@@ -72,24 +72,24 @@
 
 ## Module 4: core/rollout
 
-- [ ] Read codex-rs/core/src/rollout.rs
-- [ ] Read codex-rs/core/src/rollout/list.rs
-- [ ] Understand rollout file format (JSONL)
-- [ ] Create codex-ts/src/core/rollout.ts
-- [ ] Implement RolloutRecorder class
-- [ ] Implement write operations (persist conversation)
-- [ ] Implement read operations (load conversation)
-- [ ] Implement list operations (list saved conversations)
-- [ ] Implement archive operations
-- [ ] Implement delete operations
-- [ ] Implement find_conversation_path_by_id
-- [ ] Create codex-ts/src/core/rollout.test.ts
-- [ ] Write tests for write/read cycle (min 20 tests)
-- [ ] Write tests for list/archive/delete
-- [ ] Write tests for file format compatibility
-- [ ] Verify all tests pass
-- [ ] Update CHECKLIST.md
-- [ ] Update STATUS.md
+- [x] Read codex-rs/core/src/rollout.rs
+- [x] Read codex-rs/core/src/rollout/list.rs
+- [x] Understand rollout file format (JSONL)
+- [x] Create codex-ts/src/core/rollout.ts
+- [x] Implement RolloutRecorder class
+- [x] Implement write operations (persist conversation)
+- [x] Implement read operations (load conversation)
+- [x] Implement list operations (list saved conversations)
+- [x] Implement archive operations
+- [x] Implement delete operations
+- [x] Implement find_conversation_path_by_id
+- [x] Create codex-ts/src/core/rollout.test.ts
+- [x] Write tests for write/read cycle (30 tests - exceeded target!)
+- [x] Write tests for list/archive/delete
+- [x] Write tests for file format compatibility
+- [x] Verify all tests pass (30/30 ✅)
+- [x] Update CHECKLIST.md
+- [x] Update STATUS.md
 
 ---
 

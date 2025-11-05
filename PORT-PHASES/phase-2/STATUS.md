@@ -9,13 +9,13 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 3 / 4 (reduced from 7)
-- **Tests Written:** 57 / 100+ (57% of target)
-- **Tests Passing:** 57 / 57 (100%)
-- **Hours Logged:** ~6 hours
-- **Status:** 🔄 IN PROGRESS
+- **Modules Completed:** 4 / 4 (reduced from 7)
+- **Tests Written:** 87 / 100+ (87% of target)
+- **Tests Passing:** 87 / 87 (100%)
+- **Hours Logged:** ~8 hours
+- **Status:** ✅ PHASE 2 COMPLETE!
 
-**Visual Progress:** ✅✅✅⬜ (3/4 modules - 75% complete!)
+**Visual Progress:** ✅✅✅✅ (4/4 modules - 100% complete!)
 
 ---
 
@@ -118,6 +118,38 @@
 
 ---
 
+### 2025-11-05 - Session 4 (FINAL SESSION)
+
+**Focus:** core/rollout module - PHASE 2 COMPLETE! 🎉
+
+**Completed:**
+- ✅ Ported core/rollout module with JSONL persistence
+- ✅ Created 30 comprehensive tests for rollout (50% over target!)
+- ✅ Implemented RolloutRecorder with create/resume modes
+- ✅ Implemented recordItems for writing conversation data
+- ✅ Implemented readRolloutHistory for loading rollouts
+- ✅ Implemented listConversations with pagination support
+- ✅ Implemented findConversationPathById with recursive search
+- ✅ Implemented archiveConversation and deleteConversation
+- ✅ All tests passing (30/30 ✅)
+- ✅ **PHASE 2 COMPLETE - ALL 4 MODULES DONE!**
+
+**Decisions Made:**
+1. **Simplified for Phase 2:** Removed async channels, complex pagination cursors, and git info collection (will add in Phase 4/5)
+2. **JSONL Format:** Maintained compatibility with Rust version's JSONL format
+3. **Directory Structure:** Preserved YYYY/MM/DD directory hierarchy for efficient scanning
+4. **Pagination:** Implemented basic pagination with hasMore flag (simpler than Rust's cursor-based approach)
+5. **Testing:** Created extensive integration tests covering full conversation lifecycle
+
+**Next Steps:**
+- Phase 2 is COMPLETE!
+- Ready for Phase 3 (TBD)
+- Consider creating PR to merge Phase 2 work
+
+**Hours:** ~2 hours
+
+---
+
 ## Module Status
 
 | Module | Status | Tests | Time Spent | Notes |
@@ -125,11 +157,11 @@
 | core/config | ✅ DONE | 18/18 | ~2h | Simplified interface for Phase 2 |
 | core/config-loader | ✅ DONE | 13/13 | ~2h | TOML loading + layer merging |
 | core/message-history | ✅ DONE | 26/26 | ~2h | JSONL persistence with file locking |
-| core/rollout | ⏳ WAITING | 0 | - | Persistence layer |
+| core/rollout | ✅ DONE | 30/30 | ~2h | Conversation rollout persistence + listing |
 | core/codex | ❌ DEFERRED | 0 | - | Moved to Phase 4.5 (needs core/client) |
 | core/codex-conversation | ❌ DEFERRED | 0 | - | Moved to Phase 4.5 (needs core/codex) |
 | core/conversation-manager | ❌ DEFERRED | 0 | - | Moved to Phase 5 (needs AuthManager) |
-| **TOTAL** | **3/4** | **57** | **~6h** | 3 modules deferred to later phases |
+| **TOTAL** | **4/4** | **87** | **~8h** | **PHASE 2 COMPLETE! 3 modules deferred** |
 
 ---
 
