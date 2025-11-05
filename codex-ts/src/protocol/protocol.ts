@@ -129,6 +129,29 @@ export type SandboxPolicy =
       exclude_slash_tmp?: boolean;
     };
 
+export namespace SandboxPolicy {
+  /** Create a read-only sandbox policy */
+  export function newReadOnlyPolicy(): SandboxPolicy {
+    return { mode: 'read-only' }
+  }
+
+  /** Create a workspace-write sandbox policy */
+  export function newWorkspaceWritePolicy(): SandboxPolicy {
+    return {
+      mode: 'workspace-write',
+      writable_roots: [],
+      network_access: false,
+      exclude_tmpdir_env_var: false,
+      exclude_slash_tmp: false,
+    }
+  }
+
+  /** Create a danger-full-access sandbox policy */
+  export function newDangerFullAccessPolicy(): SandboxPolicy {
+    return { mode: 'danger-full-access' }
+  }
+}
+
 /**
  * User's decision in response to an approval request.
  */

@@ -9,28 +9,28 @@
 ## Setup & Prerequisites
 
 - [x] Phase 1 complete (✅ 283 tests passing)
-- [ ] Review Phase 2 documentation (README.md)
+- [x] Review Phase 2 documentation (README.md)
 - [x] Decide on TOML parsing library (smol-toml ✅)
-- [ ] Install smol-toml: npm install smol-toml
-- [ ] Review Rust source for core modules
+- [x] Install smol-toml: npm install smol-toml
+- [x] Review Rust source for core modules
 - [ ] Understand rollout file format
 
 ---
 
 ## Module 1: core/config
 
-- [ ] Read codex-rs/core/src/config/mod.rs
-- [ ] Create codex-ts/src/core/config.ts
-- [ ] Define Config interface/class
-- [ ] Implement default configuration
-- [ ] Implement config validation
-- [ ] Create codex-ts/src/core/config.test.ts
-- [ ] Write tests for config structure (min 15 tests)
-- [ ] Write tests for default values
-- [ ] Write tests for validation
-- [ ] Verify all tests pass
-- [ ] Update CHECKLIST.md
-- [ ] Update STATUS.md
+- [x] Read codex-rs/core/src/config/mod.rs
+- [x] Create codex-ts/src/core/config.ts
+- [x] Define Config interface/class
+- [x] Implement default configuration
+- [x] Implement config validation
+- [x] Create codex-ts/src/core/config.test.ts
+- [x] Write tests for config structure (18 tests - exceeded target!)
+- [x] Write tests for default values
+- [x] Write tests for validation
+- [x] Verify all tests pass
+- [x] Update CHECKLIST.md
+- [x] Update STATUS.md
 
 ---
 

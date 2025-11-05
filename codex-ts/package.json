@@ -25,6 +25,7 @@
     "@iarna/toml": "^2.2.5",
     "@types/uuid": "^10.0.0",
     "lru-cache": "^11.2.2",
+    "smol-toml": "^1.4.2",
     "tiktoken": "^1.0.22",
     "uuid": "^13.0.0"
   }
