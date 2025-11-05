@@ -9,10 +9,10 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 6 / 8
-- **Tests Written:** 139 / 80+ (174% of target!)
-- **Tests Passing:** 139 / 139
-- **Hours Logged:** 7.5
+- **Modules Completed:** 7 / 8
+- **Tests Written:** 204 / 80+ (255% of target!)
+- **Tests Passing:** 204 / 204
+- **Hours Logged:** 11.5
 
 ---
 
@@ -161,6 +161,55 @@
 
 ---
 
+### 2025-11-05 - Session 5
+
+**Focus:**
+- Port protocol/models.ts module
+- Write comprehensive tests for all model response types
+- Complete 7th of 8 protocol modules
+
+**Completed:**
+- ✅ Ported protocol/models.ts with complete type system:
+  - ContentItem union type (input_text, input_image, output_text)
+  - ResponseInputItem union type (message, function_call_output, mcp_tool_call_output, custom_tool_call_output)
+  - ResponseItem union type (10 variants: message, reasoning, local_shell_call, function_call, function_call_output, custom_tool_call, custom_tool_call_output, web_search_call, ghost_snapshot, other)
+  - LocalShellStatus, LocalShellAction, LocalShellExecAction
+  - WebSearchAction (search, other)
+  - ReasoningItemReasoningSummary, ReasoningItemContent
+  - GhostCommit interface
+  - ShellToolCallParams interface
+  - FunctionCallOutputContentItem, FunctionCallOutputPayload
+  - CallToolResult and ContentBlock (MCP types)
+  - Helper functions: responseInputItemToResponseItem, userInputToResponseInputItem, callToolResultToOutputPayload, serialize/deserialize functions
+- ✅ Created 65 comprehensive tests covering all types and helper functions
+- ✅ All tests passing (204/204 total, 366 across entire suite)
+- ✅ 255% of Phase 1 test target achieved!
+- ✅ Updated CHECKLIST.md and STATUS.md
+
+**In Progress:**
+- None
+
+**Blocked:**
+- None
+
+**Decisions Made:**
+- Used discriminated unions with `type` field for all variant types
+- FunctionCallOutputPayload serializes differently based on content_items presence (string vs array)
+- GhostCommit defined as interface with string IDs and path arrays
+- LocalShellStatus uses snake_case values: 'completed', 'in_progress', 'incomplete'
+- Helper functions convert between UserInput → ResponseInputItem → ResponseItem
+- MCP CallToolResult types simplified for protocol layer needs
+- shouldSerializeReasoningContent checks for presence of reasoning_text items
+
+**Next Steps:**
+- Port protocol/protocol.ts (1560 lines, ~8-10 hours) - Final module!
+- Complete Phase 1!
+- Maintain 100% test pass rate
+
+**Hours:** 4.0
+
+---
+
 ## Module Status
 
 | Module | Status | Tests | Notes |
@@ -171,8 +220,8 @@
 | protocol/plan-tool | ✅ Complete | 24/24 | StepStatus, PlanItemArg, UpdatePlanArgs ported |
 | protocol/config-types | ✅ Complete | 42/42 | 5 config enums (ReasoningEffort, ReasoningSummary, Verbosity, SandboxMode, ForcedLoginMethod) |
 | protocol/items | ✅ Complete | 41/41 | UserInput, TurnItem, all item types + helpers |
-| protocol/models | Not Started | 0/15 | Next up - Large, complex types |
-| protocol/protocol | Not Started | 0/35 | Largest module, core types |
+| protocol/models | ✅ Complete | 65/65 | ResponseInputItem, ResponseItem (10 variants), tool calls, reasoning, GhostCommit |
+| protocol/protocol | Not Started | 0/35 | Final module - Largest, core protocol types |
 
 ---
 
@@ -191,16 +240,17 @@ _Technical decisions will be recorded here and moved to DECISIONS.md_
 ## Test Results
 
 ```
-Test Suites: 25 passed, 25 total
-Tests:       301 passed, 301 total (139 Phase 1 tests)
-Time:        6.00s
+Test Suites: 26 passed, 26 total
+Tests:       366 passed, 366 total (204 Phase 1 tests)
+Time:        6.64s
 ```
 
 ---
 
 ## Next Session Plan
 
-1. Port protocol/models.ts (690 lines, ~6-8 hours) - Large module with provider-specific types
-2. Complete protocol/protocol.ts (1560 lines, ~8-10 hours) - Largest module, core protocol
-3. Phase 1 completion in sight! Only 2 modules remaining!
-4. Maintain 100% test pass rate
+1. Port protocol/protocol.ts (1560 lines, ~8-10 hours) - Final module!
+2. This is the largest and most complex module - core protocol types
+3. Event, EventMsg, Op, Submission, and all protocol messaging types
+4. After this: Phase 1 is COMPLETE! 🎉
+5. Maintain 100% test pass rate

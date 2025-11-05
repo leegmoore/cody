@@ -86,19 +86,23 @@
 - [x] Write helper function tests
 - [x] Verify all tests pass
 
-### protocol/models.rs
-- [ ] Read codex-rs/protocol/src/models.rs
-- [ ] Create codex-ts/src/protocol/models.ts
-- [ ] Define ModelRequest types
-- [ ] Define ModelResponse types
-- [ ] Define provider-specific types (OpenAI, Anthropic, etc.)
-- [ ] Define streaming response types
-- [ ] Define tool call types
-- [ ] Create codex-ts/src/protocol/models.test.ts
-- [ ] Write serialization tests (min 15 tests)
-- [ ] Write validation tests
-- [ ] Write streaming response tests
-- [ ] Verify all tests pass
+### protocol/models.ts
+- [x] Read codex-rs/protocol/src/models.rs
+- [x] Create codex-ts/src/protocol/models.ts
+- [x] Define ResponseInputItem types
+- [x] Define ResponseItem types
+- [x] Define ContentItem types
+- [x] Define LocalShellAction/Status types
+- [x] Define tool call types (FunctionCall, CustomToolCall, WebSearchCall)
+- [x] Define reasoning types (ReasoningItemContent, ReasoningItemReasoningSummary)
+- [x] Define FunctionCallOutputPayload with serialization logic
+- [x] Define GhostCommit type
+- [x] Create codex-ts/src/protocol/models.test.ts
+- [x] Write serialization tests (65 tests total)
+- [x] Write validation tests
+- [x] Write helper function tests
+- [x] Write integration tests
+- [x] Verify all tests pass
 
 ### protocol/protocol.ts (LARGEST MODULE)
 - [ ] Read codex-rs/protocol/src/protocol.rs thoroughly
