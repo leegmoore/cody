@@ -6,182 +6,164 @@ This document tracks the status of porting Rust modules from `codex-rs` to TypeS
 
 ## Summary
 
-- **Total Modules Ported**: 21
+- **Total Modules**: 43
+- **Ported**: 21
+- **Not Yet Ported**: 22
 - **Test Files**: 19 passed
 - **Tests**: 162 passed
 - **Success Rate**: 100%
 
-## Legend
-
-- ✅ **Ported with tests** - Module fully ported with comprehensive test coverage
-- 📝 **Type definitions only** - Types ported without runtime logic
-- ⏸️ **Not portable** - Platform-specific or requires significant dependencies
-- ⏳ **Not yet ported** - Portable module pending implementation
-
 ---
 
-## Protocol Modules (`protocol/`)
+## All Modules
 
-### Ported
+### ansi-escape
+- [x] **ansi-escape** - ANSI escape sequence processing (9 tests)
 
-- [x] ✅ **types** - Core protocol type definitions (6 tests)
-  - `AskForApproval`, `SandboxPolicy`, `ReasoningEffort` enums
-- [x] ✅ **num-format** - Number formatting with locale support (9 tests)
-  - `formatWithSeparators()`, `formatSiSuffix()`
-- [x] ✅ **conversation-id** - UUIDv7-based conversation identifiers (8 tests)
-  - `ConversationId` class with string parsing and equality
-- [x] 📝 **user-input** - User input type definitions
-  - `UserInput` tagged union for text, image, and local image inputs
-- [x] 📝 **parse-command** - Parsed shell command types
-  - `ParsedCommand` categorizing commands by intent
-- [x] 📝 **approvals** - Approval request types
-  - `SandboxRiskLevel`, `ExecApprovalRequestEvent`, `ApplyPatchApprovalRequestEvent`
+### app-server
+- [ ] **app-server** - Application server
 
-### Not Yet Ported
+### app-server-protocol
+- [ ] **app-server-protocol** - Server protocol types
 
-- [ ] ⏳ **account** - Account and authentication types
-- [ ] ⏳ **config-types** - Configuration type definitions
-- [ ] ⏳ **custom-prompts** - Custom prompt handling
-- [ ] ⏳ **items** - Turn item types (messages, reasoning, web search)
-- [ ] ⏳ **message-history** - Message history management
-- [ ] ⏳ **models** - Model request/response types
-- [ ] ⏳ **plan-tool** - Planning tool types
-- [ ] ⏳ **protocol** - Core protocol message types
+### apply-patch
+- [ ] **apply-patch** - Patch application
 
----
+### arg0
+- [ ] **arg0** - Process argument handling
 
-## Utils Modules (`utils/`)
+### async-utils
+- [x] **async-utils** - Promise cancellation utilities (5 tests)
 
-### Ported
+### backend-client
+- [ ] **backend-client** - Backend HTTP client
 
-- [x] ✅ **string** - UTF-8 safe string truncation (16 tests)
-  - `takeBytesAtCharBoundary()`, `takeLastBytesAtCharBoundary()`
-- [x] ✅ **cache** - LRU cache with SHA-1 hashing (13 tests)
-  - `LruCache` class, `sha1Digest()`
-- [x] ✅ **json-to-toml** - JSON to TOML conversion (9 tests)
-  - `jsonToToml()` with type handling
-- [x] ✅ **tokenizer** - Token counting with tiktoken (6 tests)
-  - `Tokenizer` class with encode/decode/count methods
-- [x] ✅ **readiness** - Async readiness synchronization (8 tests)
-  - `ReadinessFlag` with token-based subscription
+### chatgpt
+- [ ] **chatgpt** - ChatGPT integration
 
-### Not Portable
+### cli
+- [ ] **cli** - CLI entry point
 
-- [ ] ⏸️ **git** - Git operations (platform-specific, uses libgit2)
-- [ ] ⏸️ **image** - Image processing (platform-specific, uses image crate)
-- [ ] ⏸️ **pty** - Pseudo-terminal handling (platform-specific)
+### cloud-tasks
+- [ ] **cloud-tasks** - Cloud task queue
 
----
+### cloud-tasks-client
+- [ ] **cloud-tasks-client** - Cloud task client
 
-## Common Modules (`common/`)
+### codex-backend-openapi-models
+- [ ] **codex-backend-openapi-models** - Backend OpenAPI models
 
-### Ported
+### common
+- [x] **common/approval-presets** - Built-in approval/sandbox presets (5 tests)
+- [x] **common/config-override** - CLI config override parsing (18 tests)
+- [x] **common/elapsed** - Duration formatting (5 tests)
+- [x] **common/format-env-display** - Environment variable display (5 tests)
+- [x] **common/fuzzy-match** - Fuzzy string matching (12 tests)
+- [x] **common/model-presets** - Built-in model configurations (7 tests)
+- [x] **common/sandbox-summary** - Sandbox policy summarization (8 tests)
+- [ ] **common/approval-mode-cli-arg** - CLI argument parsing for approval modes
+- [ ] **common/config-summary** - Configuration summary generation
+- [ ] **common/sandbox-mode-cli-arg** - CLI argument parsing for sandbox modes
 
-- [x] ✅ **fuzzy-match** - Fuzzy string matching with Unicode (12 tests)
-  - `fuzzyMatch()`, `fuzzyIndices()`
-- [x] ✅ **elapsed** - Duration formatting (5 tests)
-  - `formatDuration()`, `formatElapsed()`
-- [x] ✅ **format-env-display** - Environment variable display (5 tests)
-  - `formatEnvDisplay()` with masking
-- [x] ✅ **sandbox-summary** - Sandbox policy summarization (8 tests)
-  - `summarizeSandboxPolicy()`
-- [x] ✅ **approval-presets** - Built-in approval/sandbox presets (5 tests)
-  - `builtinApprovalPresets()`
-- [x] ✅ **model-presets** - Built-in model configurations (7 tests)
-  - `builtinModelPresets()`
-- [x] ✅ **config-override** - CLI config override parsing (18 tests)
-  - `CliConfigOverrides`, `parseTomlValue()`
+### core
+- [ ] **core** - Core application logic
 
-### Not Yet Ported
+### exec
+- [ ] **exec** - Command execution
 
-- [ ] ⏳ **approval-mode-cli-arg** - CLI argument parsing for approval modes
-- [ ] ⏳ **sandbox-mode-cli-arg** - CLI argument parsing for sandbox modes
-- [ ] ⏳ **config-summary** - Configuration summary generation
+### execpolicy
+- [ ] **execpolicy** - Execution policy
 
----
+### feedback
+- [ ] **feedback** - Feedback collection
 
-## Async Utilities (`async-utils/`)
+### file-search
+- [ ] **file-search** - File searching
 
-### Ported
+### keyring-store
+- [ ] **keyring-store** - Credential storage
 
-- [x] ✅ **async-utils** - Promise cancellation utilities (5 tests)
-  - `orCancel()` - Race promise against AbortSignal (Rust tokio::select! pattern)
+### linux-sandbox
+- [ ] **linux-sandbox** - Linux sandboxing
 
----
+### login
+- [ ] **login** - Login flow
 
-## ANSI Processing (`ansi-escape/`)
+### mcp-server
+- [ ] **mcp-server** - MCP server implementation
 
-### Ported
+### mcp-types
+- [ ] **mcp-types** - MCP type definitions
 
-- [x] ✅ **ansi-escape** - ANSI escape sequence processing (9 tests)
-  - `expandTabs()`, `processAnsiEscape()`, `processAnsiEscapeLine()`
+### ollama
+- [x] **ollama/parser** - Ollama pull stream parsing (8 tests)
+- [x] **ollama/url** - Ollama URL utilities (5 tests)
+- [ ] **ollama/client** - Ollama HTTP client
+- [ ] **ollama/pull** - Ollama model pulling logic
 
----
+### otel
+- [ ] **otel** - OpenTelemetry integration
 
-## Ollama Integration (`ollama/`)
+### process-hardening
+- [ ] **process-hardening** - Process security
 
-### Ported
+### protocol
+- [x] **protocol/approvals** - Approval request types (type definitions)
+- [x] **protocol/conversation-id** - UUIDv7-based conversation identifiers (8 tests)
+- [x] **protocol/num-format** - Number formatting (9 tests)
+- [x] **protocol/parse-command** - Parsed shell command types (type definitions)
+- [x] **protocol/types** - Core protocol type definitions (6 tests)
+- [x] **protocol/user-input** - User input types (type definitions)
+- [ ] **protocol/account** - Account and authentication types
+- [ ] **protocol/config-types** - Configuration type definitions
+- [ ] **protocol/custom-prompts** - Custom prompt handling
+- [ ] **protocol/items** - Turn item types
+- [ ] **protocol/message-history** - Message history management
+- [ ] **protocol/models** - Model request/response types
+- [ ] **protocol/plan-tool** - Planning tool types
+- [ ] **protocol/protocol** - Core protocol message types
 
-- [x] ✅ **url** - Ollama URL utilities (5 tests)
-  - `isOpenAiCompatibleBaseUrl()`, `baseUrlToHostRoot()`
-- [x] ✅ **parser** - Ollama pull stream parsing (8 tests)
-  - `PullEvent` types, `pullEventsFromValue()`
+### protocol-ts
+- [ ] **protocol-ts** - TypeScript protocol generation
 
-### Not Yet Ported
+### responses-api-proxy
+- [ ] **responses-api-proxy** - API proxy
 
-- [ ] ⏳ **client** - Ollama HTTP client
-- [ ] ⏳ **pull** - Ollama model pulling logic
+### rmcp-client
+- [ ] **rmcp-client** - RMCP client
 
----
+### stdio-to-uds
+- [ ] **stdio-to-uds** - STDIO to Unix domain socket
 
-## Platform-Specific Modules (Not Portable)
+### tui
+- [ ] **tui** - Terminal UI
 
-The following modules are intentionally not ported due to platform-specific dependencies:
+### utils/cache
+- [x] **utils/cache** - LRU cache with SHA-1 hashing (13 tests)
 
-- `linux-sandbox` - Linux sandboxing (Linux-specific syscalls)
-- `windows-sandbox-rs` - Windows sandboxing (Windows-specific APIs)
-- `process-hardening` - Process security (platform-specific)
-- `pty` - Pseudo-terminal handling (platform-specific)
-- `git` - Git operations (requires libgit2)
-- `image` - Image processing (requires image crate)
-- `exec` - Command execution (platform-specific)
-- `execpolicy` - Execution policy (platform-specific)
-- `keyring-store` - Credential storage (platform-specific)
-- `otel` - OpenTelemetry integration (complex dependencies)
-- `backend-client` - Backend HTTP client (complex dependencies)
-- `mcp-server` - MCP server implementation (requires full protocol)
-- `mcp-types` - MCP type definitions (complex protocol types)
-- `chatgpt` - ChatGPT integration (complex dependencies)
-- `cloud-tasks` - Cloud task queue (GCP-specific)
-- `cloud-tasks-client` - Cloud task client (GCP-specific)
-- `core` - Core application logic (ties together multiple components)
-- `cli` - CLI entry point (platform-specific)
-- `tui` - Terminal UI (complex dependencies)
-- `app-server` - Application server (complex dependencies)
-- `app-server-protocol` - Server protocol (complex dependencies)
-- `responses-api-proxy` - API proxy (complex dependencies)
-- `rmcp-client` - RMCP client (complex dependencies)
-- `code` - Code application logic (ties together multiple components)
-- `apply-patch` - Patch application (file system operations)
-- `file-search` - File searching (platform-specific)
-- `feedback` - Feedback collection (complex dependencies)
-- `login` - Login flow (complex dependencies)
-- `arg0` - Process argument handling (platform-specific)
-- `stdio-to-uds` - STDIO to Unix domain socket (platform-specific)
-- `protocol-ts` - TypeScript protocol generation (build tool)
+### utils/git
+- [ ] **utils/git** - Git operations
 
----
+### utils/image
+- [ ] **utils/image** - Image processing
 
-## Design Principles
+### utils/json-to-toml
+- [x] **utils/json-to-toml** - JSON to TOML conversion (9 tests)
 
-The TypeScript port follows these principles:
+### utils/pty
+- [ ] **utils/pty** - Pseudo-terminal handling
 
-1. **Idiomatic TypeScript** - Use modern TypeScript patterns, not literal Rust translations
-2. **Comprehensive Tests** - Port all Rust tests and maintain coverage
-3. **Unicode Correctness** - Preserve Rust's careful Unicode handling
-4. **Type Safety** - Leverage TypeScript's type system fully
-5. **Minimal Dependencies** - Use existing libraries where appropriate (e.g., lru-cache, tiktoken)
-6. **Portability Focus** - Only port modules that are algorithmic and platform-independent
+### utils/readiness
+- [x] **utils/readiness** - Async readiness synchronization (8 tests)
+
+### utils/string
+- [x] **utils/string** - UTF-8 safe string truncation (16 tests)
+
+### utils/tokenizer
+- [x] **utils/tokenizer** - Token counting with tiktoken (6 tests)
+
+### windows-sandbox-rs
+- [ ] **windows-sandbox-rs** - Windows sandboxing
 
 ---
 
@@ -192,46 +174,3 @@ Test Files:  19 passed (19)
 Tests:       162 passed (162)
 Success Rate: 100%
 ```
-
-All ported modules maintain 100% test pass rate with comprehensive test coverage ported from the Rust implementation.
-
----
-
-## Next Steps
-
-### High Priority (Pure Types/Algorithms)
-
-These modules are good candidates for porting as they have minimal dependencies:
-
-1. **protocol/config-types** - Configuration type definitions
-2. **protocol/custom-prompts** - Custom prompt handling
-3. **common/approval-mode-cli-arg** - Approval mode CLI args
-4. **common/sandbox-mode-cli-arg** - Sandbox mode CLI args
-5. **common/config-summary** - Config summary generation
-
-### Medium Priority (May Have Dependencies)
-
-These modules may require additional type definitions or have moderate complexity:
-
-1. **protocol/items** - Turn item types
-2. **protocol/message-history** - Message history
-3. **protocol/plan-tool** - Planning tool types
-4. **ollama/client** - Ollama HTTP client (if keeping HTTP logic simple)
-5. **ollama/pull** - Ollama model pulling
-
-### Lower Priority (Complex Dependencies)
-
-These modules depend on many other modules or have complex protocol handling:
-
-1. **protocol/models** - Complex model types with many dependencies
-2. **protocol/protocol** - Core protocol types tying everything together
-3. **protocol/account** - Account types with authentication
-
----
-
-## Notes
-
-- Modules marked ⏸️ **Not portable** are intentionally excluded due to platform-specific requirements
-- Type-only modules (📝) don't have runtime logic but provide TypeScript definitions for protocol messages
-- All ported modules are in `codex-ts/src/` following the same directory structure as `codex-rs/`
-- Tests are co-located with implementation files using `.test.ts` suffix
