@@ -8,9 +8,9 @@
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 30 (Pre-work: 21, Phase 1: 8, Phase 2: 1)
-- **In Progress:** Phase 2 (1/4 modules done)
-- **Test Pass Rate:** 463/463 (100%) 🎉
+- **Completed:** 31 (Pre-work: 21, Phase 1: 8, Phase 2: 2)
+- **In Progress:** Phase 2 (2/4 modules done - 50% complete!)
+- **Test Pass Rate:** 476/476 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase2-port-config-011CUqLLDHJiWWH1fkx1BZ4F
@@ -75,16 +75,16 @@
 
 ---
 
-### 🔄 Phase 2: Configuration & Persistence (In Progress!)
-**Status:** IN PROGRESS (1/4 modules complete)
+### 🔄 Phase 2: Configuration & Persistence (In Progress - 50% Complete!)
+**Status:** IN PROGRESS (2/4 modules complete)
 **Start Date:** 2025-11-05
-**Duration So Far:** ~2 hours
+**Duration So Far:** ~4 hours
 **Dependencies:** Phase 1 ✅
 
 | Module | Status | Dependencies | Time Spent | Notes |
 |--------|--------|--------------|------------|-------|
 | core/config | ✅ DONE | protocol/config-types | ~2h | Simplified for Phase 2 (18 tests) |
-| core/config-loader | ⏳ NEXT | core/config | - | TOML loading + overrides |
+| core/config-loader | ✅ DONE | core/config | ~2h | TOML loading + layer merging (13 tests) |
 | core/message-history | ⏳ WAITING | protocol/message-history | - | Can be parallel |
 | core/rollout | ⏳ WAITING | protocol/* | - | Persistence layer |
 | core/codex | ❌ DEFERRED | core/client (Phase 4) | - | Moved to Phase 4.5 |

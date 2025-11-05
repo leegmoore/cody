@@ -9,13 +9,13 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 1 / 4 (reduced from 7)
-- **Tests Written:** 18 / 100+ (18% of target)
-- **Tests Passing:** 18 / 18 (100%)
-- **Hours Logged:** ~2 hours
+- **Modules Completed:** 2 / 4 (reduced from 7)
+- **Tests Written:** 31 / 100+ (31% of target)
+- **Tests Passing:** 31 / 31 (100%)
+- **Hours Logged:** ~4 hours
 - **Status:** 🔄 IN PROGRESS
 
-**Visual Progress:** ✅⬜⬜⬜ (1/4 modules)
+**Visual Progress:** ✅✅⬜⬜ (2/4 modules - 50% complete!)
 
 ---
 
@@ -53,18 +53,49 @@
 
 ---
 
+### 2025-11-05 - Session 2
+
+**Focus:** core/config-loader module
+
+**Completed:**
+- ✅ Ported core/config-loader module with TOML loading and merging
+- ✅ Created 13 comprehensive tests for config-loader
+- ✅ Implemented mergeTomlValues with recursive table merging
+- ✅ Implemented loadConfigAsTOML and loadConfigLayersWithOverrides
+- ✅ All tests passing (476 total across project, +13 new)
+- ✅ Simplified for Phase 2 (skipped macOS managed preferences)
+
+**In Progress:**
+- Planning core/message-history module
+
+**Blocked:**
+- None
+
+**Decisions Made:**
+1. **macOS Features:** Skipped macOS-specific managed preferences for Phase 2 (can add in Phase 4/5)
+2. **TOML Library:** Using smol-toml for parsing (already installed)
+3. **Merge Strategy:** Implemented recursive merging for nested tables, replacement for non-tables
+
+**Next Steps:**
+1. Port core/message-history module
+2. Then core/rollout (final Phase 2 module)
+
+**Hours:** ~2 hours
+
+---
+
 ## Module Status
 
 | Module | Status | Tests | Time Spent | Notes |
 |--------|--------|-------|------------|-------|
 | core/config | ✅ DONE | 18/18 | ~2h | Simplified interface for Phase 2 |
-| core/config-loader | ⏳ NEXT | 0 | - | Depends on core/config |
+| core/config-loader | ✅ DONE | 13/13 | ~2h | TOML loading + layer merging |
 | core/message-history | ⏳ WAITING | 0 | - | Can be done parallel with config-loader |
 | core/rollout | ⏳ WAITING | 0 | - | Persistence layer |
 | core/codex | ❌ DEFERRED | 0 | - | Moved to Phase 4.5 (needs core/client) |
 | core/codex-conversation | ❌ DEFERRED | 0 | - | Moved to Phase 4.5 (needs core/codex) |
 | core/conversation-manager | ❌ DEFERRED | 0 | - | Moved to Phase 5 (needs AuthManager) |
-| **TOTAL** | **1/4** | **18** | **~2h** | 3 modules deferred to later phases |
+| **TOTAL** | **2/4** | **31** | **~4h** | 3 modules deferred to later phases |
 
 ---
 
