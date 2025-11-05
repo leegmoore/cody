@@ -1,0 +1,45 @@
+===== PHASE 3 KICKOFF =====
+
+ROLE: TypeScript developer porting Codex Rust to TypeScript.
+
+PROJECT: Creating @openai/codex-core pure TypeScript library.
+
+PHASE 3: Execution & Tools - Make the agent DO things (execute commands, apply patches, search files)
+
+PHASE 2 STATUS: ✅ COMPLETE (87 tests, 4 modules: config, config-loader, message-history, rollout)
+
+FIRST: Read status
+- codex-ts/PORT_LOG_MASTER.md
+- codex-ts/PORT_LOG_PHASE2.md
+- PORT-PHASES/phase-3/README.md
+- PORT-PHASES/phase-3/STATUS.md
+- PORT-PHASES/phase-3/CHECKLIST.md
+
+MODULES (7 total):
+START WITH (standalone, can work in parallel):
+1. apply-patch (1,600 lines) - Parse/apply file patches
+2. file-search (600 lines) - Fuzzy file search
+3. execpolicy (800 lines) - Execution policies
+
+THEN (core integration):
+4. core/sandboxing - Policy enforcement
+5. exec - Execution interface
+6. core/exec - Execution engine
+7. core/tools - Tool coordination
+
+WORKFLOW:
+1. Read Rust source
+2. Port tests
+3. Port implementation
+4. Run: npm test
+5. Check off CHECKLIST.md
+6. Update STATUS.md
+7. Update PORT_LOG_MASTER.md
+8. Commit: git add -A && git commit -m "phase3: [MODULE]" && git push
+
+BEFORE ENDING:
+1. Update all logs (CHECKLIST, STATUS, PORT_LOG_MASTER)
+2. Commit and push
+3. Report: what's done, what's next
+
+START with apply-patch (standalone, no deps).

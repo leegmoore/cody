@@ -1,0 +1,316 @@
+================================================================================
+CODEX RUST MODULE DEPENDENCY GRAPH - Visual Dependencies
+================================================================================
+
+LEGEND:
+  [X] = External dependency (codex-protocol, codex-common)
+  P0/P1/P2/P3/P4/P5 = Phase number
+  ✓ = Clean (no forward dependencies)
+  ⚠ = Warning (cross-phase dependency)
+  🚨 = Critical (multiple cross-phase deps)
+
+================================================================================
+PHASE DEPENDENCY OVERVIEW
+================================================================================
+
+                          ┌─────────────────┐
+                          │  [codex_protocol]
+                          │  Type Definitions
+                          │  ~2,887 lines
+                          │  Required by ALL
+                          └────────┬────────┘
+                                   │
+                ┌──────────────────┼──────────────────┐
+                │                  │                  │
+           ┌────▼───────┐    ┌─────▼──────┐    ┌─────▼─────┐
+           │   PHASE 0  │    │  [common]  │    │ [External]│
+           │ Type Defs  │    │  Utilities │    │   Crates  │
+           └────┬───────┘    └────────────┘    └───────────┘
+                │
+                │ Foundation
+                │
+           ┌────▼──────────────────────────────────────────────┐
+           │           PHASE 1: Standalone Utils              │
+           │  ✓ execpolicy (800 lines)     - Zero deps        │
+           │  ✓ file-search (600 lines)    - Zero deps        │
+           │  ✓ apply-patch (1600 lines)   - Zero deps        │
+           │  ✓ Common utilities (already ported)             │
+           └────┬──────────────────────────────────────────────┘
+                │
+                │ Foundation
+                │
+           ┌────▼──────────────────────────────────────────────┐
+           │       PHASE 2: Core Infrastructure                │
+           │                                                    │
+           │  🚨 config (3000 lines)                           │
+           │    ├─→ Phase 4: openai_model_info               │
+           │    ├─→ Phase 4: codex_rmcp_client               │
+           │    ├─→ Phase 4: codex_app_server_protocol       │
+           │    ├─→ Phase 5: auth::AuthCredentialsStoreMode  │
+           │    ├─→ Phase 3: git_info                        │
+           │    └─→ Phase 3: model_family                    │
+           │                                                    │
+           │  ✓ config_loader (clean)                         │
+           │  ✓ message_history (clean)                       │
+           │  ⚠ rollout::recorder (→ Phase 4: default_client)│
+           │  ⚠ rollout::list (→ Phase 1: file_search)       │
+           └────┬──────────────────────────────────────────────┘
+                │
+                │ Provides config
+                │
+           ┌────▼──────────────────────────────────────────────┐
+           │      PHASE 3: Execution & Tools Layer             │
+           │                                                    │
+           │  ⚠ exec (standalone crate)                       │
+           │    ├─→ Phase 4: codex_ollama                     │
+           │    ├─→ Phase 5: auth::enforce_login             │
+           │    ├─→ Deferred: ConversationManager             │
+           │    └─→ Phase 2: config                           │
+           │                                                    │
+           │  ✓ core/exec (sibling deps only)                 │
+           │  ✓ core/tools (2000+ lines, Phase 3 only)       │
+           │  ✓ core/sandboxing (Phase 3 only)               │
+           │  ✓ core/spawn                                   │
+           │  ✓ environment_context                           │
+           │  ✓ conversation_history                          │
+           └────┬──────────────────────────────────────────────┘
+                │
+                │ Provides execution
+                │
+           ┌────▼──────────────────────────────────────────────┐
+           │    PHASE 4: Model Integration & MCP               │
+           │                                                    │
+           │  ⚠ core/client (1000+ lines)                     │
+           │    ├─→ Phase 5: AuthManager                      │
+           │    ├─→ Phase 5: codex_app_server_protocol        │
+           │    └─→ Phase 4: chat_completions                 │
+           │                                                    │
+           │  ✓ core/chat_completions (Phase 4 only)         │
+           │  ✓ core/default_client                           │
+           │  ✓ core/client_common                            │
+           │  ✓ backend-client                                │
+           │  ✓ mcp-server                                    │
+           │  ✓ ollama (clean)                                │
+           │  ✓ core/mcp                                      │
+           └────┬──────────────────────────────────────────────┘
+                │
+                │ Provides model API
+                │
+           ┌────▼──────────────────────────────────────────────┐
+           │      PHASE 5: Auth & CLI Polish                   │
+           │                                                    │
+           │  ✓ core/auth (Phase 5 only)                      │
+           │  ? login (OAuth - platform specific)              │
+           │  ? keyring-store (OS keyring - platform specific)│
+           │  ⚠ cli (may need selective porting)              │
+           │  ⚠ app-server (HTTP server)                      │
+           └────┬──────────────────────────────────────────────┘
+                │
+                │ Provides auth & CLI
+                │
+           ┌────▼──────────────────────────────────────────────┐
+           │    PHASE 6: Integration & Orchestration           │
+           │                                                    │
+           │  🚨 core/codex (3145 lines)                      │
+           │    Requires ALL phases: P2, P3, P4, P5           │
+           │    Cannot be ported until all complete            │
+           │                                                    │
+           │  🚨 core/codex_conversation                      │
+           │    Depends on core/codex                          │
+           │                                                    │
+           │  🚨 core/conversation_manager                    │
+           │    Depends on codex_conversation                  │
+           └────────────────────────────────────────────────────┘
+
+================================================================================
+MODULE DEPENDENCY MATRIX
+================================================================================
+
+Direction: → = depends on
+
+PHASE 2 DEPENDENCIES:
+
+  core/config (3000)        → P4: openai_model_info, rmcp_client, app_server_protocol
+                            → P5: auth
+                            → P3: git_info, model_family, model_provider_info
+                            ⚠ CRITICAL: 6 forward dependencies
+  
+  config_loader (clean)      ✓ No forward deps
+  
+  message_history (clean)    ✓ No forward deps
+  
+  rollout/recorder           → P4: default_client
+                            → P3: git_info
+                            ⚠ WARNING: 2 forward dependencies
+  
+  rollout/list               → P1: file_search
+                            → P3: protocol types
+                            ⚠ WARNING: 1 forward dependency
+
+PHASE 3 DEPENDENCIES:
+
+  core/exec                  ✓ No forward deps (Phase 3 only)
+  
+  core/tools (2000+)         ✓ No forward deps (Phase 3 only)
+  
+  core/sandboxing            ✓ No forward deps (Phase 3 only)
+  
+  exec (crate)               → P4: codex_ollama
+                            → P5: auth enforcement
+                            → Deferred: ConversationManager
+                            🚨 CRITICAL: 3 forward dependencies
+  
+  execpolicy (800)           ✓ STANDALONE: Zero deps
+  
+  file-search (600)          ✓ STANDALONE: Zero deps
+  
+  apply-patch (1600)         ✓ STANDALONE: Zero deps
+
+PHASE 4 DEPENDENCIES:
+
+  core/client (1000+)        → P5: AuthManager, CodexAuth
+                            → P5: codex_app_server_protocol
+                            ⚠ WARNING: 3 forward dependencies
+  
+  core/chat_completions      ✓ No forward deps
+  
+  core/default_client        ✓ No forward deps
+  
+  backend-client             ✓ No forward deps
+  
+  mcp-server                 ✓ No forward deps
+  
+  ollama                      ✓ No forward deps
+
+PHASE 5 DEPENDENCIES:
+
+  core/auth                  ✓ No forward deps
+  
+  login                      ⚠ Platform-specific
+  
+  keyring-store              ⚠ Platform-specific
+  
+  cli                        ✓ Mostly standalone
+
+DEFERRED INTEGRATION:
+
+  core/codex (3145)          🚨 REQUIRES ALL PHASES
+                            Depends on P2, P3, P4, P5
+                            CANNOT be ported before Phase 6
+  
+  core/codex_conversation    🚨 Depends on codex.rs
+  
+  core/conversation_manager  🚨 Depends on codex_conversation
+
+================================================================================
+CRITICAL PATH ANALYSIS
+================================================================================
+
+Most Blocking Modules (blocks others):
+
+TIER 1 (Blocks everything):
+  1. codex_protocol      - Required by ALL (~2,887 lines)
+                         Action: Port/adapt first
+  
+  2. core/config         - ~3,000 lines, 14+ dependencies, central hub
+                         Action: Refactor to DI, port with stubs
+  
+  3. core/codex          - 3,145 lines, requires ALL phases
+                         Action: Defer to Phase 6
+
+TIER 2 (Blocks Phase 4+):
+  4. core/tools          - 2,000+ lines, coordination hub
+                         Action: Port after Phase 2
+  
+  5. core/exec           - Execution engine
+                         Action: Port after Phase 2, mock dependencies
+  
+  6. core/client         - Model client interface
+                         Action: Port after Phase 3, mock auth
+
+TIER 3 (Blocks specific modules):
+  7. core/config_loader  - Blocks core/config completion
+                         Action: Port immediately (clean)
+  
+  8. error types         - Used throughout
+                         Action: Include in Phase 0
+
+================================================================================
+CROSS-PHASE FORWARD DEPENDENCIES (Anti-patterns)
+================================================================================
+
+PHASE 2 → PHASE 3:
+  core/config            → git_info, model_family, model_provider_info
+  rollout/recorder       → git_info
+  rollout/list           → (implicit type usage)
+
+PHASE 2 → PHASE 4:
+  core/config            → openai_model_info, codex_rmcp_client, codex_app_server_protocol
+  rollout/recorder       → default_client
+
+PHASE 2 → PHASE 5:
+  core/config            → auth::AuthCredentialsStoreMode
+
+PHASE 3 → PHASE 4:
+  exec                   → codex_ollama
+
+PHASE 3 → PHASE 5:
+  exec                   → auth enforcement
+
+PHASE 4 → PHASE 5:
+  core/client            → AuthManager, CodexAuth, codex_app_server_protocol
+
+DEFERRED → MULTIPLE:
+  core/codex             → P2, P3, P4, P5 (all phases)
+
+RECOMMENDED FIX: Dependency Injection Pattern
+  - Interfaces instead of concrete imports
+  - Stub implementations for Phase 2/3
+  - Real implementations in Phase 4/5
+
+================================================================================
+RECOMMENDED PORT SEQUENCE
+================================================================================
+
+Week 1: PHASE 0 - Type Definitions & Framework
+  - Port/define codex_protocol types
+  - Create DI container
+  - Define injectable interfaces for cross-phase concerns
+
+Week 2: PHASE 1 - Standalone Modules (PARALLEL OK)
+  - execpolicy (800 lines) ✓ Zero deps
+  - file-search (600 lines) ✓ Zero deps
+  - apply-patch (1600 lines) ✓ Zero deps
+
+Week 3: PHASE 2 - Infrastructure (WITH REFACTORING)
+  - config_loader
+  - message_history
+  - rollout with adapters
+  - config with DI
+
+Week 4: PHASE 3 - Execution (PARALLEL WITH P4 OK)
+  - core/exec
+  - core/tools
+  - core/sandboxing
+  - Dependencies mocked
+
+Week 5: PHASE 4 - Model Integration (PARALLEL WITH P5 OK)
+  - client_common
+  - chat_completions
+  - backend-client
+  - ollama
+
+Week 6: PHASE 5 - Auth & CLI
+  - core/auth
+  - login (if porting)
+  - cli
+
+Week 7: PHASE 6 - Integration
+  - core/codex
+  - conversation_manager
+  - Full integration tests
+
+Critical Path: P0 → P2 (refactored) → P3 → P4 → P6
+Total Estimated: 7 weeks (with refactoring, parallel work)
+
+================================================================================
