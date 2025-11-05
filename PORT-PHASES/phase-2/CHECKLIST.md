@@ -10,7 +10,8 @@
 
 - [x] Phase 1 complete (✅ 283 tests passing)
 - [ ] Review Phase 2 documentation (README.md)
-- [ ] Decide on TOML parsing library
+- [x] Decide on TOML parsing library (smol-toml ✅)
+- [ ] Install smol-toml: npm install smol-toml
 - [ ] Review Rust source for core modules
 - [ ] Understand rollout file format
 

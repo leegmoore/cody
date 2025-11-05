@@ -26,13 +26,15 @@ This document records all technical decisions made during Phase 2 of the TypeScr
 **Question:** Which TOML parser should we use?
 
 **Options:**
-1. **@iarna/toml** - Full TOML 1.0.0 support, well-maintained
-2. **smol-toml** - Lightweight, TOML 0.5.0
-3. **Custom parser** - Full control, more work
+1. **@iarna/toml** - Full TOML 1.0.0, but unmaintained (last update 2021)
+2. **smol-toml** - TOML 1.0 compliant, actively maintained (updated Aug 2025)
+3. **Custom parser** - Port @iarna/toml later (2K LOC)
 
-**Recommendation:** @iarna/toml (matches Rust's full TOML support)
+**Decision:** Use `smol-toml` (104 KB, zero deps, active maintenance)
 
-**Status:** PENDING
+**Future:** May fork and maintain our own TOML parser when stable
+
+**Status:** ✅ DECIDED
 
 ---
 

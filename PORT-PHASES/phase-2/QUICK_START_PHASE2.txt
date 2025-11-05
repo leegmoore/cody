@@ -24,6 +24,10 @@ THEN: Read full instructions:
 - Read PORT-PHASES/phase-2/STATUS.md (current progress)
 - Read PORT-PHASES/phase-2/CHECKLIST.md (task list)
 
+SETUP (first session only):
+- Run: cd codex-ts && npm install smol-toml
+- Run: mkdir -p src/core
+
 TASK: Port Phase 2 modules (core engine) using Test-Driven Development:
 1. Read Rust source: codex-rs/core/src/[MODULE].rs
 2. Read Rust tests: codex-rs/core/tests/[MODULE].rs (if exists)
