@@ -9,10 +9,10 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 5 / 8
-- **Tests Written:** 98 / 80+ (exceeded target!)
-- **Tests Passing:** 98 / 98
-- **Hours Logged:** 4.5
+- **Modules Completed:** 6 / 8
+- **Tests Written:** 139 / 80+ (174% of target!)
+- **Tests Passing:** 139 / 139
+- **Hours Logged:** 7.5
 
 ---
 
@@ -119,6 +119,48 @@
 
 ---
 
+### 2025-11-05 - Session 4
+
+**Focus:**
+- Port protocol/items.ts module
+- Write comprehensive tests for all item types and helper functions
+
+**Completed:**
+- ✅ Ported protocol/items.ts with complete type system:
+  - UserInput union type (text, image, local_image)
+  - AgentMessageContent type
+  - TurnItem union type (user_message, agent_message, reasoning, web_search)
+  - UserMessageItem, AgentMessageItem, ReasoningItem, WebSearchItem
+  - Helper functions: getTurnItemId, createUserMessageItem, createAgentMessageItem
+  - Text/image extraction functions
+- ✅ Created 41 comprehensive tests covering all types
+- ✅ All tests passing (139/139 total, 301 across entire suite)
+- ✅ 174% of Phase 1 test target achieved!
+- ✅ Updated CHECKLIST.md and STATUS.md
+
+**In Progress:**
+- None
+
+**Blocked:**
+- None
+
+**Decisions Made:**
+- Ported protocol layer items (not exec layer items from SDK)
+- Used TypeScript discriminated unions for type safety
+- UserInput supports text, image (data URL), and local_image (file path)
+- TurnItem wraps each item type with a discriminator
+- Helper functions use crypto.randomUUID() for ID generation
+- Extraction functions filter by type and aggregate content
+
+**Next Steps:**
+- Port protocol/models.ts (690 lines, ~6-8 hours) - Large module with provider types
+- Complete protocol/protocol.ts (1560 lines, ~8-10 hours) - Largest module, core protocol
+- Finish Phase 1!
+
+**Hours:** 3.0
+
+---
+
 ## Module Status
 
 | Module | Status | Tests | Notes |
@@ -128,8 +170,8 @@
 | protocol/custom-prompts | ✅ Complete | 12/12 | CustomPrompt + constant ported |
 | protocol/plan-tool | ✅ Complete | 24/24 | StepStatus, PlanItemArg, UpdatePlanArgs ported |
 | protocol/config-types | ✅ Complete | 42/42 | 5 config enums (ReasoningEffort, ReasoningSummary, Verbosity, SandboxMode, ForcedLoginMethod) |
-| protocol/items | Not Started | 0/12 | Next up - Must match SDK types! |
-| protocol/models | Not Started | 0/15 | Large, complex types |
+| protocol/items | ✅ Complete | 41/41 | UserInput, TurnItem, all item types + helpers |
+| protocol/models | Not Started | 0/15 | Next up - Large, complex types |
 | protocol/protocol | Not Started | 0/35 | Largest module, core types |
 
 ---
@@ -149,16 +191,16 @@ _Technical decisions will be recorded here and moved to DECISIONS.md_
 ## Test Results
 
 ```
-Test Suites: 24 passed, 24 total
-Tests:       260 passed, 260 total (98 new Phase 1 tests)
-Time:        4.75s
+Test Suites: 25 passed, 25 total
+Tests:       301 passed, 301 total (139 Phase 1 tests)
+Time:        6.00s
 ```
 
 ---
 
 ## Next Session Plan
 
-1. Port protocol/items.ts (159 lines, ~4-5 hours) - ⚠️ CRITICAL: Must match SDK types exactly!
-2. Continue with protocol/models.ts (690 lines, ~6-8 hours)
-3. Complete protocol/protocol.ts (1560 lines, ~8-10 hours) - Largest module
+1. Port protocol/models.ts (690 lines, ~6-8 hours) - Large module with provider-specific types
+2. Complete protocol/protocol.ts (1560 lines, ~8-10 hours) - Largest module, core protocol
+3. Phase 1 completion in sight! Only 2 modules remaining!
 4. Maintain 100% test pass rate

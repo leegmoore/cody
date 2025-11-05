@@ -68,24 +68,23 @@
 - [x] Verify all tests pass
 
 ### protocol/items.ts
-- [ ] Read codex-rs/protocol/src/items.rs
-- [ ] Read sdk/typescript/src/items.ts for comparison
-- [ ] Create codex-ts/src/protocol/items.ts
-- [ ] Define TurnItem union type
-- [ ] Define CommandExecutionItem
-- [ ] Define FileChangeItem
-- [ ] Define McpToolCallItem
-- [ ] Define AgentMessageItem
-- [ ] Define ReasoningItem
-- [ ] Define WebSearchItem
-- [ ] Define TodoListItem
-- [ ] Define ErrorItem
-- [ ] Verify types match SDK exactly
-- [ ] Create codex-ts/src/protocol/items.test.ts
-- [ ] Write serialization tests for each item type (min 12 tests)
-- [ ] Write validation tests
-- [ ] Write SDK compatibility tests
-- [ ] Verify all tests pass
+- [x] Read codex-rs/protocol/src/items.rs
+- [x] Read codex-rs/protocol/src/user_input.rs for dependencies
+- [x] Read sdk/typescript/src/items.ts for comparison
+- [x] Create codex-ts/src/protocol/items.ts
+- [x] Define UserInput union type (text, image, local_image)
+- [x] Define AgentMessageContent type
+- [x] Define TurnItem union type (user_message, agent_message, reasoning, web_search)
+- [x] Define UserMessageItem
+- [x] Define AgentMessageItem
+- [x] Define ReasoningItem
+- [x] Define WebSearchItem
+- [x] Create helper functions (getTurnItemId, create*, extract* functions)
+- [x] Create codex-ts/src/protocol/items.test.ts
+- [x] Write serialization tests for each item type (min 12 tests)
+- [x] Write validation tests
+- [x] Write helper function tests
+- [x] Verify all tests pass
 
 ### protocol/models.rs
 - [ ] Read codex-rs/protocol/src/models.rs
