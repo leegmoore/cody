@@ -8,8 +8,8 @@ This project ports portable, algorithmic modules from the codex-rs Rust workspac
 
 ## Status
 
-- **Modules Ported**: 16
-- **Tests Passing**: 138
+- **Modules Ported**: 17
+- **Tests Passing**: 144
 - **Test Coverage**: Comprehensive unit tests ported from Rust
 
 See [PORTING_STATUS.md](./PORTING_STATUS.md) for detailed porting progress and rationale.
@@ -69,6 +69,13 @@ npm run type-check
 - **utils/json-to-toml** - JSON to TOML conversion
   - `jsonToToml()` - Recursive conversion with proper type handling
 
+- **utils/tokenizer** - Token counting and encoding/decoding
+  - `Tokenizer` - Wrapper around tiktoken for token operations
+  - `encode()` - Text to token IDs
+  - `decode()` - Token IDs to text
+  - `count()` - Count tokens in text
+  - Support for O200kBase and Cl100kBase encodings
+
 ### Async Utilities
 - **async-utils** - Promise cancellation utilities
   - `orCancel()` - Race promise against AbortSignal (Rust tokio::select! pattern)
@@ -120,7 +127,7 @@ npm run type-check
 ## Test Coverage
 
 ```
-Test Files:  17 passed (17)
-Tests:       138 passed (138)
+Test Files:  18 passed (18)
+Tests:       144 passed (144)
 Success Rate: 100%
 ```
