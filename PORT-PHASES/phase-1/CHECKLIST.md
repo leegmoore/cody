@@ -19,16 +19,17 @@
 ## Protocol Module Porting
 
 ### protocol/config-types.ts
-- [ ] Read codex-rs/protocol/src/config_types.rs
-- [ ] Create codex-ts/src/protocol/config-types.ts
-- [ ] Define SandboxMode enum
-- [ ] Define ApprovalMode enum
-- [ ] Define ModelProviderConfig types
-- [ ] Define McpServerConfig types
-- [ ] Create codex-ts/src/protocol/config-types.test.ts
-- [ ] Write serialization tests (min 8 tests)
-- [ ] Write validation tests
-- [ ] Verify all tests pass
+- [x] Read codex-rs/protocol/src/config_types.rs
+- [x] Create codex-ts/src/protocol/config-types.ts
+- [x] Define SandboxMode enum
+- [x] Define ReasoningEffort enum
+- [x] Define ReasoningSummary enum
+- [x] Define Verbosity enum
+- [x] Define ForcedLoginMethod enum
+- [x] Create codex-ts/src/protocol/config-types.test.ts
+- [x] Write serialization tests (min 8 tests)
+- [x] Write validation tests
+- [x] Verify all tests pass
 
 ### protocol/account.ts
 - [x] Read codex-rs/protocol/src/account.rs
