@@ -1,8 +1,8 @@
 # Phase 1 Checklist
 
-**Phase Start Date:** _Not started_
+**Phase Start Date:** 2025-11-05
 **Phase End Date:** _Not completed_
-**Current Status:** Not Started
+**Current Status:** In Progress
 
 ---
 
@@ -31,31 +31,31 @@
 - [ ] Verify all tests pass
 
 ### protocol/account.ts
-- [ ] Read codex-rs/protocol/src/account.rs
-- [ ] Create codex-ts/src/protocol/account.ts
-- [ ] Define Account/User types
-- [ ] Define authentication status types
-- [ ] Create codex-ts/src/protocol/account.test.ts
-- [ ] Write serialization tests (min 5 tests)
-- [ ] Verify all tests pass
+- [x] Read codex-rs/protocol/src/account.rs
+- [x] Create codex-ts/src/protocol/account.ts
+- [x] Define Account/User types
+- [x] Define authentication status types
+- [x] Create codex-ts/src/protocol/account.test.ts
+- [x] Write serialization tests (min 5 tests)
+- [x] Verify all tests pass
 
 ### protocol/message-history.ts
-- [ ] Read codex-rs/protocol/src/message_history.rs
-- [ ] Create codex-ts/src/protocol/message-history.ts
-- [ ] Define message history types
-- [ ] Define turn tracking types
-- [ ] Create codex-ts/src/protocol/message-history.test.ts
-- [ ] Write tests (min 5 tests)
-- [ ] Verify all tests pass
+- [x] Read codex-rs/protocol/src/message_history.rs
+- [x] Create codex-ts/src/protocol/message-history.ts
+- [x] Define message history types
+- [x] Define turn tracking types
+- [x] Create codex-ts/src/protocol/message-history.test.ts
+- [x] Write tests (min 5 tests)
+- [x] Verify all tests pass
 
 ### protocol/custom-prompts.ts
-- [ ] Read codex-rs/protocol/src/custom_prompts.rs
-- [ ] Create codex-ts/src/protocol/custom-prompts.ts
-- [ ] Define prompt template types
-- [ ] Define placeholder handling
-- [ ] Create codex-ts/src/protocol/custom-prompts.test.ts
-- [ ] Write tests (min 6 tests)
-- [ ] Verify all tests pass
+- [x] Read codex-rs/protocol/src/custom_prompts.rs
+- [x] Create codex-ts/src/protocol/custom-prompts.ts
+- [x] Define prompt template types
+- [x] Define placeholder handling
+- [x] Create codex-ts/src/protocol/custom-prompts.test.ts
+- [x] Write tests (min 6 tests)
+- [x] Verify all tests pass
 
 ### protocol/plan-tool.ts
 - [ ] Read codex-rs/protocol/src/plan_tool.rs
