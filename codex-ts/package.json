@@ -22,6 +22,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "lru-cache": "^11.2.2"
   }
 }
