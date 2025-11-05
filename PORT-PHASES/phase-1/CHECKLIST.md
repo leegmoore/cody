@@ -58,13 +58,13 @@
 - [x] Verify all tests pass
 
 ### protocol/plan-tool.ts
-- [ ] Read codex-rs/protocol/src/plan_tool.rs
-- [ ] Create codex-ts/src/protocol/plan-tool.ts
-- [ ] Define TodoItem types
-- [ ] Define plan tracking types
-- [ ] Create codex-ts/src/protocol/plan-tool.test.ts
-- [ ] Write tests (min 6 tests)
-- [ ] Verify all tests pass
+- [x] Read codex-rs/protocol/src/plan_tool.rs
+- [x] Create codex-ts/src/protocol/plan-tool.ts
+- [x] Define TodoItem types
+- [x] Define plan tracking types
+- [x] Create codex-ts/src/protocol/plan-tool.test.ts
+- [x] Write tests (min 6 tests)
+- [x] Verify all tests pass
 
 ### protocol/items.ts
 - [ ] Read codex-rs/protocol/src/items.rs
