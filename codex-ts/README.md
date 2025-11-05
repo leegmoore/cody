@@ -8,7 +8,7 @@ This project ports portable, algorithmic modules from the codex-rs Rust workspac
 
 ## Status
 
-- **Modules Ported**: 17
+- **Modules Ported**: 20
 - **Tests Passing**: 144
 - **Test Coverage**: Comprehensive unit tests ported from Rust
 
@@ -56,6 +56,19 @@ npm run type-check
   - `ConversationId` class - Time-ordered unique conversation IDs
   - `fromString()` - Parse UUID strings
   - `equals()` - Equality comparison
+
+- **protocol/user-input** - User input type definitions
+  - `UserInput` type - Tagged union for text, image, and local image inputs
+  - Helper functions for creating input variants
+
+- **protocol/parse-command** - Parsed shell command types
+  - `ParsedCommand` type - Categorizes commands by intent (read, list, search, unknown)
+  - Helper functions for creating command variants
+
+- **protocol/approvals** - Approval request types
+  - `SandboxRiskLevel` enum - Risk levels for commands
+  - `ExecApprovalRequestEvent` - Exec approval requests
+  - `ApplyPatchApprovalRequestEvent` - File change approval requests
 
 ### Utils
 - **utils/string** - UTF-8 safe string truncation at character boundaries
