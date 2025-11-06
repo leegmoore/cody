@@ -1,0 +1,64 @@
+===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 4.1 =====
+
+ROLE: You are a TypeScript developer porting the Codex Rust codebase to TypeScript.
+
+PROJECT: Codex is an AI coding agent from OpenAI. We're porting from Rust to TypeScript to create a pure library (@openai/codex-core) that can be used without subprocess overhead.
+
+STRATEGY: Test-Driven Development - port Rust tests first, then implement. Use stateless logs to track progress across sessions.
+
+CURRENT PHASE: Phase 4.1 - Port Existing Client (6 modules - OpenAI Responses + Chat APIs)
+
+PREVIOUS STATUS:
+- Phase 3 ✅ COMPLETE (163 tests: execution, tools, sandboxing)
+- Phase 4 partial (mcp-types, ollama complete: 57 tests)
+
+NOTE: Workspace is /Users/leemoore/code/codex-port-02
+(TypeScript port is in codex-ts/ subdirectory)
+
+FIRST: Read these logs to understand status (all in codex-ts/):
+- Read codex-ts/PORT_LOG_MASTER.md (overall status)
+- Read codex-ts/PORT_LOG_PHASE3.md (Phase 3 summary)
+- Read codex-ts/DEV_STANDARDS.md (code standards)
+
+THEN: Read full instructions:
+- Read PORT-PHASES/phase-4.1/README.md (detailed plan)
+- Read PORT-PHASES/phase-4.1/STATUS.md (current progress)
+- Read PORT-PHASES/phase-4.1/CHECKLIST.md (task list)
+
+TASK: Port OpenAI client modules (Responses + Chat APIs) using Test-Driven Development:
+1. Read Rust source: codex-rs/core/src/[MODULE].rs
+2. Read Rust tests: codex-rs/core/tests/
+3. Create codex-ts/src/core/client/[FILE].test.ts - port tests
+4. Run tests (should fail): cd codex-ts && npm test
+5. Create codex-ts/src/core/client/[FILE].ts - implement until tests pass
+6. Run: npm test (must pass!)
+7. Type check: npx tsc --noEmit
+8. Format: npm run format
+9. Commit: git add -A && git commit -m "phase4.1: [MODULE]" && git push
+10. Update PORT-PHASES/phase-4.1/CHECKLIST.md
+11. Update PORT-PHASES/phase-4.1/STATUS.md
+12. Update codex-ts/PORT_LOG_MASTER.md
+
+MODULE ORDER (6 modules):
+1. client-common - Foundation types (ResponseEvent, ResponseStream, Prompt)
+2. model-provider-info - Provider pattern (WireApi enum, ModelProviderInfo)
+3. stub-auth - Temporary auth stubs for testing (replace in Phase 5)
+4. chat-completions - Chat API + delta aggregation adapter
+5. client - ModelClient + Responses API implementation
+6. tool-converters - Tool format conversion functions
+
+DEV STANDARDS:
+- Use npm (not pnpm/bun)
+- TypeScript strict mode (no 'any' types)
+- Prettier formatting
+- 100% test pass rate
+- JSDoc comments for public APIs
+
+BEFORE ENDING SESSION:
+1. Update PORT-PHASES/phase-4.1/CHECKLIST.md (check off items)
+2. Update PORT-PHASES/phase-4.1/STATUS.md (session log)
+3. Update codex-ts/PORT_LOG_MASTER.md
+4. git add -A && git commit -m "phase4.1: [what you did]" && git push
+5. Report: modules done, tests passing, what's next
+
+START by reading STATUS.md, then begin with client-common (foundation).
