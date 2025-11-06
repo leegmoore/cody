@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 2/7
-- **Tests Passing:** 60/60
-- **Status:** 🔄 IN PROGRESS (29% Complete!)
+- **Modules Completed:** 3/7
+- **Tests Passing:** 92/92
+- **Status:** 🔄 IN PROGRESS (43% Complete!)
 
 ---
 
@@ -20,7 +20,7 @@
 |--------|--------|-------|-------|
 | apply-patch | ✅ COMPLETE | 49/49 | Parser, seek-sequence, apply logic, bash stub |
 | file-search | ✅ COMPLETE | 11/11 | Fuzzy file search with fuzzysort + globby |
-| execpolicy | ⏳ WAITING | 0 | Standalone, can start now |
+| execpolicy | ✅ COMPLETE | 32/32 | JSON-based policy checking (simplified from Starlark) |
 | core/sandboxing | ⏳ WAITING | 0 | Depends on execpolicy |
 | exec | ⏳ WAITING | 0 | Integration module |
 | core/exec | ⏳ WAITING | 0 | Integration module |
@@ -103,3 +103,51 @@
 - Using globby instead of ignore crate (parallel walking)
 - Simplified worker thread model (async/await)
 - Scores may differ slightly (different fuzzy algorithms)
+
+---
+
+### 2025-11-06 - Session 3: execpolicy
+**Duration:** ~3 hours
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Read Rust source (lib.rs, policy.rs, program.rs, checker logic) - ~1,800 LOC
+- Analyzed Starlark-based policy system
+- Designed JSON-based policy format as pragmatic alternative
+- Created TypeScript structure:
+  - types.ts - Type definitions for policies, specs, and results
+  - arg-types.ts - Helper functions for building policies
+  - checker.ts - Core policy checking logic
+  - policy.ts - Policy management and verification
+  - default-policy.ts - Default policy in JSON format
+- Ported 32 tests covering:
+  - Safe commands (ls, cat, pwd, printenv, head, grep, echo)
+  - Match commands (cp, mkdir - require file approval)
+  - Forbidden commands (rm, sudo, deployment commands)
+  - Unverified commands (unknown programs, bad args)
+  - Positive/negative example verification
+  - Option parsing (flags and values)
+  - Argument pattern matching
+- All tests passing: 32/32 ✅
+
+**Key Features Implemented:**
+- Command classification (safe, match, forbidden, unverified)
+- Argument type validation (ReadableFile, WriteableFile, etc.)
+- Option parsing (flags and values)
+- Pattern matching for arguments (literal, single, one-or-more, zero-or-more)
+- Forbidden program regex patterns
+- Forbidden substring detection
+- Policy validation with positive/negative examples
+- Default policy covering 15+ common commands
+
+**Implementation Decisions:**
+- **JSON instead of Starlark**: The Rust version uses Starlark (Python-like DSL) for policy files. No mature Starlark parser exists for TypeScript, so we created a JSON-based format that can express the same rules. This is pragmatic and maintainable.
+- **Simplified from 1,800 to ~600 lines**: Focused on core checking logic, deferred Starlark parser
+- **Same semantics**: The checking logic matches Rust behavior
+- **Type-safe policies**: TypeScript interfaces ensure policy correctness
+
+**Future Enhancements:**
+- Starlark parser (if needed)
+- Option bundling support (e.g., -al → -a -l)
+- Combined format support (--option=value)
+- More sophisticated sed command parsing

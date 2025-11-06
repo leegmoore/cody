@@ -26,11 +26,11 @@
 - [ ] Update logs
 
 ### execpolicy
-- [ ] Read codex-rs/execpolicy/src/lib.rs
-- [ ] Create codex-ts/src/execpolicy/index.ts
-- [ ] Port policy parsing
-- [ ] Create tests
-- [ ] Verify tests pass
+- [x] Read codex-rs/execpolicy/src/lib.rs
+- [x] Create codex-ts/src/execpolicy/index.ts
+- [x] Port policy parsing (JSON-based, simplified from Starlark)
+- [x] Create tests (32 tests)
+- [x] Verify tests pass (32/32 ✅)
 - [ ] Update logs
 
 ---

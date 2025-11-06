@@ -1,6 +1,6 @@
 # Codex TypeScript Port - Master Log
 
-**Last Updated:** 2025-11-05
+**Last Updated:** 2025-11-06
 **Project Status:** 🔄 PHASE 3 IN PROGRESS
 
 ---
@@ -8,9 +8,9 @@
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 33 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 2)
-- **In Progress:** Phase 3 (2/7 modules done - 29% complete!)
-- **Test Pass Rate:** 592/592 (100%) 🎉
+- **Completed:** 34 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 3)
+- **In Progress:** Phase 3 (3/7 modules done - 43% complete!)
+- **Test Pass Rate:** 624/624 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase3-apply-patch-011CUqc5Es1kzrtVbqh86kUs
@@ -93,10 +93,10 @@
 
 ---
 
-### 🔄 Phase 3: Execution & Tools (In Progress - 29% Complete!)
-**Status:** IN PROGRESS (2/7 modules complete)
+### 🔄 Phase 3: Execution & Tools (In Progress - 43% Complete!)
+**Status:** IN PROGRESS (3/7 modules complete)
 **Start Date:** 2025-11-05
-**Duration So Far:** ~2.5 hours
+**Duration So Far:** ~5.5 hours
 **Dependencies:** Phase 2 ✅
 **Log:** [PORT-PHASES/phase-3/STATUS.md](../PORT-PHASES/phase-3/STATUS.md)
 
@@ -104,13 +104,13 @@
 |--------|--------|--------------|-------|-------|
 | apply-patch | ✅ DONE | - | 49/49 | Parser, seek-sequence, apply logic |
 | file-search | ✅ DONE | fuzzysort, globby | 11/11 | Fuzzy file search with gitignore |
-| execpolicy | ⏳ WAITING | - | - | Standalone |
+| execpolicy | ✅ DONE | - | 32/32 | JSON-based policy checking |
 | core/sandboxing | ⏳ WAITING | execpolicy | - | Policy enforcement |
 | exec | ⏳ WAITING | execpolicy | - | Execution interface |
 | core/exec | ⏳ WAITING | exec, core/sandboxing | - | Execution engine |
 | core/tools | ⏳ WAITING | all above | - | Tool coordination |
 
-**Total So Far:** 60 tests (100% pass rate)
+**Total So Far:** 92 tests (100% pass rate)
 
 ---
 
