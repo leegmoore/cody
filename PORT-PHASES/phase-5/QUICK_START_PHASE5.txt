@@ -1,0 +1,73 @@
+===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 5 =====
+
+ROLE: You are a TypeScript developer porting the Codex Rust codebase to TypeScript.
+
+PROJECT: Codex is an AI coding agent from OpenAI. We're porting from Rust to TypeScript to create a pure library (@openai/codex-core) that can be used without subprocess overhead.
+
+STRATEGY: Test-Driven Development - port Rust tests first, then implement. Use stateless logs to track progress across sessions.
+
+CURRENT PHASE: Phase 5 - Authentication & CLI (9 modules, builds on Phases 1-4)
+
+PHASE 4 STATUS: ✅ COMPLETE (model integration and MCP support)
+
+NOTE: Workspace is /Users/leemoore/code/codex-port-02
+(TypeScript port is in codex-ts/ subdirectory)
+
+FIRST: Read these logs to understand status (all in codex-ts/):
+- Read codex-ts/PORT_LOG_MASTER.md (overall status)
+- Read codex-ts/PORT_LOG_PHASE4.md (Phase 4 summary)
+- Read codex-ts/KNOWN_BUGS.md (bug tracking)
+- Read codex-ts/DEV_STANDARDS.md (code standards)
+
+THEN: Read full instructions:
+- Read PORT-PHASES/phase-5/README.md (detailed plan)
+- Read PORT-PHASES/phase-5/STATUS.md (current progress)
+- Read PORT-PHASES/phase-5/CHECKLIST.md (task list)
+
+TASK: Port Phase 5 modules (auth & CLI) using Test-Driven Development:
+1. Read Rust source: codex-rs/[MODULE]/src/
+2. Read Rust tests: codex-rs/[MODULE]/tests/ (if exists)
+3. Create codex-ts/src/[MODULE]/[FILE].test.ts - port tests to TypeScript/Vitest
+4. Run tests (should fail): cd codex-ts && npm test
+5. Create codex-ts/src/[MODULE]/[FILE].ts - implement until tests pass
+6. Run: npm test (must pass!)
+7. Type check: npx tsc --noEmit (must pass!)
+8. Format: npm run format
+9. Commit and push: git add -A && git commit -m "phase5: [MODULE]" && git push
+10. Update PORT-PHASES/phase-5/CHECKLIST.md (check off completed items)
+11. Update PORT-PHASES/phase-5/STATUS.md (add session log)
+12. Update codex-ts/PORT_LOG_MASTER.md (update module status)
+13. If bugs found: add to codex-ts/KNOWN_BUGS.md (don't fix unless critical)
+
+START ORDER (9 modules):
+1. keyring-store - Secure credential storage
+2. login - Login flow orchestration
+3. core/auth - AuthManager integration
+4. cli - Command-line interface
+5. app-server-protocol - Server protocol types
+6. app-server - IDE integration server
+7. utils/git - Git operations
+8. utils/image - Image processing
+9. utils/pty - Pseudo-terminal handling
+
+DEV STANDARDS (see codex-ts/DEV_STANDARDS.md):
+- Use npm (not pnpm/bun)
+- TypeScript strict mode (no 'any' types)
+- Prettier handles formatting (single quotes, 100 char width)
+- Every module needs comprehensive tests
+- 100% test pass rate maintained
+- Clear, descriptive variable names
+- JSDoc comments for public APIs
+
+BEFORE ENDING SESSION:
+1. Update PORT-PHASES/phase-5/CHECKLIST.md (check off completed items)
+2. Update PORT-PHASES/phase-5/STATUS.md (add session log with what you did)
+3. Update codex-ts/PORT_LOG_MASTER.md (update module progress)
+4. Run: git add -A
+5. Run: git commit -m "phase5: [description of what you completed]"
+6. Run: git push
+7. Report to user: modules completed, test count, what's next
+
+GO! Start by reading STATUS.md to see current progress, then continue from where you left off.
+
+============================================================
