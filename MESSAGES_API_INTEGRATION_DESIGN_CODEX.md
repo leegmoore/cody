@@ -161,6 +161,181 @@ State machine tracks active `tool_use` entries to ensure we do not emit duplicat
 - Use Node.js `ReadableStream` `pipeTo` with manual chunk reading to detect slow consumers; throttle `OutputTextDelta` dispatch via microtask queue.
 - **Tool calls are sequential:** Anthropic Claude currently serializes tool execution (limitation of the Messages API, not Codex design). Multiple `tool_use` blocks may appear in one response, but Claude waits for all tool_result blocks before continuing. Our adapter tracks multiple tool_use IDs via index-based mapping, supporting parallel tracking even though execution is sequential. If future Anthropic versions enable true parallel execution, the architecture already supports it.
 
+#### 2.7 Parallel Tool Execution Implementation
+**State Management:**
+```ts
+// Track by index for SSE parsing, by ID for result matching
+private toolByIndex: Map<number, { id: string; name: string; argsFragments: string[] }> = new Map();
+private toolCallsById: Map<string, number> = new Map(); // quick lookup
+```
+
+**Execution Flow:**
+1. During streaming, accumulate tool_use blocks in `toolByIndex`
+2. On `message_stop`, extract all finalized tools
+3. Execute in parallel: `Promise.all(tools.map(t => harness.execute(t)))`
+4. Marshall results into ONE user message with multiple tool_result blocks
+5. Ordering: by original content_block index (deterministic)
+
+**Code Example:**
+```ts
+// After message_stop, collect all tools
+const tools = Array.from(toolByIndex.values());
+
+// Execute in parallel
+const results = await Promise.all(
+  tools.map(async (tc) => {
+    const output = await toolHarness.execute(tc.name, JSON.parse(tc.argsFragments.join('')));
+    return { tool_use_id: tc.id, content: serializeToolOutput(output) };
+  })
+);
+
+// Build next user message
+const userMessage: AnthropicMessage = {
+  role: 'user',
+  content: results.map(r => ({ type: 'tool_result', tool_use_id: r.tool_use_id, content: r.content }))
+};
+```
+
+#### 2.8 System Prompt Handling
+**Codex → Messages mapping:**
+- Codex `base_instructions` → Anthropic `system` field (string format preferred)
+- Send `system` on every request for determinism
+- If system prompt changes mid-session, next request uses updated value
+
+**Cross-API comparison:**
+| API | System Prompt Location |
+|-----|----------------------|
+| Responses | `instructions` field |
+| Chat | First message `{role: 'system', content}` |
+| Messages | Top-level `system` field |
+
+**Conversion:**
+```ts
+function toAnthropicSystem(baseInstructions: string | undefined): string | undefined {
+  return baseInstructions?.trim() || undefined;
+}
+```
+
+#### 2.9 Token Usage Normalization
+**Anthropic fields → Codex TokenUsage:**
+```ts
+function normalizeUsage(usage?: {
+  input_tokens?: number;
+  output_tokens?: number;
+  reasoning_tokens?: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+}): TokenUsageInfo {
+  const u = usage ?? {};
+  return {
+    total_token_usage: {
+      input_tokens: u.input_tokens ?? 0,
+      cached_input_tokens: u.cache_read_input_tokens ?? 0,
+      output_tokens: u.output_tokens ?? 0,
+      reasoning_tokens: u.reasoning_tokens ?? 0,
+    },
+    last_token_usage: {
+      input_tokens: u.input_tokens ?? 0,
+      cached_input_tokens: u.cache_read_input_tokens ?? 0,
+      output_tokens: u.output_tokens ?? 0,
+      reasoning_tokens: u.reasoning_tokens ?? 0,
+    },
+  };
+}
+```
+
+**Field mapping:**
+- `input_tokens` → `input_tokens`
+- `output_tokens` → `output_tokens`
+- `reasoning_tokens` → `reasoning_tokens`
+- `cache_read_input_tokens` → `cached_input_tokens`
+- `cache_creation_input_tokens` → informational only (don't count)
+
+#### 2.10 Error Handling & Retry Strategy
+**Anthropic error types → Codex:**
+| Anthropic Error | HTTP | Codex Handling | Retry? |
+|----------------|------|----------------|--------|
+| invalid_request_error | 400 | `{type: 'error', message}` | No |
+| authentication_error | 401 | `{type: 'error', message}` | No |
+| permission_error | 403 | `{type: 'error', message}` | No |
+| not_found_error | 404 | `{type: 'error', message}` | No |
+| rate_limit_error | 429 | Retry with backoff | Yes |
+| overloaded_error | 529/503 | Retry with backoff | Yes |
+| api_error | 5xx | Retry with backoff | Yes |
+
+**Rate limit headers:**
+- `anthropic-ratelimit-requests-limit` → `requests.limit`
+- `anthropic-ratelimit-requests-remaining` → `requests.remaining`
+- `anthropic-ratelimit-requests-reset` → `requests.reset_at`
+- `anthropic-ratelimit-tokens-limit` → `tokens.limit`
+- `anthropic-ratelimit-tokens-remaining` → `tokens.remaining`
+- `anthropic-ratelimit-tokens-reset` → `tokens.reset_at`
+
+**Retry parameters:**
+- Initial: 250ms
+- Factor: 2x
+- Jitter: ±20%
+- Max delay: 4s
+- Max attempts: 6
+
+#### 2.11 Streaming Cancellation
+```ts
+export async function streamMessages(
+  req: MessagesApiRequest,
+  signal: AbortSignal
+): AsyncGenerator<ResponseEvent> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(req),
+    signal
+  });
+  const reader = res.body!.getReader();
+  try {
+    // Parse SSE...
+  } catch (err) {
+    if ((err as any).name === 'AbortError') {
+      yield { type: 'turn_aborted', reason: 'user_requested' };
+    } else {
+      yield { type: 'stream_error', error: String(err) };
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+```
+
+#### 2.12 Authentication & Configuration
+**Environment variable:** `ANTHROPIC_API_KEY`
+
+**Provider config:**
+```ts
+export interface AnthropicProviderConfig {
+  baseUrl?: string; // default: 'https://api.anthropic.com'
+  anthropicVersion?: string; // default: '2023-06-01'
+  apiKey?: string; // if omitted, read from ANTHROPIC_API_KEY
+  reasoningEmission?: 'none' | 'readable' | 'raw'; // default 'readable'
+}
+```
+
+**Header construction:**
+```ts
+function anthropicHeaders(cfg: AnthropicProviderConfig): Record<string, string> {
+  const key = cfg.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
+  if (!key) throw new Error('Missing Anthropic API key');
+  return {
+    'x-api-key': key,
+    'anthropic-version': cfg.anthropicVersion ?? '2023-06-01',
+    'content-type': 'application/json',
+  };
+}
+```
+
+#### 2.13 Stop Sequences
+- Optional `stop_sequences` parameter supported
+- Pass-through from Codex config if exposed
+- Default: unset
+
 ### 3. Tool Harness
 
 #### 3.1 Tool Format Specification
@@ -372,7 +547,27 @@ State machine tracks active `tool_use` entries to ensure we do not emit duplicat
 9. **Documentation & Samples**: Update `docs/` (e.g., provider configuration guide) with Anthropic setup, environment variable instructions.
 10. **Review & Iteration**: Run targeted tests (`pnpm vitest --run messages`), gather peer review, adjust as necessary.
 
-### 6. Risks & Mitigations
+### 6. Test Specifications (Updated)
+
+**Total tests: 135+** (expanded from 115)
+
+**Test categories:**
+1. Request formatting: 15 tests (RF-01 through RF-15)
+2. Response parsing: 20 tests (RP-01 through RP-20)
+3. Streaming adapter: 25 tests (SE-01 through SE-25)
+4. Tool calling: 35 tests (TC-01 through TC-30, plus 5 parallel tool tests)
+5. Error handling: 20 tests (EH-01 through EH-15, plus 5 error mapping tests)
+6. Token usage: 5 tests (new)
+7. Cancellation: 5 tests (new)
+8. Integration: 10 tests (IT-01 through IT-10)
+
+**New test additions:**
+- Parallel tool execution (5 tests)
+- Error code mappings (5 tests)
+- Token field mappings (5 tests)
+- Streaming cancellation (5 tests)
+
+### 7. Risks & Mitigations
 - **Streaming drift due to unbounded thinking text**: Large reasoning sections could flood UI. *Mitigation*: throttle `ReasoningContentDelta`, add configurable cap and `ReasoningSummaryPartAdded` markers for chunking.
 - **Tool schema incompatibility**: Freeform or non-JSONSchema tools unsupported. *Mitigation*: validate at config load, provide actionable error.
 - **Anthropic API changes (beta fields)**: Future changes may break assumptions. *Mitigation*: centralize version string and feature flags; expose provider config to override `anthropicVersion`.
