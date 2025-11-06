@@ -1,19 +1,19 @@
 # Codex TypeScript Port - Master Log
 
 **Last Updated:** 2025-11-06
-**Project Status:** 🔄 PHASE 3 IN PROGRESS
+**Project Status:** 🔄 PHASE 4 IN PROGRESS
 
 ---
 
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 38 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7)
-- **In Progress:** Ready for Phase 4!
-- **Test Pass Rate:** 695/695 (100%) 🎉
+- **Completed:** 40 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 2)
+- **In Progress:** Phase 4 - Model Integration & MCP (2/9 modules)
+- **Test Pass Rate:** 752/752 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
-- **Current Branch:** claude/phase3-apply-patch-011CUqc5Es1kzrtVbqh86kUs
+- **Current Branch:** claude/phase4-model-integration-mcp-011CUrtJtUBGfBqdNLCEh5GA
 
 ---
 
@@ -115,23 +115,26 @@
 
 ---
 
-### ⏳ Phase 4: Model Integration & MCP
-**Status:** NOT STARTED
+### 🔄 Phase 4: Model Integration & MCP
+**Status:** IN PROGRESS (2/9 modules complete)
+**Start Date:** 2025-11-06
 **Dependencies:** Phase 2 & 3
+**Log:** [PORT-PHASES/phase-4/STATUS.md](../PORT-PHASES/phase-4/STATUS.md)
 
-| Module | Status | Dependencies | Estimated Hours |
-|--------|--------|--------------|-----------------|
-| core/client | ⏳ WAITING | protocol/models | 12-16 hours |
-| core/chat_completions | ⏳ WAITING | core/client | 8-12 hours |
-| backend-client | ⏳ WAITING | - | 12-16 hours |
-| ollama/client | ⏳ WAITING | ollama/parser | 6-8 hours |
-| chatgpt | ⏳ WAITING | backend-client | 8-12 hours |
-| mcp-server | ⏳ WAITING | mcp-types | 12-16 hours |
-| mcp-types | ⏳ WAITING | - | 4-6 hours |
-| rmcp-client | ⏳ WAITING | mcp-types | 6-8 hours |
-| core/mcp | ⏳ WAITING | all above | 8-12 hours |
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
+| mcp-types | ✅ DONE | - | 12/12 | Official SDK re-exports |
+| ollama/client | ✅ DONE | ollama/parser | 45/45 | Full client + progress |
+| core/client | ⏳ WAITING | protocol/models | 0 | Model client interface |
+| core/chat_completions | ⏳ WAITING | core/client | 0 | Streaming handler |
+| backend-client | ⏳ WAITING | - | 0 | API communication |
+| chatgpt | ⏳ WAITING | backend-client | 0 | ChatGPT features |
+| rmcp-client | ⏳ WAITING | mcp-types | 0 | MCP client |
+| mcp-server | ⏳ WAITING | mcp-types | 0 | MCP server management |
+| core/mcp | ⏳ WAITING | all above | 0 | MCP integration |
 
-**Total Estimated:** 76-106 hours
+**Total:** 57 tests (100% pass rate)
+**Estimated Remaining:** 64-92 hours
 
 ---
 
