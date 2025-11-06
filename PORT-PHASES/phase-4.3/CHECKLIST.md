@@ -1,6 +1,6 @@
 # Phase 4.3 Checklist
 
-**Status:** In Progress (1/5 modules complete)
+**Status:** In Progress (2/5 modules complete)
 
 ---
 
@@ -27,15 +27,15 @@
 
 ## Module 2: chatgpt
 
-- [ ] Read codex-rs/chatgpt/src/
-- [ ] Create codex-ts/src/chatgpt/
-- [ ] Port ChatGPT client
-- [ ] Port token management
-- [ ] Port apply command integration
-- [ ] Port get task functionality
-- [ ] Create tests
-- [ ] Verify tests pass
-- [ ] Update logs
+- [x] Read codex-rs/chatgpt/src/
+- [x] Create codex-ts/src/chatgpt/
+- [x] Port ChatGPT client
+- [x] Port token management
+- [x] Port apply command integration
+- [x] Port get task functionality
+- [x] Create tests
+- [x] Verify tests pass
+- [x] Update logs
 
 ---
 

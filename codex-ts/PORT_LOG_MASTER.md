@@ -8,9 +8,9 @@
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 47 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 9)
+- **Completed:** 48 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 10)
 - **In Progress:** Phase 4.3 - Backend Services & MCP
-- **Test Pass Rate:** 847/847 (100%) 🎉
+- **Test Pass Rate:** 858/858 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase-4.3-backend-services-011CUsPuv4XZ8MjXDRXyT74v
@@ -116,7 +116,7 @@
 ---
 
 ### 🔄 Phase 4: Model Integration & MCP
-**Status:** IN PROGRESS (9/14 modules complete)
+**Status:** IN PROGRESS (10/14 modules complete)
 **Start Date:** 2025-11-06
 **Dependencies:** Phase 2 & 3
 **Log:** [PORT-PHASES/phase-4.3/STATUS.md](../PORT-PHASES/phase-4.3/STATUS.md)
@@ -147,13 +147,13 @@
 | Module | Status | Dependencies | Tests | Notes |
 |--------|--------|--------------|-------|-------|
 | backend-client | ✅ DONE | - | 5/5 | Codex backend API (OpenAI-specific) |
-| chatgpt | ⏳ WAITING | backend-client | 0 | ChatGPT features |
+| chatgpt | ✅ DONE | backend-client | 11/11 | ChatGPT features (simplified, git deferred to Phase 5) |
 | rmcp-client | ⏳ WAITING | mcp-types | 0 | MCP client |
 | mcp-server | ⏳ WAITING | mcp-types | 0 | MCP server management |
 | core/mcp | ⏳ WAITING | all above | 0 | MCP integration |
 
-**Subtotal:** 5 tests (100% pass rate)
-**Duration:** Partial (2025-11-06, backend-client complete)
+**Subtotal:** 16 tests (100% pass rate)
+**Duration:** Partial (2025-11-06, 2/5 modules complete)
 
 #### Phase 4.5+: HTTP Client & Full Streaming (Deferred)
 | Module | Status | Dependencies | Tests | Notes |
@@ -162,9 +162,9 @@
 | SSE Parsing | ⏳ WAITING | HTTP Client | 0 | Server-sent events for streaming |
 | Full Streaming | ⏳ WAITING | SSE Parsing | 0 | Complete stream() implementation |
 
-**Phase 4 Total:** 176 tests (100% pass rate)
-**Progress:** 9/14 modules (64%)
-**Estimated Remaining:** 40-56 hours
+**Phase 4 Total:** 187 tests (100% pass rate)
+**Progress:** 10/14 modules (71%)
+**Estimated Remaining:** 32-48 hours
 
 ---
 
