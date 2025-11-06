@@ -730,7 +730,6 @@ Your design is successful if:
 
 ## Timeline
 
-**You have:** Unlimited time for this consultation - be thorough.
 
 **We need:** Complete design before implementation starts.
 
@@ -747,7 +746,18 @@ Your design is successful if:
 - Provide complete, actionable design
 - Don't rush - quality over speed
 
-**Your output will guide 2-4 weeks of implementation work, so thoroughness is critical.**
+**Your output will guide extensive of implementation work, so thoroughness is critical.**
+
+---
+
+## Output Instructions
+
+**Write your complete design document to:**
+`/Users/leemoore/code/codex-port-02/MESSAGES_API_INTEGRATION_DESIGN.md`
+
+**Format:** Markdown with clear sections, code examples, and diagrams.
+
+**Length:** As long as needed - thoroughness over brevity.
 
 ---
 
