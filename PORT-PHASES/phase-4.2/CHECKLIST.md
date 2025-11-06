@@ -31,13 +31,13 @@
 
 ## Stage 2: Tool Format Conversion
 
-- [ ] Create messages/tool-bridge.ts
-- [ ] Create messages/tool-bridge.test.ts
-- [ ] Write tests TC-01 through TC-10 (10 tests)
-- [ ] Implement createToolsJsonForMessagesApi()
-- [ ] Implement tool result converter
-- [ ] Write tool result tests (5 tests)
-- [ ] Verify all 15 tests pass
+- [x] Create messages/tool-bridge.ts
+- [x] Create messages/tool-bridge.test.ts
+- [x] Write tests TC-01 through TC-10 (10 tests)
+- [x] Implement createToolsJsonForMessagesApi()
+- [x] Implement tool result converter
+- [x] Write tool result tests (5 tests)
+- [x] Verify all 15 tests pass (all passing!)
 
 ---
 

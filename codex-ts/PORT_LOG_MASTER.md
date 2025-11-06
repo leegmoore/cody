@@ -9,8 +9,8 @@
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
 - **Completed:** 46 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 8)
-- **In Progress:** Phase 4.2 - Anthropic Messages API (Stage 1/11 complete)
-- **Test Pass Rate:** 854/854 (100%) 🎉
+- **In Progress:** Phase 4.2 - Anthropic Messages API (Stage 2/11 complete)
+- **Test Pass Rate:** 869/869 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase-4.2-anthropic-integration-011CUsKh6orPn46p3fGUcajm
@@ -147,7 +147,7 @@
 | Stage | Status | Tests | Notes |
 |-------|--------|-------|-------|
 | 1. Foundation & Types | ✅ DONE | 12/10 | Complete type definitions |
-| 2. Tool Conversion | ⏳ NEXT | 0/15 | Test-driven |
+| 2. Tool Conversion | ✅ DONE | 15/15 | Schema conversion + validation |
 | 3. Request Builder | ⏳ WAITING | 0/15 | Test-driven |
 | 4. SSE Parser | ⏳ WAITING | 0/15 | With fixtures |
 | 5. Streaming Adapter | ⏳ WAITING | 0/25 | Critical stage |
@@ -158,7 +158,7 @@
 | 10. Error Handling | ⏳ WAITING | 0/30 | Retry + errors |
 | 11. Final Integration | ⏳ WAITING | 0 | Docs + polish |
 
-**Subtotal:** 12/167 tests (7% complete)
+**Subtotal:** 27/167 tests (16% complete)
 **Start Date:** 2025-11-06
 **Design Doc:** MESSAGES_API_INTEGRATION_DESIGN_CODEX.md
 **Workplan:** PORT-PHASES/phase-4.2/WORKPLAN.md
@@ -180,8 +180,8 @@
 | SSE Parsing | ⏳ WAITING | HTTP Client | 0 | Server-sent events for streaming |
 | Full Streaming | ⏳ WAITING | SSE Parsing | 0 | Complete stream() implementation |
 
-**Phase 4 Total:** 183 tests (100% pass rate - includes Stage 1 of Phase 4.2)
-**Progress:** 1/11 stages of Phase 4.2, 8/14 modules overall
+**Phase 4 Total:** 198 tests (100% pass rate - includes Stages 1-2 of Phase 4.2)
+**Progress:** 2/11 stages of Phase 4.2, 8/14 modules overall
 **Estimated Remaining:** 48-64 hours
 
 ---
