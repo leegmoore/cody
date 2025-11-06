@@ -1,0 +1,64 @@
+===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 4.3 =====
+
+ROLE: You are a TypeScript developer porting the Codex Rust codebase to TypeScript.
+
+PROJECT: Codex is an AI coding agent from OpenAI. We're porting from Rust to TypeScript to create a pure library (@openai/codex-core) that can be used without subprocess overhead.
+
+STRATEGY: Test-Driven Development - port Rust tests first, then implement. Use stateless logs to track progress across sessions.
+
+CURRENT PHASE: Phase 4.3 - Backend Services & MCP (5 modules)
+
+PREVIOUS STATUS:
+- Phase 4.1 ✅ COMPLETE (OpenAI Responses + Chat client)
+- Phase 4.2 ✅ COMPLETE (Anthropic Messages API integration)
+
+NOTE: Workspace is /Users/leemoore/code/codex-port-02
+(TypeScript port is in codex-ts/ subdirectory)
+
+FIRST: Read these logs to understand status:
+- Read codex-ts/PORT_LOG_MASTER.md (overall status)
+- Read codex-ts/DEV_STANDARDS.md (code standards)
+
+THEN: Read full instructions:
+- Read PORT-PHASES/phase-4.3/README.md (detailed plan)
+- Read PORT-PHASES/phase-4.3/STATUS.md (current progress)
+- Read PORT-PHASES/phase-4.3/CHECKLIST.md (task list)
+
+TASK: Port backend services and MCP modules using Test-Driven Development:
+1. Read Rust source: codex-rs/[MODULE]/src/
+2. Read Rust tests: codex-rs/[MODULE]/tests/ (if exists)
+3. Create codex-ts/src/[MODULE]/[FILE].test.ts - port tests
+4. Run tests (should fail): cd codex-ts && npm test
+5. Create codex-ts/src/[MODULE]/[FILE].ts - implement until tests pass
+6. Run: npm test (must pass!)
+7. Type check: npx tsc --noEmit
+8. Format: npm run format
+9. Commit: git add -A && git commit -m "phase4.3: [MODULE]" && git push
+10. Update PORT-PHASES/phase-4.3/CHECKLIST.md
+11. Update PORT-PHASES/phase-4.3/STATUS.md
+12. Update codex-ts/PORT_LOG_MASTER.md
+
+MODULE ORDER (5 modules):
+1. backend-client - Codex backend API (task management, rate limits)
+2. chatgpt - ChatGPT-specific features (token management, apply command)
+3. rmcp-client - RMCP client implementation
+4. mcp-server - MCP server process management
+5. core/mcp - MCP integration in core engine
+
+NOTE: backend-client and chatgpt are OpenAI/ChatGPT specific - no Anthropic equivalent
+
+DEV STANDARDS:
+- Use npm (not pnpm/bun)
+- TypeScript strict mode (no 'any' types)
+- Prettier formatting
+- 100% test pass rate
+- JSDoc comments for public APIs
+
+BEFORE ENDING SESSION:
+1. Update PORT-PHASES/phase-4.3/CHECKLIST.md (check off items)
+2. Update PORT-PHASES/phase-4.3/STATUS.md (session log)
+3. Update codex-ts/PORT_LOG_MASTER.md
+4. git add -A && git commit -m "phase4.3: [what you did]" && git push
+5. Report: modules done, tests passing, what's next
+
+START by reading STATUS.md, then begin with backend-client.
