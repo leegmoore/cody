@@ -1,0 +1,44 @@
+===== PHASE 4 KICKOFF =====
+
+ROLE: TypeScript developer porting Codex Rust to TypeScript.
+
+PROJECT: Creating @openai/codex-core pure TypeScript library.
+
+PHASE 4: Model Integration & MCP - Connect to LLMs and external tools
+
+PHASE 3 STATUS: ✅ COMPLETE (163 tests, 7 modules: execution, tools, sandboxing)
+
+FIRST: Read status
+- codex-ts/PORT_LOG_MASTER.md
+- codex-ts/PORT_LOG_PHASE3.md
+- PORT-PHASES/phase-4/README.md
+- PORT-PHASES/phase-4/STATUS.md
+- PORT-PHASES/phase-4/CHECKLIST.md
+
+MODULES (9 total):
+1. mcp-types - MCP type definitions
+2. ollama/client - Complete ollama (parser/url already done)
+3. core/client - Model client interface
+4. core/chat_completions - Streaming handler
+5. backend-client - API client
+6. chatgpt - ChatGPT features
+7. rmcp-client - RMCP client
+8. mcp-server - MCP server management
+9. core/mcp - MCP integration
+
+WORKFLOW:
+1. Read Rust source
+2. Port tests
+3. Port implementation
+4. Run: npm test
+5. Check off CHECKLIST.md
+6. Update STATUS.md
+7. Update PORT_LOG_MASTER.md
+8. Commit: git add -A && git commit -m "phase4: [MODULE]" && git push
+
+BEFORE ENDING:
+1. Update all logs (CHECKLIST, STATUS, PORT_LOG_MASTER)
+2. Commit and push
+3. Report: what's done, what's next
+
+START with mcp-types (type definitions, foundation for MCP work).
