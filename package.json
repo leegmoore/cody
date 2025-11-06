@@ -21,5 +21,9 @@
     "node": ">=22",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@10.8.1"
+  "packageManager": "pnpm@10.8.1",
+  "dependencies": {
+    "fuzzysort": "^3.1.0",
+    "globby": "^15.0.0"
+  }
 }
