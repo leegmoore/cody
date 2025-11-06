@@ -8,8 +8,8 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 1 / 6
-- **Tests Passing:** 32
+- **Modules Completed:** 2 / 6
+- **Tests Passing:** 54
 - **Status:** 🔄 IN PROGRESS
 
 ---
@@ -19,7 +19,7 @@
 | Module | Status | Tests | Notes |
 |--------|--------|-------|-------|
 | client-common | ✅ DONE | 32/32 | Foundation types ported |
-| model-provider-info | ⏳ WAITING | 0 | Provider abstraction |
+| model-provider-info | ✅ DONE | 22/22 | Provider abstraction complete |
 | stub-auth | ⏳ WAITING | 0 | Temporary for testing |
 | chat-completions | ⏳ WAITING | 0 | Chat API + aggregation |
 | client | ⏳ WAITING | 0 | ModelClient + Responses API |
@@ -58,3 +58,34 @@
 - Created minimal `ModelFamily` interface (will be expanded in later phases)
 - All Verbosity enum values map directly to OpenAI format
 - Clean discriminated unions for type safety
+
+### Session 2 - 2025-11-06 (Module 2: model-provider-info)
+
+**Goal:** Port provider abstraction and built-in registry
+
+**Work Completed:**
+- Ported `model-provider-info.ts` with provider system:
+  - `WireApi` enum (Responses, Chat)
+  - `ModelProviderInfo` interface with all configuration fields
+  - Built-in provider registry (`builtInModelProviders`)
+  - OSS provider factory functions
+  - Helper functions: `getFullUrl`, `getQueryString`, `isAzureResponsesEndpoint`
+  - Retry/timeout getters with defaults and caps
+- Created comprehensive test suite (`model-provider-info.test.ts`):
+  - 22 tests covering all provider configurations
+  - Tests for WireApi enum
+  - Tests for built-in providers (openai, oss)
+  - Tests for Azure endpoint detection
+  - 100% pass rate
+
+**Files Added:**
+- `codex-ts/src/core/client/model-provider-info.ts` (320 lines)
+- `codex-ts/src/core/client/model-provider-info.test.ts` (175 lines)
+
+**Test Results:** ✅ 22/22 passing
+
+**Notes:**
+- HTTP client integration deferred to later phases (Phase 4.5+)
+- Environment variable reading works at runtime
+- Azure endpoint detection covers all known URL patterns
+- Default retry/timeout values match Rust implementation

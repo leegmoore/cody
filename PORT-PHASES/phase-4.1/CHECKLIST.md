@@ -31,16 +31,16 @@
 
 ## Module 2: model-provider-info (Provider Pattern)
 
-- [ ] Read codex-rs/core/src/model_provider_info.rs
-- [ ] Create codex-ts/src/core/client/model-provider-info.ts
-- [ ] Port WireApi enum (Responses, Chat)
-- [ ] Port ModelProviderInfo interface
-- [ ] Port built-in provider registry
-- [ ] Port create request helper
-- [ ] Create model-provider-info.test.ts
-- [ ] Write tests (min 12 tests)
-- [ ] Verify tests pass
-- [ ] Update logs
+- [x] Read codex-rs/core/src/model_provider_info.rs
+- [x] Create codex-ts/src/core/client/model-provider-info.ts
+- [x] Port WireApi enum (Responses, Chat)
+- [x] Port ModelProviderInfo interface
+- [x] Port built-in provider registry
+- [x] Port create request helper
+- [x] Create model-provider-info.test.ts
+- [x] Write tests (22 tests - exceeded target!)
+- [x] Verify tests pass
+- [x] Update logs
 
 ---
 
