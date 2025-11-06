@@ -1,6 +1,6 @@
 # Script-Based Tool Harness Design Consultation
 
-**Role:** Senior Security Engineer & Runtime Architecture Expert
+**Role:** Senior Security Engineer, Principal Engineer & Runtime Architecture Expert
 
 **Task:** Design a secure, script-based tool harness that allows LLMs to execute TypeScript code in a sandboxed runtime, calling Codex tools programmatically instead of via structured tool calls.
 
