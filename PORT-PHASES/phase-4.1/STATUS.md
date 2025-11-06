@@ -8,8 +8,8 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 2 / 6
-- **Tests Passing:** 54
+- **Modules Completed:** 3 / 6
+- **Tests Passing:** 75
 - **Status:** 🔄 IN PROGRESS
 
 ---
@@ -20,7 +20,7 @@
 |--------|--------|-------|-------|
 | client-common | ✅ DONE | 32/32 | Foundation types ported |
 | model-provider-info | ✅ DONE | 22/22 | Provider abstraction complete |
-| stub-auth | ⏳ WAITING | 0 | Temporary for testing |
+| stub-auth | ✅ DONE | 21/21 | Temporary auth stubs for testing |
 | chat-completions | ⏳ WAITING | 0 | Chat API + aggregation |
 | client | ⏳ WAITING | 0 | ModelClient + Responses API |
 | tool-converters | ⏳ WAITING | 0 | Format conversion |
@@ -89,3 +89,36 @@
 - Environment variable reading works at runtime
 - Azure endpoint detection covers all known URL patterns
 - Default retry/timeout values match Rust implementation
+
+### Session 3 - 2025-11-06 (Module 3: stub-auth)
+
+**Goal:** Create temporary authentication stubs for testing
+
+**Work Completed:**
+- Created `stub-auth.ts` with minimal authentication support:
+  - `AuthMode` enum (ApiKey, ChatGPT)
+  - `CodexAuth` class with factory methods (`fromApiKey`, `fromChatGPT`)
+  - `getToken()` method for token retrieval
+  - `getAccountId()` stub (returns undefined)
+  - Environment variable reading: `readOpenaiApiKeyFromEnv()`
+  - Constants: `OPENAI_API_KEY_ENV_VAR`, `CODEX_API_KEY_ENV_VAR`
+- Created comprehensive test suite (`stub-auth.test.ts`):
+  - 21 tests covering all auth modes
+  - Tests for factory methods
+  - Tests for token retrieval
+  - Tests for environment variable reading (7 scenarios)
+  - Tests for constant exports
+  - 100% pass rate
+- Added TODO comments for Phase 5 full implementation
+
+**Files Added:**
+- `codex-ts/src/core/auth/stub-auth.ts` (145 lines)
+- `codex-ts/src/core/auth/stub-auth.test.ts` (183 lines)
+
+**Test Results:** ✅ 21/21 passing
+
+**Notes:**
+- Minimal stub implementation for Phase 4.1 testing only
+- Phase 5 will add: token refresh, auth storage, keyring, expiration
+- Environment variable reading supports both OPENAI_API_KEY and CODEX_API_KEY
+- Proper trimming and empty string handling

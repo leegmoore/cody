@@ -46,16 +46,16 @@
 
 ## Module 3: Stub Auth (Temporary)
 
-- [ ] Create codex-ts/src/core/auth/stub-auth.ts
-- [ ] Create simple AuthManager stub
-- [ ] Create CodexAuth stub
-- [ ] Support ApiKey and ChatGPT modes (minimal)
-- [ ] Return hardcoded tokens for testing
-- [ ] Create stub-auth.test.ts
-- [ ] Write tests (min 8 tests)
-- [ ] Verify tests pass
-- [ ] Update logs
-- [ ] Add TODO comments for Phase 5 replacement
+- [x] Create codex-ts/src/core/auth/stub-auth.ts
+- [x] Create simple AuthManager stub
+- [x] Create CodexAuth stub
+- [x] Support ApiKey and ChatGPT modes (minimal)
+- [x] Return hardcoded tokens for testing
+- [x] Create stub-auth.test.ts
+- [x] Write tests (21 tests - exceeded target!)
+- [x] Verify tests pass
+- [x] Update logs
+- [x] Add TODO comments for Phase 5 replacement
 
 ---
 
