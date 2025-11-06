@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 3/7
-- **Tests Passing:** 92/92
-- **Status:** 🔄 IN PROGRESS (43% Complete!)
+- **Modules Completed:** 4/7
+- **Tests Passing:** 116/116
+- **Status:** 🔄 IN PROGRESS (57% Complete!)
 
 ---
 
@@ -21,7 +21,7 @@
 | apply-patch | ✅ COMPLETE | 49/49 | Parser, seek-sequence, apply logic, bash stub |
 | file-search | ✅ COMPLETE | 11/11 | Fuzzy file search with fuzzysort + globby |
 | execpolicy | ✅ COMPLETE | 32/32 | JSON-based policy checking (simplified from Starlark) |
-| core/sandboxing | ⏳ WAITING | 0 | Depends on execpolicy |
+| core/sandboxing | ✅ COMPLETE | 24/24 | SandboxManager, platform detection, command wrapping |
 | exec | ⏳ WAITING | 0 | Integration module |
 | core/exec | ⏳ WAITING | 0 | Integration module |
 | core/tools | ⏳ WAITING | 0 | Integration module |
@@ -151,3 +151,53 @@
 - Option bundling support (e.g., -al → -a -l)
 - Combined format support (--option=value)
 - More sophisticated sed command parsing
+
+---
+
+### 2025-11-06 - Session 4: core/sandboxing
+**Duration:** ~45 minutes
+**Status:** ✅ COMPLETE
+
+**Completed:**
+- Read Rust source (mod.rs, assessment.rs) - ~429 LOC
+- Analyzed sandboxing architecture:
+  - CommandSpec → ExecEnv transformation
+  - Platform-specific sandbox wrapping
+  - Policy-based sandbox selection
+- Created TypeScript structure:
+  - types.ts - Core types (CommandSpec, ExecEnv, SandboxType, etc.)
+  - platform.ts - Platform detection and capabilities
+  - wrappers.ts - Platform-specific command wrapping (stubs)
+  - manager.ts - SandboxManager class (core logic)
+- Ported 24 tests covering:
+  - Platform detection (macOS, Linux, Windows)
+  - Windows sandbox opt-in flag
+  - Sandbox availability checking
+  - Sandbox selection based on preference (Auto/Require/Forbid)
+  - Command transformation for each sandbox type
+  - Network disabled flag handling
+  - Environment variable preservation
+  - Timeout and permission preservation
+  - Integration scenarios
+- All tests passing: 24/24 ✅
+
+**Key Features Implemented:**
+- Platform detection (macOS Seatbelt, Linux Seccomp, Windows Restricted Token)
+- SandboxManager for selecting and transforming commands
+- Sandbox preference handling (Auto/Require/Forbid)
+- Command wrapping for platform-specific sandboxes
+- Network access control via environment variables
+- Preservation of timeouts, permissions, justifications
+- Error handling for missing sandbox executables
+
+**Implementation Notes:**
+- **Simplified from 429 lines**: Focused on core transformation logic
+- **Skipped LLM assessment**: The assessment.rs module uses ModelClient to assess command safety with an LLM. This is experimental and requires Phase 4 infrastructure (ModelClient). Created stub for future implementation.
+- **Stub wrappers**: Created basic stubs for `createSeatbeltCommandArgs` and `createLinuxSandboxCommandArgs`. Full implementations require platform-specific policy templates.
+- **Same semantics**: Core transformation logic matches Rust behavior
+
+**Future Enhancements:**
+- Full Seatbelt profile generation (.sb files)
+- Full Landlock policy configuration
+- LLM-based sandbox assessment (requires ModelClient)
+- Windows sandbox implementation details

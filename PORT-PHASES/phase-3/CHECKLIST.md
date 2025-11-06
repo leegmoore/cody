@@ -38,9 +38,10 @@
 ## Core Integration
 
 ### core/sandboxing
-- [ ] Read codex-rs/core/src/sandboxing/
-- [ ] Port sandboxing logic
-- [ ] Create tests
+- [x] Read codex-rs/core/src/sandboxing/
+- [x] Port sandboxing logic (SandboxManager, platform detection)
+- [x] Create tests (24 tests)
+- [x] Verify tests pass (24/24 ✅)
 - [ ] Update logs
 
 ### exec
