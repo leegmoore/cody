@@ -1,18 +1,18 @@
 # Phase 4.2 Status Log
 
 **Phase:** Anthropic Messages API Integration
-**Status:** Not Started
-**Start Date:** _TBD_
+**Status:** IN PROGRESS
+**Start Date:** November 6, 2025
 
 ---
 
 ## Progress Overview
 
-- **Stages Completed:** 0 / 11
-- **Tests Passing:** 0 / 167
-- **Status:** ⏳ NOT STARTED (waiting for Phase 4.1)
+- **Stages Completed:** 1 / 11
+- **Tests Passing:** 21 / 167
+- **Status:** 🚧 IN PROGRESS
 
-**Visual Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ (0/11 stages)
+**Visual Progress:** ✅⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ (1/11 stages)
 
 ---
 
@@ -20,8 +20,8 @@
 
 | Stage | Status | Tests | Notes |
 |-------|--------|-------|-------|
-| 1. Foundation & Types | ⏳ WAITING | 0/10 | Setup |
-| 2. Tool Conversion | ⏳ WAITING | 0/15 | Test-first |
+| 1. Foundation & Types | ✅ COMPLETE | 21/21 | All type definitions created |
+| 2. Tool Conversion | 🚧 IN PROGRESS | 0/15 | Test-first |
 | 3. Request Builder | ⏳ WAITING | 0/15 | Test-first |
 | 4. SSE Parser | ⏳ WAITING | 0/15 | With fixtures |
 | 5. Streaming Adapter | ⏳ WAITING | 0/25 | Critical |
@@ -36,4 +36,19 @@
 
 ## Session Log
 
-_Will be updated as work progresses_
+### Session 1 - November 6, 2025
+
+**Stage 1: Foundation & Types - COMPLETE ✅**
+- Created `src/core/client/messages/` directory
+- Created `types.ts` with all Anthropic-specific type definitions:
+  - `MessagesApiRequest`, `AnthropicMessage`, `AnthropicContentBlock`
+  - `AnthropicTool`, `AnthropicToolChoice`, `ThinkingConfig`
+  - `AnthropicSseEvent` (all variants)
+  - `UsageInfo`, `AnthropicProviderConfig`
+  - Rate limit headers and default constants
+- Created `types.test.ts` with comprehensive type validation (21 tests)
+- All tests passing ✅
+- Code formatted with Prettier
+- Committed: `phase4.2: stage 1 - foundation & types (21 tests passing)`
+
+**Next:** Stage 2 - Tool Format Conversion
