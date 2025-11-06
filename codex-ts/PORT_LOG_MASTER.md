@@ -8,12 +8,12 @@
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 40 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 2)
-- **In Progress:** Phase 4 - Model Integration & MCP (2/9 modules)
-- **Test Pass Rate:** 752/752 (100%) 🎉
+- **Completed:** 46 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 8)
+- **In Progress:** Phase 4.5+ - HTTP Client & Full Streaming
+- **Test Pass Rate:** 842/842 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
-- **Current Branch:** claude/phase4-model-integration-mcp-011CUrtJtUBGfBqdNLCEh5GA
+- **Current Branch:** claude/phase-4.1-openai-client-011CUsB8H59ERdgdzDwJqpUn
 
 ---
 
@@ -116,25 +116,52 @@
 ---
 
 ### 🔄 Phase 4: Model Integration & MCP
-**Status:** IN PROGRESS (2/9 modules complete)
+**Status:** IN PROGRESS (8/14 modules complete)
 **Start Date:** 2025-11-06
 **Dependencies:** Phase 2 & 3
 **Log:** [PORT-PHASES/phase-4/STATUS.md](../PORT-PHASES/phase-4/STATUS.md)
 
+#### Phase 4.1: OpenAI Client - ✅ COMPLETE!
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
+| client-common | ✅ DONE | protocol/models | 32/32 | Foundation types |
+| model-provider-info | ✅ DONE | - | 22/22 | Provider abstraction complete |
+| stub-auth | ✅ DONE | - | 21/21 | Temporary auth stubs for testing |
+| chat-completions | ✅ DONE | client-common | 18/18 | Core types + message building |
+| client | ✅ DONE | client-common | 11/11 | ModelClient with API abstraction |
+| tool-converters | ✅ DONE | - | 10/10 | Responses/Chat format conversion |
+
+**Subtotal:** 114 tests (100% pass rate)
+**Duration:** Single day (2025-11-06)
+**Notes:** Core types complete, HTTP streaming deferred to Phase 4.5+
+
+#### Phase 4.0: MCP & Ollama - ✅ COMPLETE
 | Module | Status | Dependencies | Tests | Notes |
 |--------|--------|--------------|-------|-------|
 | mcp-types | ✅ DONE | - | 12/12 | Official SDK re-exports |
 | ollama/client | ✅ DONE | ollama/parser | 45/45 | Full client + progress |
-| core/client | ⏳ WAITING | protocol/models | 0 | Model client interface |
-| core/chat_completions | ⏳ WAITING | core/client | 0 | Streaming handler |
+
+**Subtotal:** 57 tests (100% pass rate)
+
+#### Phase 4.2+: Additional Integration (Waiting)
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
 | backend-client | ⏳ WAITING | - | 0 | API communication |
 | chatgpt | ⏳ WAITING | backend-client | 0 | ChatGPT features |
 | rmcp-client | ⏳ WAITING | mcp-types | 0 | MCP client |
 | mcp-server | ⏳ WAITING | mcp-types | 0 | MCP server management |
 | core/mcp | ⏳ WAITING | all above | 0 | MCP integration |
 
-**Total:** 57 tests (100% pass rate)
-**Estimated Remaining:** 64-92 hours
+#### Phase 4.5+: HTTP Client & Full Streaming (Deferred)
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
+| HTTP Client | ⏳ WAITING | - | 0 | Fetch-based HTTP with retries |
+| SSE Parsing | ⏳ WAITING | HTTP Client | 0 | Server-sent events for streaming |
+| Full Streaming | ⏳ WAITING | SSE Parsing | 0 | Complete stream() implementation |
+
+**Phase 4 Total:** 171 tests (100% pass rate)
+**Progress:** 8/14 modules (57%)
+**Estimated Remaining:** 48-64 hours
 
 ---
 
