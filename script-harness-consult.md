@@ -45,12 +45,6 @@ Model API → ResponseItem (FunctionCall/LocalShellCall/CustomToolCall)
 }
 ```
 
-**Limitations:**
-- ❌ One tool per call (or N parallel structured calls)
-- ❌ Model can't compose tool results
-- ❌ Fixed return format
-- ❌ No conditional logic in tool orchestration
-
 ### Relevant Code
 
 **Tool routing:**
@@ -97,10 +91,13 @@ return {
 **Execution:**
 1. Detect `<tool-calls>` XML tags in model response
 2. Extract TypeScript code
-3. Execute in sandboxed runtime (QuickJS)
+3. Execute in sandboxed runtime (QuickJS preferred, but recommend alternatives if better)
 4. Wire in available tools as async functions
-5. Capture return value
-6. Send back to model as tool output
+5. Provide execution context object with runtime state
+6. Capture return value
+7. Send back to model as tool output
+
+**Note:** We prefer QuickJS for its lightweight nature and good sandboxing, but if you identify a superior alternative (isolated-vm, etc.) with better security, performance, or async handling, please recommend it with justification.
 
 ### Benefits
 
