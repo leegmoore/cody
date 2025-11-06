@@ -347,6 +347,17 @@ export interface RateLimitWindow {
 }
 
 /**
+ * MCP authentication status.
+ *
+ * Ported from: codex-rs/protocol/src/protocol.rs (McpAuthStatus)
+ */
+export type McpAuthStatus =
+  | "unsupported"
+  | "not_logged_in"
+  | "bearer_token"
+  | "oauth";
+
+/**
  * MCP tool invocation information.
  */
 export interface McpInvocation {
