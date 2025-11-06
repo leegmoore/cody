@@ -3,7 +3,7 @@
  */
 
 import * as path from 'node:path';
-import globby from 'globby';
+import { globby } from 'globby';
 import Fuzzysort from 'fuzzysort';
 import type { FileMatch, FileSearchResults, FileSearchOptions } from './types.js';
 
