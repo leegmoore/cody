@@ -43,15 +43,15 @@
 
 ## Stage 3: Request Builder
 
-- [ ] Create messages/request-builder.ts
-- [ ] Create messages/request-builder.test.ts
-- [ ] Write tests RF-01 through RF-15 (15 tests)
-- [ ] Implement buildMessagesRequest()
-- [ ] Implement message array construction
-- [ ] Implement system prompt injection
-- [ ] Implement tool inclusion
-- [ ] Implement parameter mapping
-- [ ] Verify all 15 tests pass
+- [x] Create messages/request-builder.ts
+- [x] Create messages/request-builder.test.ts
+- [x] Write tests RF-01 through RF-15 (15 tests)
+- [x] Implement buildMessagesRequest()
+- [x] Implement message array construction
+- [x] Implement system prompt injection
+- [x] Implement tool inclusion
+- [x] Implement parameter mapping
+- [x] Verify all 15 tests pass (CRUSHED IT! ✅)
 
 ---
 
