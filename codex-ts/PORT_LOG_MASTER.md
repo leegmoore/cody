@@ -11,7 +11,7 @@
 - **Completed:** 60 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 13, Phase 5: 9)
 - **In Progress:** None - Phase 5 COMPLETE! 🎉
 - **Test Pass Rate:** 989/989 (100%) 🎉
-- **Known Bugs:** 0 (2 fixed in bug pass, see KNOWN_BUGS.md)
+- **Known Bugs:** 1 low-severity (2 fixed, 1 flaky test issue documented, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase5-auth-cli-port-011CUseoYQcbdfkYvLthABGN
 

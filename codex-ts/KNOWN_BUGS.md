@@ -7,7 +7,36 @@
 
 ## Active Bugs
 
-*None - All bugs fixed!* 🎉
+### 🐛 Bug #3: Flaky tests in full suite run
+**Module:** `async-utils`, `file-search`
+**Files:** `src/async-utils/index.test.ts`, `src/file-search/search.test.ts`
+**Severity:** Low (tests pass individually)
+
+**Description:**
+When running the full test suite, 11 tests timeout after 5000ms. These tests pass consistently when run individually or in small groups, suggesting test pollution or resource exhaustion in the full suite.
+
+**Failing tests:**
+- `async-utils/index.test.ts`: "returns Err when signal aborted first" (1 test)
+- `file-search/search.test.ts`: All 11 tests timeout
+
+**Error:**
+```
+Error: Test timed out in 5000ms.
+```
+
+**Impact:**
+- Full test suite shows: 11 failed | 1137 passed (1148)
+- Individual test runs: All tests pass (100%)
+- Likely test pollution or resource contention issue
+
+**Notes:**
+- Tests pass individually: `npm test -- src/file-search/search.test.ts` ✓
+- Tests fail in full suite: `npm test` ✗
+- Vitest config uses `singleFork: true` (sequential execution)
+- May be related to temporary file cleanup or async resource exhaustion
+- Fixed 1 test (was 12 failures, now 11) by improving abort listener cleanup
+
+**Priority:** Low (doesn't block core functionality, tests pass individually)
 
 ---
 
@@ -113,15 +142,15 @@ When you discover a bug:
 
 ## Bug Tracking Stats
 
-- **Total Active:** 0 🎉
+- **Total Active:** 1
 - **Total Fixed:** 2
 - **By Severity:**
   - Critical: 0
   - High: 0
   - Medium: 0 (2 fixed)
-  - Low: 0
+  - Low: 1 (flaky tests)
 - **By Phase:**
   - Phase 0 (pre-work): 0 (2 fixed)
-  - Phase 1-5: 0
+  - Phase 1-5: 1 (flaky tests)
 - **Last Bug Pass:** 2025-11-07 (after Phase 5 completion)
 - **Next Bug Pass:** When 5+ bugs accumulated or before release

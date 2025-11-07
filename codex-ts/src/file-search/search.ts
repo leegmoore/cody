@@ -2,7 +2,6 @@
  * File search implementation using globby and fuzzysort
  */
 
-import * as path from 'node:path';
 import { globby } from 'globby';
 import Fuzzysort from 'fuzzysort';
 import type { FileMatch, FileSearchResults, FileSearchOptions } from './types.js';
@@ -21,7 +20,15 @@ export async function run(options: FileSearchOptions): Promise<FileSearchResults
     signal,
   } = options;
 
-  // Build glob options
+  // Check if already aborted
+  if (signal?.aborted) {
+    return {
+      matches: [],
+      totalMatchCount: 0,
+    };
+  }
+
+  // Build glob options (globby doesn't support AbortSignal)
   const globOptions: Parameters<typeof globby>[1] = {
     cwd: searchDirectory,
     gitignore: respectGitignore,
@@ -29,7 +36,6 @@ export async function run(options: FileSearchOptions): Promise<FileSearchResults
     onlyFiles: true,
     followSymbolicLinks: true,
     dot: true, // Include hidden files
-    signal,
   };
 
   // Get all files
@@ -60,7 +66,7 @@ export async function run(options: FileSearchOptions): Promise<FileSearchResults
       };
 
       if (computeIndices && result.indexes) {
-        match.indices = result.indexes;
+        match.indices = Array.from(result.indexes);
       }
 
       return match;

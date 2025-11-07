@@ -46,18 +46,27 @@ export async function orCancel<T>(
   }
 
   // Create a promise that rejects when the signal is aborted
+  let abortHandler: (() => void) | null = null;
   const abortPromise = new Promise<never>((_, reject) => {
-    const onAbort = () => {
+    abortHandler = () => {
       reject({ ok: false, error: CancelErr.Cancelled });
     };
-    signal.addEventListener('abort', onAbort, { once: true });
+    signal.addEventListener('abort', abortHandler);
   });
 
   try {
     // Race the original promise against the abort promise
     const value = await Promise.race([promise, abortPromise]);
+    // Clean up the abort listener if the promise won first
+    if (abortHandler) {
+      signal.removeEventListener('abort', abortHandler);
+    }
     return { ok: true, value };
   } catch (error) {
+    // Clean up the abort listener
+    if (abortHandler) {
+      signal.removeEventListener('abort', abortHandler);
+    }
     // If it's our cancellation error, return it
     if (
       typeof error === 'object' &&
