@@ -39,11 +39,11 @@
 ## CLI & Integration
 
 ### cli
-- [ ] Read codex-rs/cli/src/
-- [ ] Port CLI interface
-- [ ] Create tests
-- [ ] Verify tests pass
-- [ ] Update logs
+- [x] Read codex-rs/cli/src/
+- [x] Port CLI utilities (library-focused: safeFormatKey)
+- [x] Create tests
+- [x] Verify tests pass
+- [x] Update logs
 
 ### app-server-protocol
 - [ ] Read codex-rs/app-server-protocol/src/

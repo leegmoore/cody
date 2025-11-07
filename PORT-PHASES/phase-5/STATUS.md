@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 4/9
-- **Tests Passing:** 77
-- **Status:** 🔄 IN PROGRESS (44% COMPLETE!)
+- **Modules Completed:** 5/9
+- **Tests Passing:** 83
+- **Status:** 🔄 IN PROGRESS (56% COMPLETE!)
 
 ---
 
@@ -22,7 +22,7 @@
 | login | ✅ DONE | 7/7 | PKCE utilities and stub types (library port) |
 | core/auth | ✅ DONE | 27/27 | CodexAuth, AuthManager, file/keyring storage backends |
 | utils/git | ✅ DONE | 22/22 | Git operations: apply patches, ghost commits, repo utils (1,814 lines!) |
-| cli | ⏳ WAITING | 0 | CLI interface |
+| cli | ✅ DONE | 6/6 | CLI utilities: safeFormatKey (library-focused port) |
 | app-server-protocol | ⏳ WAITING | 0 | Protocol types |
 | app-server | ⏳ WAITING | 0 | IDE server |
 | utils/image | ⏳ WAITING | 0 | Image processing |
@@ -154,3 +154,33 @@
 - Path validation prevents repository escapes
 - Tests cover: repository detection, HEAD resolution, ghost commits, patch application, restore operations
 - Library-appropriate: All features portable and useful for library consumers
+
+### Session 5: 2025-11-07 - cli
+**Duration:** ~20 minutes
+**Completed:** cli module (6 tests) - Library utilities extracted from 2,231 lines of CLI code
+
+**Work done:**
+1. Read Rust source for cli module (6 files: lib.rs, exit_status.rs, debug_sandbox.rs, login.rs, mcp_cmd.rs, main.rs)
+2. Analyzed module structure:
+   - CLI argument parsing with clap (CLI-specific, not portable)
+   - Process execution and sandbox commands (CLI-specific)
+   - Terminal I/O formatting (CLI-specific)
+   - Exit status handling (CLI-specific)
+   - Reusable utility: `safe_format_key()` function
+3. Created library-focused TypeScript tests (6 test cases):
+   - Format long API keys (show prefix + *** + suffix)
+   - Format short keys (return ***)
+   - Boundary cases (13 chars, 14 chars)
+   - Edge cases (empty string, very long keys)
+4. Implemented TypeScript port:
+   - `safeFormatKey()` - Safely format API keys for display
+5. All 6 tests passing (100%)
+6. Zero TypeScript errors
+7. Updated documentation
+
+**Notes:**
+- Library-first approach: Extracted only reusable utilities
+- CLI-specific code (argument parsing, process execution, terminal I/O) intentionally skipped
+- `safeFormatKey()` function useful for library consumers displaying sensitive data
+- Module provides essential utility for safe credential display
+- Minimal but focused port following established pattern
