@@ -131,22 +131,9 @@ npm test -- grep-files
 npm test -- apply-patch
 ```
 
-## Next Steps for Full Phase 4.5
+## Phase 4.5 Complete Features
 
-The following items from the original Phase 4.5 checklist are **deferred** for future work:
-
-### Deferred Features
-
-1. **tools.spawn** - Detached task execution
-2. **Worker Pool** - QuickJS worker reuse optimization
-3. **Context Reuse** - Script context recycling
-4. **Script Caching** - LRU cache for parsed scripts
-5. **Compilation Caching** - TS→JS transpilation cache
-
-These optimizations are not critical for the initial tool migration and can be implemented as performance becomes a concern.
-
-### Completed in This Phase
-
+### Tool Migration
 - ✅ Tool migration (4 new + 2 existing)
 - ✅ Tool registry implementation
 - ✅ ESM compatibility
@@ -154,12 +141,42 @@ These optimizations are not critical for the initial tool migration and can be i
 - ✅ Tree-sitter dependencies
 - ✅ Documentation
 
+### Performance Optimizations (NEW!)
+- ✅ **tools.spawn** - Detached task execution implemented
+- ✅ **Worker Pool** - QuickJS worker reuse (pool size = min(2, cpuCount))
+- ✅ **Context Reuse** - Workers recycled after 100 scripts
+- ✅ **Script Caching** - LRU cache for parsed scripts (SHA-256 hash, max 1000 entries)
+- ✅ **Compilation Caching** - Script preprocessing cache (IIFE wrapping, etc.)
+
+### Implementation Details
+
+**tools.spawn:**
+- Located in: `src/core/script-harness/tool-facade.ts`
+- API: `tools.spawn.exec(toolName, args)` returns `{id, done: Promise}`
+- API: `tools.spawn.cancel(id)` cancels detached task
+- Detached promises NOT aborted on script completion
+- Enabled via `enableSpawn: true` in config
+
+**Worker Pool:**
+- Located in: `src/core/script-harness/runtime/worker-pool.ts`
+- Integrated into QuickJS runtime
+- Borrow/release pattern for worker reuse
+- Automatic recycling after 100 executions
+- Unhealthy worker replacement
+
+**Caching:**
+- Script cache: `src/core/script-harness/runtime/script-cache.ts`
+- Compilation cache: `src/core/script-harness/runtime/compilation-cache.ts`
+- Both use SHA-256 hashing and LRU eviction
+- Max 1000 entries per cache
+- Hit rate tracking and statistics
+
 ## Known Limitations
 
 1. **grepFiles** requires ripgrep (`rg`) to be installed
 2. **applyPatch** requires tree-sitter WASM files to be accessible
 3. No test files migrated yet (original test files are in .migration-staging)
-4. Performance optimizations not implemented
+4. tools.spawn disabled by default (must enable explicitly)
 
 ## References
 

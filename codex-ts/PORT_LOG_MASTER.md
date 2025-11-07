@@ -116,7 +116,7 @@
 ---
 
 ### ✅ Phase 4: Model Integration, MCP & Tools
-**Status:** ✅ COMPLETE (14/14 modules complete, Phase 4.5 ✅ COMPLETE!)
+**Status:** ✅ COMPLETE (14/14 modules + 12 Phase 4.5 modules/features = 26 total!)
 **Start Date:** 2025-11-06
 **End Date:** 2025-11-07
 **Dependencies:** Phase 2 & 3
@@ -156,7 +156,9 @@
 **Subtotal:** 34 tests (100% pass rate)
 **Duration:** 2025-11-06 (5/5 modules complete, 2 full + 3 quality stubs)
 
-#### Phase 4.5: Tool Migration & Registry - ✅ COMPLETE!
+#### Phase 4.5: Tool Migration, Registry & Performance Optimizations - ✅ COMPLETE!
+
+**Tool Migration (6 modules)**
 | Module | Status | Dependencies | Tests | Notes |
 |--------|--------|--------------|-------|-------|
 | tools/apply-patch | ✅ DONE | web-tree-sitter | - | Migrated from codex-port with tree-sitter heredoc parsing |
@@ -166,24 +168,37 @@
 | tools/registry | ✅ DONE | all tools | - | Central tool registry for 6 tools (4 new + exec + fileSearch) |
 | tools/types | ✅ DONE | - | - | Common ToolResult interface |
 
-**Subtotal:** 6 modules complete (tests to be added in Phase 4.6)
+**Performance Optimizations (6 features)**
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
+| tool-facade (tools.spawn) | ✅ DONE | promise-tracker | - | Detached task execution API (tools.spawn.exec, tools.spawn.cancel) |
+| promise-tracker (detached) | ✅ DONE | - | - | Enhanced with detached promise support |
+| runtime/worker-pool | ✅ DONE | quickjs-emscripten | - | QuickJS worker pool (size=min(2, cpuCount), recycle after 100 scripts) |
+| runtime/quickjs-runtime | ✅ DONE | worker-pool | - | Integrated worker pool with borrow/release pattern |
+| runtime/script-cache | ✅ DONE | - | - | LRU cache for parsed scripts (SHA-256, max 1000 entries) |
+| runtime/compilation-cache | ✅ DONE | - | - | LRU cache for compiled scripts (SHA-256, max 1000 entries) |
+
+**Subtotal:** 12 modules/features complete (tests to be added in Phase 4.6)
 **Duration:** 2025-11-07 (single session)
+
 **Key Changes:**
-- ✅ Migrated 4 tools from .migration-staging/tools-from-codex-port/
-- ✅ Updated all imports to use .js extensions for ESM
-- ✅ Converted Bun spawn to Node.js child_process in grepFiles
-- ✅ Installed web-tree-sitter + @vscode/tree-sitter-wasm for applyPatch
-- ✅ Created centralized ToolRegistry with typed interface
-- ✅ Integrated with existing exec and fileSearch tools
-- ✅ Documentation: tool-api-reference.md + tool-migration-guide.md
-- ✅ Zero type errors, builds successfully
+- ✅ **Tool Migration:** Migrated 4 tools from .migration-staging/tools-from-codex-port/
+- ✅ **ESM Compatibility:** Updated all imports to use .js extensions
+- ✅ **Bun → Node.js:** Converted spawn API and stream handling in grepFiles
+- ✅ **Tree-sitter:** Installed web-tree-sitter + @vscode/tree-sitter-wasm for applyPatch
+- ✅ **Tool Registry:** Centralized ToolRegistry with typed interface (6 tools)
+- ✅ **tools.spawn:** Detached task execution (continues after script completion)
+- ✅ **Worker Pool:** QuickJS worker reuse (pool size = min(2, cpuCount), recycle after 100 scripts)
+- ✅ **Context Reuse:** Workers recycled instead of destroyed for performance
+- ✅ **Script Caching:** LRU cache for parsed scripts with SHA-256 keys
+- ✅ **Compilation Caching:** LRU cache for preprocessed scripts with SHA-256 keys
+- ✅ **Documentation:** tool-api-reference.md + tool-migration-guide.md (with all optimizations)
+- ✅ **Type Safety:** Zero type errors, builds successfully
 
 **Deferred to Phase 4.6+:**
-- tools.spawn (detached task execution)
-- Worker pool optimization (QuickJS worker reuse)
-- Context reuse & script caching
-- Test file migration
+- Test file migration for new tools
 - HTTP Client & Full Streaming
+- Integration tests for performance optimizations
 
 **Phase 4 Total:** 205 tests (100% pass rate) + 6 new tool modules
 **Progress:** 14/14 modules (100%) ✅
