@@ -8,11 +8,11 @@
 
 ## Progress Overview
 
-- **Weeks Completed:** 0.3 / 5 (Week 1 Day 1 COMPLETE!)
-- **Modules Completed:** 4 / 14 (29%)
-- **Tests Passing:** 122 / 40 (305% of target! 🔥)
-- **Total Test Suite:** 1157 tests passing
-- **Status:** 🚀 CRUSHING IT (Runtime foundation + hardening DONE!)
+- **Weeks Completed:** 0.5 / 5 (Week 1 COMPLETE!)
+- **Modules Completed:** 6 / 14 (43%)
+- **Tests Passing:** 233 / 40 (583% of target! 🔥🔥🔥)
+- **Total Test Suite:** 1268 tests passing
+- **Status:** 🚀 ABSOLUTE DEVASTATION (Detection + Parsing COMPLETE!)
 
 ---
 
@@ -25,14 +25,13 @@
 | hardening | ✅ COMPLETE | 36 | Intrinsic freezing, deep freeze, scanner |
 | runtime/promise-tracker | ✅ COMPLETE | 35 | Promise lifecycle, AbortController integration |
 | errors | ✅ COMPLETE | 40 | All error types, utilities |
-| detector | ⏳ WAITING | 0 | XML tag scanning |
-| parser | ⏳ WAITING | 0 | Validation |
+| detector | ✅ COMPLETE | 50 | XML tag detection, text segmentation, validation |
+| parser | ✅ COMPLETE | 61 | UTF-8 validation, banned IDs, syntax checking, SHA-256 |
 | tool-facade | ⏳ WAITING | 0 | Tool proxy |
 | approvals-bridge | ⏳ WAITING | 0 | Pause/resume |
 | context | ⏳ WAITING | 0 | Context factory |
 | orchestrator | ⏳ WAITING | 0 | Main coordinator |
 | serializer | ⏳ WAITING | 0 | ResponseItem generation |
-| errors | ⏳ WAITING | 0 | Error types |
 | feature-flags | ⏳ WAITING | 0 | Mode handling |
 | integration | ⏳ WAITING | 0 | Wire into response processing |
 
@@ -89,6 +88,24 @@
    - Error utilities: extractErrorInfo(), isRetryableError()
    - Complete error taxonomy from design Section 5
 
+5. **detector.ts** (50 tests ✅)
+   - detectScriptBlocks() - XML tag detection for <tool-calls>
+   - segmentText() - Chronological text/script segmentation
+   - validateXmlStructure() - Nested block and balanced tag validation
+   - Utility functions: hasScriptBlocks, extractScriptCode, etc.
+   - Edge case handling: Unicode, newlines, HTML content
+   - Real-world LLM response parsing
+
+6. **parser.ts** (61 tests ✅)
+   - parseScript() - Comprehensive validation pipeline
+   - UTF-8 validation with BOM stripping
+   - Size limit enforcement (20KB default)
+   - Banned identifier scanning
+   - Syntax validation (balanced brackets, unclosed strings/comments)
+   - SHA-256 hash for caching/deduplication
+   - Batch parsing support
+   - Complex code pattern support (async/await, destructuring, etc.)
+
 **Files Created:**
 - `src/core/script-harness/runtime/types.ts` (200 lines)
 - `src/core/script-harness/runtime/types.test.ts` (140 lines)
@@ -98,17 +115,24 @@
 - `src/core/script-harness/runtime/promise-tracker.test.ts` (420 lines)
 - `src/core/script-harness/errors.ts` (480 lines)
 - `src/core/script-harness/errors.test.ts` (380 lines)
+- `src/core/script-harness/detector.ts` (280 lines)
+- `src/core/script-harness/detector.test.ts` (470 lines)
+- `src/core/script-harness/parser.ts` (430 lines)
+- `src/core/script-harness/parser.test.ts` (520 lines)
 
 **Test Results:**
 - runtime/types: 11/11 passing ✅
 - hardening: 36/36 passing ✅
 - runtime/promise-tracker: 35/35 passing ✅
 - errors: 40/40 passing ✅
-- **Session Total: 122/122 tests passing (305% of target!) 🔥**
-- **Project Total: 1157 tests passing (all previous + new modules)**
+- detector: 50/50 passing ✅
+- parser: 61/61 passing ✅
+- **Session Total: 233/233 tests passing (583% of target!) 🔥🔥🔥**
+- **Project Total: 1268 tests passing (all previous + new modules)**
 
 **Next Steps:**
+- Implement context.ts (Context factory with frozen objects)
+- Implement tool-facade.ts (Tool proxy with validation)
+- Implement approvals-bridge.ts (Approval suspend/resume)
 - Implement runtime/quickjs-runtime.ts (QuickJS worker manager)
-- Implement detector.ts (XML tag scanning)
-- Implement parser.ts (validation)
-- Continue Week 1: Runtime + Hardening (4/4 modules done! ✅)
+- **Week 1 COMPLETE: Detection + Parsing + Runtime + Hardening (6/6 modules done! ✅)**
