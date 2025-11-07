@@ -3,12 +3,16 @@
  *
  * Ported from: codex-rs/core/src/tools/handlers/mcp_resource.rs
  *
- * NOTE: MCP connection manager is stubbed (Phase 4.3).
- * These tools provide the interface for MCP resource access but return
- * stub/empty results until full MCP integration is implemented.
+ * Integrated with MCP connection manager (Phase 4.6).
+ * Connection manager methods return empty results until Phase 5 implements
+ * real MCP server connections.
  */
 
 import { ToolResult } from '../types.js'
+import {
+  McpConnectionManager,
+  mcpConnectionManager,
+} from '../../core/mcp/connection-manager.js'
 
 /**
  * MCP Resource - represents a single resource from an MCP server
@@ -114,26 +118,62 @@ export interface ReadMcpResourceResult {
 /**
  * List MCP resources from one or all servers.
  *
- * NOTE: This is a stub implementation. Returns empty list until MCP
- * connection manager is fully implemented in Phase 4.3+.
+ * Calls the MCP connection manager to list resources. Returns empty list
+ * until Phase 5 implements real MCP server connections.
  *
  * @param params - List parameters
+ * @param connectionManager - Optional connection manager (for testing)
  * @returns Tool result with JSON list of resources
  */
 export async function listMcpResources(
   params: ListMcpResourcesParams,
+  connectionManager?: McpConnectionManager,
 ): Promise<ToolResult> {
   // Validate: cursor requires server
   if (params.cursor && !params.server) {
     throw new Error('cursor can only be used when a server is specified')
   }
 
-  // STUB: In full implementation, this would call MCP connection manager
-  // For now, return empty list
-  const result: ListMcpResourcesResult = {
-    server: params.server,
-    resources: [],
-    nextCursor: undefined,
+  const manager = connectionManager ?? mcpConnectionManager
+
+  let result: ListMcpResourcesResult
+
+  if (params.server) {
+    // List from specific server
+    const mcpResult = await manager.listResources(params.server, {
+      cursor: params.cursor,
+    })
+    result = {
+      server: params.server,
+      resources: mcpResult.resources.map((r) => ({
+        server: params.server!,
+        ...r,
+      })),
+      nextCursor: mcpResult.nextCursor,
+    }
+  } else {
+    // List from all servers
+    const allResources = await manager.listAllResources()
+
+    // Flatten resources from all servers, sorted by server name
+    const resourcesList: ResourceWithServer[] = []
+    const serverNames = Object.keys(allResources).sort()
+
+    for (const serverName of serverNames) {
+      const resources = allResources[serverName]
+      for (const resource of resources) {
+        resourcesList.push({
+          server: serverName,
+          ...resource,
+        })
+      }
+    }
+
+    result = {
+      server: undefined,
+      resources: resourcesList,
+      nextCursor: undefined,
+    }
   }
 
   return {
@@ -148,26 +188,62 @@ export async function listMcpResources(
  * Resource templates are like resources but have URI templates with variables
  * that can be filled in (e.g., "file:///{path}").
  *
- * NOTE: This is a stub implementation. Returns empty list until MCP
- * connection manager is fully implemented.
+ * Calls the MCP connection manager to list templates. Returns empty list
+ * until Phase 5 implements real MCP server connections.
  *
  * @param params - List parameters
+ * @param connectionManager - Optional connection manager (for testing)
  * @returns Tool result with JSON list of resource templates
  */
 export async function listMcpResourceTemplates(
   params: ListMcpResourceTemplatesParams,
+  connectionManager?: McpConnectionManager,
 ): Promise<ToolResult> {
   // Validate: cursor requires server
   if (params.cursor && !params.server) {
     throw new Error('cursor can only be used when a server is specified')
   }
 
-  // STUB: In full implementation, this would call MCP connection manager
-  // For now, return empty list
-  const result: ListMcpResourceTemplatesResult = {
-    server: params.server,
-    resourceTemplates: [],
-    nextCursor: undefined,
+  const manager = connectionManager ?? mcpConnectionManager
+
+  let result: ListMcpResourceTemplatesResult
+
+  if (params.server) {
+    // List from specific server
+    const mcpResult = await manager.listResourceTemplates(params.server, {
+      cursor: params.cursor,
+    })
+    result = {
+      server: params.server,
+      resourceTemplates: mcpResult.resourceTemplates.map((t) => ({
+        server: params.server!,
+        ...t,
+      })),
+      nextCursor: mcpResult.nextCursor,
+    }
+  } else {
+    // List from all servers
+    const allTemplates = await manager.listAllResourceTemplates()
+
+    // Flatten templates from all servers, sorted by server name
+    const templatesList: ResourceTemplateWithServer[] = []
+    const serverNames = Object.keys(allTemplates).sort()
+
+    for (const serverName of serverNames) {
+      const templates = allTemplates[serverName]
+      for (const template of templates) {
+        templatesList.push({
+          server: serverName,
+          ...template,
+        })
+      }
+    }
+
+    result = {
+      server: undefined,
+      resourceTemplates: templatesList,
+      nextCursor: undefined,
+    }
   }
 
   return {
@@ -179,14 +255,16 @@ export async function listMcpResourceTemplates(
 /**
  * Read a specific MCP resource content.
  *
- * NOTE: This is a stub implementation. Throws error until MCP
- * connection manager is fully implemented.
+ * Calls the MCP connection manager to read a resource. Throws error
+ * until Phase 5 implements real MCP server connections.
  *
  * @param params - Read parameters
+ * @param connectionManager - Optional connection manager (for testing)
  * @returns Tool result with resource content
  */
 export async function readMcpResource(
   params: ReadMcpResourceParams,
+  connectionManager?: McpConnectionManager,
 ): Promise<ToolResult> {
   // Validate required fields
   if (!params.server) {
@@ -197,11 +275,21 @@ export async function readMcpResource(
     throw new Error('failed to parse function arguments: missing uri field')
   }
 
-  // STUB: In full implementation, this would read from MCP server
-  // For now, return error indicating MCP is not yet available
-  throw new Error(
-    `MCP resource reading not yet implemented: ${params.server}::${params.uri}`,
-  )
+  const manager = connectionManager ?? mcpConnectionManager
+
+  // Call connection manager to read resource
+  const mcpResult = await manager.readResource(params.server, params.uri)
+
+  const result: ReadMcpResourceResult = {
+    server: params.server,
+    uri: params.uri,
+    contents: mcpResult.contents,
+  }
+
+  return {
+    content: JSON.stringify(result, null, 2),
+    success: true,
+  }
 }
 
 /**
