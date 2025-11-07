@@ -1,19 +1,19 @@
 # Codex TypeScript Port - Master Log
 
 **Last Updated:** 2025-11-07
-**Project Status:** ✅ PHASE 5 COMPLETE! (Authentication & CLI complete)
+**Project Status:** ✅ PHASE 4.6 COMPLETE! (Tools & Tool Packs)
 
 ---
 
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 60 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 13, Phase 5: 9)
-- **In Progress:** None - Phase 5 COMPLETE! 🎉
-- **Test Pass Rate:** 1148/1148 (100%) 🎉
-- **Known Bugs:** 0 (3 fixed in bug pass, see KNOWN_BUGS.md)
+- **Completed:** 64 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 15, Phase 5: 9)
+- **In Progress:** None - Phase 4.6 COMPLETE! 🎉
+- **Test Pass Rate:** 1263/1265 (99.8%) - 2 pre-existing failures in quickjs-runtime
+- **Known Bugs:** 0 critical (2 pre-existing test failures, 9 pre-existing skipped tests)
 - **Rust Source:** ~41K LOC in `core/` alone
-- **Current Branch:** claude/phase5-auth-cli-port-011CUseoYQcbdfkYvLthABGN
+- **Current Branch:** claude/phase-4.6-port-tools-011CUtkMRgmb9WR5HhD92pyg
 
 ---
 
@@ -116,11 +116,11 @@
 ---
 
 ### ✅ Phase 4: Model Integration, MCP & Tools
-**Status:** ✅ COMPLETE (14/14 modules + 12 Phase 4.5 modules/features = 26 total!)
+**Status:** ✅ COMPLETE (14 modules + 12 Phase 4.5 features + 4 Phase 4.6 modules = 30 total!)
 **Start Date:** 2025-11-06
 **End Date:** 2025-11-07
 **Dependencies:** Phase 2 & 3
-**Log:** [PORT-PHASES/phase-4.3/STATUS.md](../PORT-PHASES/phase-4.3/STATUS.md)
+**Logs:** [Phase 4.3](../PORT-PHASES/phase-4.3/STATUS.md) | [Phase 4.6](../PORT-PHASES/phase-4.6/STATUS.md)
 
 #### Phase 4.1: OpenAI Client - ✅ COMPLETE!
 | Module | Status | Dependencies | Tests | Notes |
@@ -195,14 +195,37 @@
 - ✅ **Documentation:** tool-api-reference.md + tool-migration-guide.md (with all optimizations)
 - ✅ **Type Safety:** Zero type errors, builds successfully
 
-**Deferred to Phase 4.6+:**
-- Test file migration for new tools
+**Deferred:**
 - HTTP Client & Full Streaming
 - Integration tests for performance optimizations
 
-**Phase 4 Total:** 205 tests (100% pass rate) + 6 new tool modules
-**Progress:** 14/14 modules (100%) ✅
-**Status:** READY FOR PHASE 5
+#### Phase 4.6: Remaining Tools & Tool Packs - ✅ COMPLETE!
+
+**Tool Ports (3 tools, 4 operations, 66 tests)**
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
+| tools/view-image | ✅ DONE | - | 14/14 | Image path validation and preparation |
+| tools/plan | ✅ DONE | protocol/plan-tool | 49/49 | update_plan tool with validation (includes 24 protocol tests) |
+| tools/mcp-resource | ✅ DONE | - | 27/27 | 3 operations: list_mcp_resources, list_mcp_resource_templates, read_mcp_resource (stub impl) |
+
+**Tool Pack System (25 tests)**
+| Module | Status | Dependencies | Tests | Notes |
+|--------|--------|--------------|-------|-------|
+| tools/packs | ✅ DONE | - | 25/25 | Named tool collections (core-codex, anthropic-standard, file-ops, research, all) |
+
+**Tool Registry Enhancements**
+- Updated registry with 9 tools total (6 from 4.5 + 3 new)
+- viewImage, updatePlan, listMcpResources, listMcpResourceTemplates, readMcpResource
+
+**Deferred to Future Phase:**
+- web_search tool (user to provide API specifications)
+
+**Subtotal:** 115 tests (100% pass rate)
+**Duration:** 2025-11-07 (single session)
+
+**Phase 4 Total:** 320 tests (100% pass rate) + 9 tool modules + tool pack system
+**Progress:** All planned modules complete (web_search deferred) ✅
+**Status:** READY FOR PHASE 6 (or next phase as planned)
 
 ---
 
