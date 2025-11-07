@@ -1,89 +1,90 @@
 ===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 4.5 =====
 
-ROLE: You are a TypeScript developer optimizing the script harness and migrating tools.
+ROLE: You are a TypeScript developer migrating tools and optimizing the script harness.
 
-PROJECT: Codex TypeScript port - production-ready script harness with complete tool set.
+PROJECT: Codex TypeScript port - complete tool set + optimized script harness.
 
-STRATEGY: Tool migration + performance optimization + documentation.
+STRATEGY: Careful migration following comprehensive guide.
 
-CURRENT PHASE: Phase 4.5 - Script Harness Optimization & Tools
+CURRENT PHASE: Phase 4.5 - Tool Migration & Script Harness Optimization
 
-PHASE 4.4 STATUS: ✅ COMPLETE (Core implementation, 401 tests, QuickJS working)
+PHASE 4.4 STATUS: ✅ COMPLETE (Script harness core with 401 tests)
 
 NOTE: Workspace is /Users/leemoore/code/codex-port-02
 (TypeScript port is in codex-ts/ subdirectory)
 
-FIRST: Read status
-- Read codex-ts/src/core/script-harness/ (what's built)
-- Read PORT-PHASES/phase-4.5/README.md (detailed plan)
-- Read PORT-PHASES/phase-4.5/CHECKLIST.md (task list)
-- Read PORT-PHASES/phase-4.5/STATUS.md (progress)
+🚨 CRITICAL - READ MIGRATION GUIDE FIRST:
+- Read .migration-staging/MIGRATION_GUIDE.md (COMPLETE step-by-step instructions)
+- Has: Dependencies, import conversion, Bun→Node.js, type handling, test conversion
+- Has: Code examples, common issues, solutions
+- Has: Integration pattern
 
-TOOL MIGRATION SOURCE (IMPORTANT):
-Files are staged in: .migration-staging/tools-from-codex-port/
-- applyPatch/ (directory: applyPatch.ts, parser.ts, seekSequence.ts)
+THEN: Read documentation
+- Read PORT-PHASES/phase-4.5/README.md (overview)
+- Read PORT-PHASES/phase-4.5/CHECKLIST.md (detailed tasks)
+- Read PORT-PHASES/phase-4.5/STATUS.md (progress tracking)
+
+FILES STAGED IN REPO (.migration-staging/tools-from-codex-port/):
+
+Source files:
+- applyPatch/ (applyPatch.ts, parser.ts, seekSequence.ts)
 - readFile.ts
 - listDir.ts
 - grepFiles.ts
-- types.ts (for ToolResult reference)
+- types.ts (ToolResult interface reference)
 
-These files are IN THE REPO - no external paths needed.
+Test files (COPY THESE):
+- applyPatch.test.ts
+- readFile.test.ts
+- listDir.test.ts
+- grepFiles.test.ts
 
-PHASE 4.5 TASKS:
+DEPENDENCIES TO INSTALL:
+npm install web-tree-sitter @vscode/tree-sitter-wasm
 
-Task 1: Tool Migration (COPY from .migration-staging/)
-- REPLACE applyPatch: .migration-staging/tools-from-codex-port/applyPatch/ → codex-ts/src/tools/apply-patch/
-  * Has FULL tree-sitter-bash (ours is stubbed)
-  * Requires: npm install web-tree-sitter @vscode/tree-sitter-wasm
-- ADD readFile: .migration-staging/.../readFile.ts → codex-ts/src/tools/read-file/
-  * Smart indentation-aware file reading
-- ADD listDir: .migration-staging/.../listDir.ts → codex-ts/src/tools/list-dir/
-  * Recursive directory listing
-- ADD grepFiles: .migration-staging/.../grepFiles.ts → codex-ts/src/tools/grep-files/
-  * Ripgrep-based content search
+MIGRATION TASKS (IN ORDER):
 
-Adaptation needed:
-- Update imports (add .js for ESM)
-- Update ToolResult type (reference: types.ts in staging)
-- Replace Bun → Node.js (spawn, fs.promises)
-- Write tests (15-20 per tool)
+Task 1: Tool Migration (Follow MIGRATION_GUIDE.md for each)
+1. applyPatch (REPLACE - has full tree-sitter, ours is stubbed)
+2. readFile (ADD - indentation-aware file reading)
+3. listDir (ADD - recursive directory listing)
+4. grepFiles (ADD - ripgrep content search)
+
+Each tool needs:
+- Copy source to codex-ts/src/tools/[tool-name]/
+- Update imports (add .js, kebab-case file names)
+- Convert Bun→Node.js (if applicable)
+- Copy tests, update test framework (bun:test → vitest)
+- Run tests, fix issues
+- Verify 100% passing
 
 Task 2: tools.spawn
-- Detached tasks for long-running ops (phone-a-sme takes 10+ min)
-- spawn.exec() + spawn.cancel()
+- Detached tasks for phone-a-sme (10+ min operations)
+- Add to tool-facade.ts
 
 Task 3: Performance
-- Worker pool (reuse workers)
-- Context reuse (reset vs recreate)
-- Script caching (by hash)
-- Compilation caching (TS→JS)
+- Worker pool, context reuse, caching
 
 Task 4: Documentation
-- 5 guides (user, API, config, errors, ops)
+- 5 guides
 
 WORKFLOW:
-1. Complete tool migration first (critical)
-2. Then tools.spawn
-3. Then performance optimizations
-4. Finally documentation
-
-PER TASK:
-1. Follow CHECKLIST steps
-2. Run: npm test (must pass!)
-3. Commit: git add -A && git commit -m "phase4.5: [TASK]" && git push
-4. Update logs
-
-DEV STANDARDS:
-- Use npm
-- TypeScript strict mode
-- Prettier formatting
-- 100% test pass rate
+1. Read MIGRATION_GUIDE.md for specific tool
+2. Follow steps exactly
+3. Run: npm test -- [tool-name]
+4. Fix any issues using guide's "Common Issues" section
+5. Verify passing
+6. Commit: git add -A && git commit -m "phase4.5: migrate [tool-name]" && git push
+7. Update CHECKLIST.md
+8. Move to next tool
 
 BEFORE ENDING SESSION:
-1. Update PORT-PHASES/phase-4.5/CHECKLIST.md
-2. Update PORT-PHASES/phase-4.5/STATUS.md
+1. Update PORT-PHASES/phase-4.5/CHECKLIST.md (check off completed tasks)
+2. Update PORT-PHASES/phase-4.5/STATUS.md (session log)
 3. Update codex-ts/PORT_LOG_MASTER.md
-4. git add -A && git commit -m "phase4.5: [what you did]" && git push
-5. Report: tasks done, tools added, what's next
+4. git add -A && git commit -m "phase4.5: [summary of work]" && git push
+5. Report: tools migrated, tests passing, issues encountered, what's next
 
-START with Task 1 (tool migration) - files are in .migration-staging/ ready to copy.
+START by reading MIGRATION_GUIDE.md, then migrate applyPatch first (most complex).
+
+⚠️ DO NOT SKIP THE MIGRATION GUIDE - it has critical conversion info.
