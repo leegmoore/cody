@@ -4,9 +4,7 @@
  * Implements ScriptRuntimeAdapter using quickjs-emscripten for portable
  * WASM-based script execution with security isolation.
  *
- * NOTE: This is a simplified implementation for Phase 4.4.
- * Full worker pool, advanced timeout handling, and memory limits
- * will be added in future iterations.
+ * Phase 4.5: Enhanced with worker pool for performance optimization.
  */
 
 import { getQuickJS } from "quickjs-emscripten";
@@ -16,25 +14,28 @@ import type {
   ScriptExecutionLimits,
 } from "./types.js";
 import { HarnessInternalError } from "../errors.js";
+import { WorkerPool, type WorkerPoolConfig } from "./worker-pool.js";
 
 /**
  * QuickJS runtime configuration
  */
 export interface QuickJSRuntimeConfig {
-  /** Placeholder for future config */
-  _placeholder?: never;
+  /** Worker pool configuration */
+  workerPool?: WorkerPoolConfig;
+
+  /** Enable worker pool (default: true) */
+  useWorkerPool?: boolean;
 }
 
 /**
  * QuickJS runtime adapter
  *
- * SIMPLIFIED IMPLEMENTATION: Creates fresh QuickJS VMs for each execution.
- * This version focuses on correct execution and global injection.
- * Timeouts, memory limits, and worker pools will be added later.
+ * Phase 4.5: Enhanced with worker pool for reusable workers.
+ * Provides significant performance improvement by avoiding VM creation overhead.
  *
  * @example
  * ```typescript
- * const runtime = new QuickJSRuntime();
+ * const runtime = new QuickJSRuntime({ useWorkerPool: true });
  * await runtime.initialize({ timeoutMs: 5000 });
  *
  * const result = await runtime.execute(
@@ -50,9 +51,14 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
 
   private defaultLimits?: ScriptExecutionLimits;
   private initialized = false;
+  private workerPool?: WorkerPool;
+  private useWorkerPool: boolean;
 
-  constructor(_config: QuickJSRuntimeConfig = {}) {
-    // Reserved for future use
+  constructor(config: QuickJSRuntimeConfig = {}) {
+    this.useWorkerPool = config.useWorkerPool ?? true;
+    if (this.useWorkerPool) {
+      this.workerPool = new WorkerPool(config.workerPool);
+    }
   }
 
   /**
@@ -60,17 +66,19 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
    */
   async initialize(config: ScriptExecutionLimits): Promise<void> {
     this.defaultLimits = config;
+
+    // Initialize worker pool if enabled
+    if (this.workerPool) {
+      await this.workerPool.initialize();
+    }
+
     this.initialized = true;
   }
 
   /**
    * Execute a script with injected globals
    *
-   * LIMITATIONS in this version:
-   * - Async/await not yet supported (TODO for next iteration)
-   * - Timeouts not fully enforced (basic timeout wrapper only)
-   * - Memory limits not enforced
-   * - AbortSignal support is basic
+   * Phase 4.5: Now uses worker pool for better performance.
    */
   async execute(
     sourceCode: string,
@@ -110,9 +118,17 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
     try {
       // Create timeout wrapper
       const executeWithTimeout = async (): Promise<ScriptExecutionResult> => {
-        // Get QuickJS instance
-        const QuickJS = await getQuickJS();
-        const vm = QuickJS.newContext();
+        // Borrow worker from pool (or create new if pool disabled)
+        let vm;
+        let worker;
+
+        if (this.workerPool) {
+          worker = await this.workerPool.borrow();
+          vm = worker.context;
+        } else {
+          const QuickJS = await getQuickJS();
+          vm = QuickJS.newContext();
+        }
 
         try {
           // Set up cancellation handler
@@ -197,7 +213,12 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
             },
           };
         } finally {
-          vm.dispose();
+          // Release worker back to pool (or dispose if pool disabled)
+          if (worker && this.workerPool) {
+            await this.workerPool.release(worker);
+          } else if (!this.workerPool) {
+            vm.dispose();
+          }
         }
       };
 
@@ -247,6 +268,9 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
    * Dispose runtime and cleanup resources
    */
   async dispose(): Promise<void> {
+    if (this.workerPool) {
+      await this.workerPool.dispose();
+    }
     this.initialized = false;
   }
 
@@ -258,6 +282,15 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
     workersActive: number;
     workersAvailable: number;
   } {
+    if (this.workerPool) {
+      const poolStatus = this.workerPool.getStatus();
+      return {
+        healthy: this.initialized,
+        workersActive: poolStatus.busy,
+        workersAvailable: poolStatus.available,
+      };
+    }
+
     return {
       healthy: this.initialized,
       workersActive: 0,

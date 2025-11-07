@@ -95,6 +95,9 @@ export interface ToolFacadeConfig {
 
   /** Execution mode */
   mode: "disabled" | "dry-run" | "enabled";
+
+  /** Enable tools.spawn for detached task execution (default: false) */
+  enableSpawn?: boolean;
 }
 
 /**
@@ -112,9 +115,33 @@ export interface ToolCallStats {
 }
 
 /**
+ * Detached task result
+ */
+export interface DetachedTask<T = unknown> {
+  /** Unique task identifier */
+  id: string;
+
+  /** Promise that resolves when task completes */
+  done: Promise<T>;
+}
+
+/**
+ * Spawn interface for detached task execution
+ */
+export interface SpawnInterface {
+  /** Execute a tool in detached mode (doesn't block script completion) */
+  exec<T = unknown>(toolName: string, args: unknown): DetachedTask<T>;
+
+  /** Cancel a detached task */
+  cancel(id: string): boolean;
+}
+
+/**
  * ScriptTools interface (what scripts see)
  */
-export type ScriptTools = Record<string, (...args: any[]) => Promise<unknown>>;
+export type ScriptTools = Record<string, (...args: any[]) => Promise<unknown>> & {
+  spawn?: SpawnInterface;
+};
 
 /**
  * Creates a tools proxy for script execution
@@ -165,6 +192,65 @@ export function createToolsProxy(
   // Freeze the target object (empty object that serves as the proxy target)
   const target = Object.freeze({});
 
+  // Create spawn interface if enabled
+  const spawnInterface: SpawnInterface | undefined = config.enableSpawn
+    ? {
+        exec<T = unknown>(toolName: string, args: unknown): DetachedTask<T> {
+          // Validate tool exists
+          const tool = registry.get(toolName);
+          if (!tool) {
+            throw new ToolNotFoundError(toolName, Array.from(allowedTools));
+          }
+
+          // Validate tool is allowed
+          if (!allowedTools.has(toolName)) {
+            throw new ToolNotFoundError(toolName, Array.from(allowedTools));
+          }
+
+          // Create AbortController
+          const abort = new AbortController();
+
+          // Create detached promise
+          const taskPromise = (async () => {
+            try {
+              // Check if approval needed (in spawn mode, approvals are immediate or rejected)
+              if (tool.requiresApproval && tool.requiresApproval(args) && approvalBridge) {
+                const toolCallId = `spawn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+                const approved = await approvalBridge.requestApproval({
+                  toolName,
+                  args,
+                  scriptId: config.scriptId,
+                  toolCallId,
+                });
+                if (!approved) {
+                  throw new ApprovalDeniedError(toolName);
+                }
+              }
+
+              // Execute tool
+              const result = await tool.execute(args, { signal: abort.signal });
+              return result as T;
+            } catch (error) {
+              throw error;
+            }
+          })();
+
+          // Register as DETACHED promise
+          const taskId = tracker.register(toolName, taskPromise, abort, true);
+
+          // Return detached task handle
+          return {
+            id: taskId,
+            done: taskPromise,
+          };
+        },
+
+        cancel(id: string): boolean {
+          return tracker.cancelDetached(id);
+        },
+      }
+    : undefined;
+
   const proxy = new Proxy(
     target,
     {
@@ -177,6 +263,11 @@ export function createToolsProxy(
         // Special property for stats (for testing/debugging)
         if (prop === "__stats") {
           return { ...stats };
+        }
+
+        // Special property for spawn interface
+        if (prop === "spawn") {
+          return spawnInterface;
         }
 
         // Validate tool is allowed

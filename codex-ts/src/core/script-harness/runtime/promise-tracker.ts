@@ -33,6 +33,9 @@ interface TrackedPromise {
 
   /** Error (if rejected) */
   error?: any;
+
+  /** Whether this is a detached promise (not auto-aborted on script completion) */
+  detached?: boolean;
 }
 
 /**
@@ -66,13 +69,14 @@ export class DetachedPromiseError extends Error {
 export class PromiseTracker {
   private pending = new Map<string, TrackedPromise>();
   private completed = new Map<string, TrackedPromise>();
+  private detached = new Map<string, TrackedPromise>();
   private nextId = 0;
   private startTime = Date.now();
   private toolCallCount = 0;
   private peakMemory = 0;
 
   constructor(
-    public readonly scriptId: string,
+    public readonly scriptId: string = "default",
     private readonly maxConcurrent: number = 4,
   ) {}
 
@@ -82,12 +86,14 @@ export class PromiseTracker {
    * @param toolName - Name of the tool creating this promise
    * @param promise - The promise to track
    * @param abort - AbortController to cancel the promise
+   * @param detached - If true, promise won't be auto-aborted on script completion
    * @returns Unique identifier for this promise
    */
   register(
     toolName: string,
     promise: Promise<any>,
     abort: AbortController,
+    detached = false,
   ): string {
     const id = `tool_${this.nextId++}`;
     this.toolCallCount++;
@@ -98,25 +104,32 @@ export class PromiseTracker {
       toolName,
       startTime: Date.now(),
       status: "pending",
+      detached,
     };
 
-    this.pending.set(id, tracked);
+    if (detached) {
+      this.detached.set(id, tracked);
+    } else {
+      this.pending.set(id, tracked);
+    }
 
     // Automatically update status when promise settles
     promise
       .then((result) => {
-        if (this.pending.has(id)) {
+        const sourceMap = detached ? this.detached : this.pending;
+        if (sourceMap.has(id)) {
           tracked.status = "resolved";
           tracked.result = result;
-          this.pending.delete(id);
+          sourceMap.delete(id);
           this.completed.set(id, tracked);
         }
       })
       .catch((error) => {
-        if (this.pending.has(id)) {
+        const sourceMap = detached ? this.detached : this.pending;
+        if (sourceMap.has(id)) {
           tracked.status = "rejected";
           tracked.error = error;
-          this.pending.delete(id);
+          sourceMap.delete(id);
           this.completed.set(id, tracked);
         }
       });
@@ -174,20 +187,22 @@ export class PromiseTracker {
    * Ensure all pending promises are settled before script completion
    *
    * This is the critical cleanup method that implements the promise lifecycle rules:
-   * 1. Abort all pending promises
+   * 1. Abort all pending promises (but NOT detached promises)
    * 2. Wait up to gracePeriodMs for cleanup
    * 3. Throw if any promises are still orphaned
+   *
+   * Note: Detached promises (created via tools.spawn) are NOT aborted and continue running.
    *
    * @param gracePeriodMs - How long to wait for cleanup (default: 250ms)
    * @throws DetachedPromiseError if promises remain orphaned after grace period
    */
   async ensureAllSettled(gracePeriodMs = 250): Promise<void> {
-    // If no pending promises, we're done
+    // If no pending promises, we're done (detached promises continue running)
     if (this.pending.size === 0) {
       return;
     }
 
-    // Abort all pending promises
+    // Abort all pending promises (NOT detached)
     const orphanedIds = Array.from(this.pending.keys());
     for (const [id, entry] of this.pending) {
       entry.abort.abort(
@@ -231,10 +246,35 @@ export class PromiseTracker {
   }
 
   /**
+   * Get all detached promise IDs
+   */
+  getDetachedIds(): string[] {
+    return Array.from(this.detached.keys());
+  }
+
+  /**
    * Get all completed promise IDs
    */
   getCompletedIds(): string[] {
     return Array.from(this.completed.keys());
+  }
+
+  /**
+   * Cancel a detached promise by ID
+   *
+   * @param id - Promise identifier
+   * @returns true if cancelled, false if not found or already settled
+   */
+  cancelDetached(id: string): boolean {
+    const tracked = this.detached.get(id);
+    if (tracked && tracked.status === "pending") {
+      tracked.status = "aborted";
+      tracked.abort.abort(new Error(`Detached task cancelled: ${id}`));
+      this.detached.delete(id);
+      this.completed.set(id, tracked);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -340,7 +380,7 @@ export class PromiseTracker {
    * Get details about a specific tracked promise
    */
   getPromiseInfo(id: string): TrackedPromise | undefined {
-    return this.pending.get(id) || this.completed.get(id);
+    return this.pending.get(id) || this.detached.get(id) || this.completed.get(id);
   }
 
   /**
