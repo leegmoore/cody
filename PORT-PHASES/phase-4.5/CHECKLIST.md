@@ -14,23 +14,66 @@
 
 ---
 
-## Week 1: isolated-vm Runtime
+## Task 1: Tool Migration from codex-port
 
-- [ ] Install isolated-vm dependency
-- [ ] Create runtime/ivm-runtime.ts
-- [ ] Implement ScriptRuntimeAdapter for isolated-vm
-- [ ] Configure memory limits
-- [ ] Implement timeout enforcement
-- [ ] Test isolated-vm adapter
-- [ ] Create runtime parity tests
-- [ ] Verify QuickJS and isolated-vm produce same results
-- [ ] Update logs
+### Migrate applyPatch (REPLACE)
+- [ ] Backup current src/apply-patch/ to .archive/
+- [ ] Copy ~/code/v/codex-port/src/tools/applyPatch/ to src/tools/apply-patch/
+- [ ] Update imports (add .js extensions)
+- [ ] Update return types to match our protocol
+- [ ] Install web-tree-sitter dependency
+- [ ] Adapt tests (port from codex-port if available)
+- [ ] Verify tree-sitter heredoc parsing works
+- [ ] Update tool registry
+- [ ] Run tests
+- [ ] Verify all passing
+
+### Add readFile (NEW)
+- [ ] Copy ~/code/v/codex-port/src/tools/readFile.ts to src/tools/read-file/
+- [ ] Update imports (.js extensions)
+- [ ] Update ToolResult type
+- [ ] Replace Bun-specific code with Node.js
+- [ ] Add to tool registry
+- [ ] Write tests (15-20 tests)
+- [ ] Test indentation mode
+- [ ] Test slice mode
+- [ ] Verify all passing
+
+### Add listDir (NEW)
+- [ ] Copy ~/code/v/codex-port/src/tools/listDir.ts to src/tools/list-dir/
+- [ ] Update imports (.js extensions)
+- [ ] Update ToolResult type
+- [ ] Replace Bun-specific code with Node.js
+- [ ] Add to tool registry
+- [ ] Write tests (15-20 tests)
+- [ ] Test recursive listing
+- [ ] Test depth control
+- [ ] Verify all passing
+
+### Add grepFiles (NEW)
+- [ ] Copy ~/code/v/codex-port/src/tools/grepFiles.ts to src/tools/grep-files/
+- [ ] Update imports (.js extensions)
+- [ ] Update ToolResult type
+- [ ] Replace Bun spawn with Node.js spawn
+- [ ] Add to tool registry
+- [ ] Write tests (15-20 tests)
+- [ ] Test pattern matching
+- [ ] Test glob filtering
+- [ ] Verify ripgrep available (or graceful fallback)
+- [ ] Verify all passing
+
+### Update Tool Registry
+- [ ] Create central tool registry module
+- [ ] Register all 6 tools (applyPatch, exec, fileSearch, readFile, listDir, grepFiles)
+- [ ] Expose to script harness
+- [ ] Test all tools callable from scripts
+- [ ] Verify all passing
 
 ---
 
-## Week 2: Advanced Features
+## Task 2: tools.spawn (Detached Tasks)
 
-### tools.spawn
+### Implementation
 - [ ] Implement spawn pattern in tool-facade
 - [ ] Add spawn.exec() for detached tasks
 - [ ] Add spawn.cancel() for cancellation
@@ -46,56 +89,41 @@
 
 ---
 
-## Week 3-4: Security Hardening
+## Task 3: Performance Optimizations
 
-### Additional Security Tests
-- [ ] Expand security tests S16-S20
-- [ ] Fuzz parser with 1000+ malformed inputs
-- [ ] Penetration testing (sandbox escapes)
-- [ ] Memory exhaustion tests
-- [ ] Concurrent execution isolation tests
-- [ ] Verify all 20 security tests pass
+### Worker Pool
+- [ ] Implement WorkerPool class
+- [ ] Worker reuse logic
+- [ ] Pool size configuration
+- [ ] Test worker reuse
+- [ ] Verify faster than create/destroy
 
-### Security Review
-- [ ] Internal security audit
-- [ ] Code review focusing on sandbox boundaries
-- [ ] Red-team dry run
-- [ ] Address findings
-- [ ] Security signoff
+### Context Reuse
+- [ ] Implement context reset
+- [ ] Contamination detection
+- [ ] Recycle after 100 scripts
+- [ ] Test context isolation
+- [ ] Verify 87% faster init
 
----
+### Script Caching
+- [ ] Implement LRU cache (1000 entries)
+- [ ] Cache by SHA-256 hash
+- [ ] Test cache hits/misses
+- [ ] Verify faster for repeated scripts
 
-## Week 4: Testing Expansion
-
-### Additional Functional Tests
-- [ ] Add F21-F30 from design
-- [ ] Test TypeScript compilation
-- [ ] Test helper functions in scripts
-- [ ] Test complex return values
-- [ ] Test tool budget limits
-- [ ] Verify all 30 functional tests pass
-
-### Additional Integration Tests
-- [ ] Add I6-I10 from design
-- [ ] Test feature flag transitions
-- [ ] Test worker pool exhaustion
-- [ ] Test concurrent scripts
-- [ ] Test history snapshot
-- [ ] Verify all 10 integration tests pass
+### Compilation Caching
+- [ ] Cache TS→JS transpilation
+- [ ] Cache by source hash
+- [ ] Test cache effectiveness
+- [ ] Verify 20-30ms savings
 
 ---
 
-## Week 5: Performance & Documentation
+## Task 4: Documentation
 
-### Performance
-- [ ] Benchmark worker pool
-- [ ] Optimize context creation
-- [ ] Cache transpiled scripts
-- [ ] Profile memory usage
-- [ ] Verify < 100ms overhead target
-- [ ] Create performance test suite
+---
 
-### Documentation
+### User Guide
 - [ ] Write user guide (docs/script-harness.md)
 - [ ] Write security model (docs/script-harness-security.md)
 - [ ] Write tool API reference (docs/script-harness-api.md)
@@ -107,10 +135,10 @@
 
 ## Final
 
-- [ ] All 60 tests passing (20 security, 30 functional, 10 integration)
-- [ ] Security review complete
-- [ ] Performance targets met
-- [ ] Documentation complete
+- [ ] All 6 tools integrated and working
+- [ ] tools.spawn functional
+- [ ] Performance optimizations verified
+- [ ] All documentation complete
 - [ ] Update PORT_LOG_MASTER.md
 - [ ] Commit and push
-- [ ] Phase 4.5 COMPLETE - Production ready!
+- [ ] Phase 4.5 COMPLETE!
