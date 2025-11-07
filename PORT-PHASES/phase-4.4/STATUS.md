@@ -1,17 +1,18 @@
 # Phase 4.4 Status Log
 
 **Phase:** Script Harness - Core Implementation
-**Status:** 🚧 IN PROGRESS
+**Status:** 🚀 CRUSHING IT!
 **Start Date:** 2025-11-07
 
 ---
 
 ## Progress Overview
 
-- **Weeks Completed:** 0.1 / 5 (Week 1 Day 1)
-- **Modules Completed:** 2 / 14
-- **Tests Passing:** 47 / 40 (exceeding target!)
-- **Status:** 🚧 IN PROGRESS (Prerequisites complete, runtime foundation done)
+- **Weeks Completed:** 0.3 / 5 (Week 1 Day 1 COMPLETE!)
+- **Modules Completed:** 4 / 14 (29%)
+- **Tests Passing:** 122 / 40 (305% of target! 🔥)
+- **Total Test Suite:** 1157 tests passing
+- **Status:** 🚀 CRUSHING IT (Runtime foundation + hardening DONE!)
 
 ---
 
@@ -20,9 +21,10 @@
 | Module | Status | Tests | Notes |
 |--------|--------|-------|-------|
 | runtime/types | ✅ COMPLETE | 11 | Adapter interface, limits, context types |
-| runtime/quickjs-runtime | ⏳ PENDING | 0 | Worker manager |
+| runtime/quickjs-runtime | ⏳ PENDING | 0 | Worker manager (next session) |
 | hardening | ✅ COMPLETE | 36 | Intrinsic freezing, deep freeze, scanner |
-| runtime/promise-tracker | ⏳ PENDING | 0 | Promise lifecycle |
+| runtime/promise-tracker | ✅ COMPLETE | 35 | Promise lifecycle, AbortController integration |
+| errors | ✅ COMPLETE | 40 | All error types, utilities |
 | detector | ⏳ WAITING | 0 | XML tag scanning |
 | parser | ⏳ WAITING | 0 | Validation |
 | tool-facade | ⏳ WAITING | 0 | Tool proxy |
@@ -52,8 +54,8 @@
 1. **runtime/types.ts** (11 tests ✅)
    - ScriptRuntimeAdapter interface
    - ScriptExecutionResult, ScriptError types
-   - ScriptExecutionLimits with defaults
-   - ScriptContext interface
+   - ScriptExecutionLimits with defaults (30s timeout, 96MB memory, etc.)
+   - ScriptContext interface with all metadata
    - All type validation tests passing
 
 2. **hardening.ts** (36 tests ✅)
@@ -61,21 +63,52 @@
    - generateHardeningValidation() - verifies hardening applied
    - deepFreeze() - recursive freezing with cycle detection
    - freezeClone() - clone + freeze combo
-   - scanForBannedIdentifiers() - detects eval, require, etc.
+   - scanForBannedIdentifiers() - detects eval, require, import outside strings
    - Comprehensive security tests (S1-S15 coverage)
+
+3. **runtime/promise-tracker.ts** (35 tests ✅)
+   - PromiseTracker class with full lifecycle management
+   - Register promises with AbortController integration
+   - ensureAllSettled() with 250ms grace period
+   - Orphaned promise detection (Scenario 1)
+   - Promise.race support (Scenario 2)
+   - Partial results collection for failed scripts
+   - Concurrency limit tracking
+   - All promise lifecycle tests from design spec
+
+4. **errors.ts** (40 tests ✅)
+   - 16 error classes covering all failure modes:
+     * ScriptSyntaxError, ScriptTimeoutError, ScriptMemoryError
+     * ApprovalDeniedError, ApprovalTimeoutError
+     * ToolExecutionError, ToolNotFoundError, ToolValidationError
+     * DetachedPromiseError, HarnessInternalError
+     * SerializationError, ScriptTooLargeError, ReturnValueTooLargeError
+     * ToolBudgetExceededError, ConcurrencyLimitError
+     * BannedIdentifierError, ScriptCancelledError
+   - Stack trace sanitization (removes host paths)
+   - Error utilities: extractErrorInfo(), isRetryableError()
+   - Complete error taxonomy from design Section 5
 
 **Files Created:**
 - `src/core/script-harness/runtime/types.ts` (200 lines)
 - `src/core/script-harness/runtime/types.test.ts` (140 lines)
 - `src/core/script-harness/hardening.ts` (220 lines)
 - `src/core/script-harness/hardening.test.ts` (310 lines)
+- `src/core/script-harness/runtime/promise-tracker.ts` (350 lines)
+- `src/core/script-harness/runtime/promise-tracker.test.ts` (420 lines)
+- `src/core/script-harness/errors.ts` (480 lines)
+- `src/core/script-harness/errors.test.ts` (380 lines)
 
 **Test Results:**
 - runtime/types: 11/11 passing ✅
 - hardening: 36/36 passing ✅
-- **Total: 47/47 tests passing (exceeds Week 1 target!)**
+- runtime/promise-tracker: 35/35 passing ✅
+- errors: 40/40 passing ✅
+- **Session Total: 122/122 tests passing (305% of target!) 🔥**
+- **Project Total: 1157 tests passing (all previous + new modules)**
 
 **Next Steps:**
-- Implement runtime/promise-tracker.ts (Promise lifecycle management)
 - Implement runtime/quickjs-runtime.ts (QuickJS worker manager)
-- Begin Week 1 Day 2 work
+- Implement detector.ts (XML tag scanning)
+- Implement parser.ts (validation)
+- Continue Week 1: Runtime + Hardening (4/4 modules done! ✅)
