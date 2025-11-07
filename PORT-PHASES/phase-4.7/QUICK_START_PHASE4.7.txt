@@ -1,0 +1,74 @@
+===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 4.7 =====
+
+ROLE: You are a TypeScript developer implementing web search and document tools.
+
+PROJECT: Codex TypeScript port - web search with intelligent caching.
+
+STRATEGY: Perplexity for search, Firecrawl for scraping, Redis for caching.
+
+CURRENT PHASE: Phase 4.7 - Web Search & Document Tools
+
+PHASE 4.6 STATUS: ✅ COMPLETE (11 tools + tool packs)
+
+NOTE: Workspace is /Users/leemoore/code/codex-port-02
+(TypeScript port is in codex-ts/ subdirectory)
+
+FIRST: Read documentation
+- Read PORT-PHASES/phase-4.7/README.md (detailed design)
+- Read PORT-PHASES/phase-4.7/CHECKLIST.md (tasks)
+- Read PORT-PHASES/phase-4.7/STATUS.md (progress)
+
+TOOLS TO IMPLEMENT:
+
+1. webSearch (FULL IMPLEMENTATION)
+   - Perplexity API for search
+   - Returns: ranked results with titles, URLs, snippets
+   - Background prefetch: top N → Firecrawl → Redis
+   - Supports: single query or parallel (string | string[])
+
+2. fetchUrl (FULL IMPLEMENTATION)
+   - Firecrawl API for scraping
+   - Redis cache check first (URL-keyed, 24hr TTL)
+   - Auto-assign fileKey per fetch
+   - Announcement board integration (5 turn TTL)
+   - Supports: single URL or parallel (string | string[])
+
+3. saveToFC (STUB)
+   - Interface: Save fileKey to File Cabinet with note
+   - Implementation: TODO for later phase
+
+4. fetchFromFC (STUB)
+   - Interface: Retrieve by fileKey
+   - Implementation: TODO for later phase
+
+5. writeFile (STUB)
+   - Interface: Write fileKey content to filesystem
+   - Implementation: TODO for later phase
+
+DEPENDENCIES:
+npm install @perplexity-ai/sdk firecrawl-api ioredis
+
+API KEYS NEEDED:
+- PERPLEXITY_API_KEY
+- FIRECRAWL_API_KEY
+- Redis connection (localhost:6379 or configured)
+
+WORKFLOW:
+1. Setup dependencies and Redis
+2. Implement webSearch with Perplexity
+3. Implement fetchUrl with Firecrawl + cache
+4. Create File Cabinet stubs
+5. Integrate announcement board
+6. Test everything
+7. Add to tool registry
+
+BEFORE ENDING SESSION:
+1. Update PORT-PHASES/phase-4.7/CHECKLIST.md
+2. Update PORT-PHASES/phase-4.7/STATUS.md
+3. Update codex-ts/PORT_LOG_MASTER.md
+4. git add -A && git commit -m "phase4.7: [what you did]" && git push
+5. Report: tools implemented, caching working, what's next
+
+START with webSearch (Perplexity integration).
+
+NOTE: File Cabinet is stubbed - full implementation in future phase.
