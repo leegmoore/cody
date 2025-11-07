@@ -24,6 +24,17 @@ import { run as fileSearchRun, type FileSearchOptions, type FileSearchResults } 
 import { ToolOptions } from './types.js';
 import { SandboxType } from '../core/sandboxing/index.js';
 import { type SandboxPolicy } from '../protocol/protocol.js';
+// Phase 4.7: Web search and document tools
+import { webSearch, type WebSearchParams, type WebSearchResult } from './web/index.js';
+import { fetchUrl, type FetchUrlParams, type FetchUrlResult } from './web/index.js';
+import { llmChat, type LLMChatParams, type LLMChatResult } from './agents/index.js';
+import { launchSync, type LaunchSyncParams, type LaunchSyncResult } from './agents/index.js';
+import { launchAsync, type LaunchAsyncParams, type LaunchAsyncResult } from './agents/index.js';
+import { saveToFC, type SaveToFCParams, type SaveToFCResult } from './docs/index.js';
+import { fetchFromFC, type FetchFromFCParams, type FetchFromFCResult } from './docs/index.js';
+import { writeFile, type WriteFileParams, type WriteFileResult } from './docs/index.js';
+import { savePrompts, type SavePromptsParams, type SavePromptsResult } from './prompts/index.js';
+import { getPrompts, type GetPromptsParams, type GetPromptsResult } from './prompts/index.js';
 
 /**
  * Tool function signature
@@ -213,6 +224,128 @@ export class ToolRegistry {
       },
       execute: async (params: ReadMcpResourceParams) => {
         return await readMcpResource(params);
+      },
+    });
+
+    // Phase 4.7: Web Search & Document Tools
+
+    // Web Search tool
+    this.register({
+      metadata: {
+        name: 'webSearch',
+        description: 'Search the web using Perplexity API with ranked results',
+        requiresApproval: false,
+      },
+      execute: async (params: WebSearchParams): Promise<WebSearchResult> => {
+        return await webSearch(params);
+      },
+    });
+
+    // Fetch URL tool
+    this.register({
+      metadata: {
+        name: 'fetchUrl',
+        description: 'Fetch URL content via Firecrawl with caching',
+        requiresApproval: false,
+      },
+      execute: async (params: FetchUrlParams): Promise<FetchUrlResult> => {
+        return await fetchUrl(params);
+      },
+    });
+
+    // LLM Chat tool
+    this.register({
+      metadata: {
+        name: 'llmChat',
+        description: 'Single-shot LLM call using OpenRouter',
+        requiresApproval: false,
+      },
+      execute: async (params: LLMChatParams): Promise<LLMChatResult> => {
+        return await llmChat(params);
+      },
+    });
+
+    // Agent Launch Sync tool
+    this.register({
+      metadata: {
+        name: 'launchSync',
+        description: 'Launch synchronous agent (waits for completion) [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: LaunchSyncParams): Promise<LaunchSyncResult> => {
+        return await launchSync(params);
+      },
+    });
+
+    // Agent Launch Async tool
+    this.register({
+      metadata: {
+        name: 'launchAsync',
+        description: 'Launch asynchronous agent (background execution) [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: LaunchAsyncParams): Promise<LaunchAsyncResult> => {
+        return await launchAsync(params);
+      },
+    });
+
+    // Save to File Cabinet tool
+    this.register({
+      metadata: {
+        name: 'saveToFC',
+        description: 'Save fileKey to File Cabinet (30 day storage) [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: SaveToFCParams): Promise<SaveToFCResult> => {
+        return await saveToFC(params);
+      },
+    });
+
+    // Fetch from File Cabinet tool
+    this.register({
+      metadata: {
+        name: 'fetchFromFC',
+        description: 'Retrieve content by fileKey from File Cabinet [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: FetchFromFCParams): Promise<FetchFromFCResult> => {
+        return await fetchFromFC(params);
+      },
+    });
+
+    // Write File tool
+    this.register({
+      metadata: {
+        name: 'writeFile',
+        description: 'Write fileKey content to filesystem [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: WriteFileParams): Promise<WriteFileResult> => {
+        return await writeFile(params);
+      },
+    });
+
+    // Save Prompts tool
+    this.register({
+      metadata: {
+        name: 'savePrompts',
+        description: 'Store prompts in cache and return promptKeys [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: SavePromptsParams): Promise<SavePromptsResult> => {
+        return await savePrompts(params);
+      },
+    });
+
+    // Get Prompts tool
+    this.register({
+      metadata: {
+        name: 'getPrompts',
+        description: 'Retrieve prompts by keys [STUB]',
+        requiresApproval: false,
+      },
+      execute: async (params: GetPromptsParams): Promise<GetPromptsResult> => {
+        return await getPrompts(params);
       },
     });
   }

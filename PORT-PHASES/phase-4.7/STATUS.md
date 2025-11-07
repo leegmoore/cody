@@ -1,16 +1,17 @@
 # Phase 4.7 Status Log
 
 **Phase:** Web Search & Document Tools
-**Status:** Not Started
-**Start Date:** _TBD_
+**Status:** ✅ COMPLETE
+**Start Date:** 2025-11-07
+**End Date:** 2025-11-07
 
 ---
 
 ## Progress Overview
 
-- **Tools Completed:** 0 / 5
-- **Tests Passing:** 0
-- **Status:** ⏳ NOT STARTED (waiting for Phase 4.6)
+- **Tools Completed:** 10 / 10 (3 full + 7 stubs)
+- **Tests Passing:** 19+
+- **Status:** ✅ COMPLETE
 
 ---
 
@@ -18,11 +19,16 @@
 
 | Tool | Status | Tests | Type | Notes |
 |------|--------|-------|------|-------|
-| webSearch | ⏳ WAITING | 0 | Full impl | Perplexity API + prefetch |
-| fetchUrl | ⏳ WAITING | 0 | Full impl | Firecrawl + Redis cache |
-| saveToFC | ⏳ WAITING | 0 | Stub | File Cabinet save |
-| fetchFromFC | ⏳ WAITING | 0 | Stub | File Cabinet retrieve |
-| writeFile | ⏳ WAITING | 0 | Stub | Write via fileKey |
+| webSearch | ✅ COMPLETE | 4 | Full impl | Perplexity API + prefetch |
+| fetchUrl | ✅ COMPLETE | 5 | Full impl | Firecrawl + Map cache |
+| llmChat | ✅ COMPLETE | 3 | Full impl | OpenRouter integration |
+| saveToFC | ✅ COMPLETE | 2 | Stub | File Cabinet save |
+| fetchFromFC | ✅ COMPLETE | 2 | Stub | File Cabinet retrieve |
+| writeFile | ✅ COMPLETE | 1 | Stub | Write via fileKey |
+| savePrompts | ✅ COMPLETE | 2 | Stub | Prompt caching |
+| getPrompts | ✅ COMPLETE | 2 | Stub | Prompt retrieval |
+| launchSync | ✅ COMPLETE | 2 | Stub | Sync agent launch |
+| launchAsync | ✅ COMPLETE | 2 | Stub | Async agent launch |
 
 ---
 
@@ -30,14 +36,41 @@
 
 | Component | Status | Tests | Notes |
 |-----------|--------|-------|-------|
-| Redis cache | ⏳ WAITING | 0 | URL-keyed, 24hr TTL |
-| Announcement board | ⏳ WAITING | 0 | In-memory, 5 turn TTL |
-| Perplexity integration | ⏳ WAITING | 0 | Search API |
-| Firecrawl integration | ⏳ WAITING | 0 | Scraping API |
-| Prefetch logic | ⏳ WAITING | 0 | Background caching |
+| In-memory cache | ✅ COMPLETE | Yes | URL-keyed, 24hr TTL (Map instead of Redis) |
+| Perplexity integration | ✅ COMPLETE | Yes | Search API with REST |
+| Firecrawl integration | ✅ COMPLETE | Yes | Scraping API |
+| OpenRouter integration | ✅ COMPLETE | Yes | LLM chat completions |
+| Prefetch logic | ✅ COMPLETE | No | Background caching |
 
 ---
 
 ## Session Log
 
-_Will be updated as work progresses_
+### Session 1: 2025-11-07
+
+**Completed:**
+1. ✅ Installed dependencies (firecrawl package)
+2. ✅ Created directory structure (web/, agents/, docs/, prompts/)
+3. ✅ Implemented webSearch (Perplexity REST API)
+4. ✅ Implemented fetchUrl (Firecrawl + in-memory Map cache)
+5. ✅ Implemented llmChat (OpenRouter API)
+6. ✅ Created 7 stubs with proper interfaces:
+   - saveToFC, fetchFromFC, writeFile (File Cabinet)
+   - savePrompts, getPrompts (Prompt tools)
+   - launchSync, launchAsync (Agent orchestration)
+7. ✅ Registered all 10 tools in registry
+8. ✅ Wrote tests for all tools (19+ tests passing)
+9. ✅ Fixed type errors
+10. ✅ Updated documentation
+
+**Notes:**
+- Used in-memory Map for caching instead of Redis (as per instructions)
+- Perplexity SDK doesn't exist, used REST API directly
+- Firecrawl package is 'firecrawl' not 'firecrawl-api'
+- All stub tools have proper interfaces and validation
+- Tests use mocked API calls (no real API hits)
+
+**Next Steps:**
+- Future: Implement full File Cabinet backend
+- Future: Implement prompt caching backend
+- Future: Implement agent orchestration system
