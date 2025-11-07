@@ -8,9 +8,9 @@
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 53 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 13, Phase 5: 2)
-- **In Progress:** Phase 5 - Authentication & CLI
-- **Test Pass Rate:** 904/904 (100%) 🎉
+- **Completed:** 54 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 13, Phase 5: 3)
+- **In Progress:** Phase 5 - Authentication & CLI (33% complete!)
+- **Test Pass Rate:** 931/931 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase5-auth-cli-port-011CUseoYQcbdfkYvLthABGN
@@ -169,7 +169,7 @@
 ---
 
 ### 🔄 Phase 5: CLI, Auth & Polish
-**Status:** IN PROGRESS (2/9 modules)
+**Status:** IN PROGRESS (3/9 modules - 33% complete!)
 **Start Date:** 2025-11-07
 **Dependencies:** All previous phases
 **Log:** [PORT-PHASES/phase-5/STATUS.md](../PORT-PHASES/phase-5/STATUS.md)
@@ -178,7 +178,7 @@
 |--------|--------|--------------|-------|-------|
 | keyring-store | ✅ DONE | - | 21/21 | Interface and mock implementation |
 | login | ✅ DONE | keyring-store | 7/7 | PKCE utilities + stub types (library port) |
-| core/auth | ⏳ WAITING | login | 8-12 hours |
+| core/auth | ✅ DONE | login, token-data | 27/27 | CodexAuth, AuthManager, storage backends (1,597 lines Rust!) |
 | exec/exec_events | ⏳ WAITING | protocol/* | 6-8 hours |
 | cli | ⏳ WAITING | all core | 12-16 hours |
 | app-server | ⏳ WAITING | all core | 16-20 hours |

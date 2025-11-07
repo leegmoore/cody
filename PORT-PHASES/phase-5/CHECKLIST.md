@@ -28,11 +28,11 @@
 - [x] Update logs
 
 ### core/auth
-- [ ] Read codex-rs/core/src/auth/
-- [ ] Port auth manager
-- [ ] Create tests
-- [ ] Verify tests pass
-- [ ] Update logs
+- [x] Read codex-rs/core/src/auth/
+- [x] Port auth manager (CodexAuth + AuthManager + storage backends)
+- [x] Create tests (27 tests)
+- [x] Verify tests pass
+- [x] Update logs
 
 ---
 
