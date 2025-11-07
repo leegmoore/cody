@@ -61,4 +61,10 @@ export async function* streamMessages(
 // Re-export types for convenience
 export type { AnthropicProviderConfig, MessagesApiRequest } from './types.js';
 export type { MessagesRequestOptions } from './request-builder.js';
+export type { ToolExecutionResult } from './tool-result-builder.js';
 export { AnthropicTransportError } from './transport.js';
+export {
+  buildToolResult,
+  buildToolResultMessage,
+  appendToolResults,
+} from './tool-result-builder.js';
