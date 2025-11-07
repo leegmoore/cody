@@ -9,6 +9,7 @@ import { applyPatch } from './apply-patch/index.js';
 import { readFile, type ReadFileParams } from './read-file/index.js';
 import { listDir, type ListDirParams } from './list-dir/index.js';
 import { grepFiles, type GrepFilesParams } from './grep-files/index.js';
+import { viewImage, type ViewImageParams } from './view-image/index.js';
 import { processExecToolCall, type ExecParams, type ExecToolCallOutput } from '../core/exec/index.js';
 import { run as fileSearchRun, type FileSearchOptions, type FileSearchResults } from '../file-search/index.js';
 import { ToolOptions } from './types.js';
@@ -145,6 +146,18 @@ export class ToolRegistry {
           signal: options?.signal,
         };
         return await fileSearchRun(searchOptions);
+      },
+    });
+
+    // View Image tool
+    this.register({
+      metadata: {
+        name: 'viewImage',
+        description: 'Validate and prepare an image for viewing in the conversation',
+        requiresApproval: false,
+      },
+      execute: async (params: ViewImageParams) => {
+        return await viewImage(params);
       },
     });
   }
