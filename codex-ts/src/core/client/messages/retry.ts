@@ -139,10 +139,11 @@ export async function sleep(
     const timeout = setTimeout(resolve, ms);
 
     if (signal) {
-      signal.addEventListener("abort", () => {
+      const abortHandler = () => {
         clearTimeout(timeout);
         reject(new Error("Aborted"));
-      });
+      };
+      signal.addEventListener("abort", abortHandler, { once: true });
     }
   });
 }
