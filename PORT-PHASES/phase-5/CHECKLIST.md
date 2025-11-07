@@ -21,11 +21,11 @@
 - [x] Update logs
 
 ### login
-- [ ] Read codex-rs/login/src/
-- [ ] Port login flows
-- [ ] Create tests
-- [ ] Verify tests pass
-- [ ] Update logs
+- [x] Read codex-rs/login/src/
+- [x] Port login flows (PKCE + stub types)
+- [x] Create tests
+- [x] Verify tests pass
+- [x] Update logs
 
 ### core/auth
 - [ ] Read codex-rs/core/src/auth/

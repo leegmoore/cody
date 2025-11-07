@@ -8,8 +8,8 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 1/9
-- **Tests Passing:** 21
+- **Modules Completed:** 2/9
+- **Tests Passing:** 28
 - **Status:** 🔄 IN PROGRESS
 
 ---
@@ -19,7 +19,7 @@
 | Module | Status | Tests | Notes |
 |--------|--------|-------|-------|
 | keyring-store | ✅ DONE | 21/21 | Credential storage interface and mock |
-| login | ⏳ WAITING | 0 | Login flows |
+| login | ✅ DONE | 7/7 | PKCE utilities and stub types (library port) |
 | core/auth | ⏳ WAITING | 0 | Auth manager |
 | cli | ⏳ WAITING | 0 | CLI interface |
 | app-server-protocol | ⏳ WAITING | 0 | Protocol types |
@@ -53,3 +53,30 @@
 - Real keyring integration (native OS credential managers) can be added later
 - Tests cover load, save, delete operations plus error simulation
 - Following TDD approach successfully
+
+### Session 2: 2025-11-07 - login
+**Duration:** ~20 minutes
+**Completed:** login module (7 tests)
+
+**Work done:**
+1. Read Rust source for login module (4 files: lib.rs, pkce.rs, server.rs, device_code_auth.rs)
+2. Analyzed module structure:
+   - Full HTTP OAuth server (CLI-specific, 700+ lines)
+   - Device code authentication flow (CLI-specific, 200+ lines)
+   - PKCE code generation (crypto utility, portable)
+3. Created library-focused TypeScript port (7 test cases):
+   - `generatePkce()` - PKCE code generation for OAuth
+   - `PkceCodes` interface
+   - `ServerOptions`, `LoginServer`, `ShutdownHandle` - Stub interfaces
+   - `AuthCredentialsStoreMode` enum
+   - `createServerOptions()` - Factory function
+4. All tests passing (7/7)
+5. No TypeScript errors
+6. Updated documentation
+
+**Notes:**
+- Pragmatic library port: Essential crypto utilities + stub types
+- Full HTTP server, browser integration, and device code flow are CLI-specific (not included)
+- PKCE implementation matches RFC 7636 spec
+- Provides necessary interfaces for core/auth integration
+- Real OAuth flows should be handled externally for library usage
