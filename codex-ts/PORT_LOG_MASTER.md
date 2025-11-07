@@ -8,9 +8,9 @@
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 56 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 13, Phase 5: 5)
-- **In Progress:** Phase 5 - Authentication & CLI (56% complete!)
-- **Test Pass Rate:** 959/959 (100%) 🎉
+- **Completed:** 57 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 13, Phase 5: 6)
+- **In Progress:** Phase 5 - Authentication & CLI (67% complete!)
+- **Test Pass Rate:** 973/973 (100%) 🎉
 - **Known Bugs:** 2 (pre-existing, see KNOWN_BUGS.md)
 - **Rust Source:** ~41K LOC in `core/` alone
 - **Current Branch:** claude/phase5-auth-cli-port-011CUseoYQcbdfkYvLthABGN
@@ -169,7 +169,7 @@
 ---
 
 ### 🔄 Phase 5: CLI, Auth & Polish
-**Status:** IN PROGRESS (5/9 modules - 56% complete!)
+**Status:** IN PROGRESS (6/9 modules - 67% complete!)
 **Start Date:** 2025-11-07
 **Dependencies:** All previous phases
 **Log:** [PORT-PHASES/phase-5/STATUS.md](../PORT-PHASES/phase-5/STATUS.md)
@@ -181,9 +181,9 @@
 | core/auth | ✅ DONE | login, token-data | 27/27 | CodexAuth, AuthManager, storage backends (1,597 lines Rust!) |
 | utils/git | ✅ DONE | - | 22/22 | Git ops: apply patches, ghost commits, repo utils (1,814 lines Rust!) |
 | cli | ✅ DONE | - | 6/6 | CLI utilities: safeFormatKey (library port from 2,231 lines) |
+| app-server-protocol | ✅ DONE | - | 14/14 | JSON-RPC types for IDE communication (library port from 990 lines) |
 | exec/exec_events | ⏳ WAITING | protocol/* | 6-8 hours |
 | app-server | ⏳ WAITING | all core | 16-20 hours |
-| app-server-protocol | ⏳ WAITING | - | 4-6 hours |
 | utils/image | ⏳ WAITING | - | 4-6 hours |
 | utils/pty | ⏳ WAITING | - | 6-8 hours |
 

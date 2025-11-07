@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Modules Completed:** 5/9
-- **Tests Passing:** 83
-- **Status:** 🔄 IN PROGRESS (56% COMPLETE!)
+- **Modules Completed:** 6/9
+- **Tests Passing:** 97
+- **Status:** 🔄 IN PROGRESS (67% COMPLETE!)
 
 ---
 
@@ -23,7 +23,7 @@
 | core/auth | ✅ DONE | 27/27 | CodexAuth, AuthManager, file/keyring storage backends |
 | utils/git | ✅ DONE | 22/22 | Git operations: apply patches, ghost commits, repo utils (1,814 lines!) |
 | cli | ✅ DONE | 6/6 | CLI utilities: safeFormatKey (library-focused port) |
-| app-server-protocol | ⏳ WAITING | 0 | Protocol types |
+| app-server-protocol | ✅ DONE | 14/14 | JSON-RPC types for IDE/app-server communication |
 | app-server | ⏳ WAITING | 0 | IDE server |
 | utils/image | ⏳ WAITING | 0 | Image processing |
 | utils/pty | ⏳ WAITING | 0 | PTY handling |
@@ -184,3 +184,38 @@
 - `safeFormatKey()` function useful for library consumers displaying sensitive data
 - Module provides essential utility for safe credential display
 - Minimal but focused port following established pattern
+
+### Session 6: 2025-11-07 - app-server-protocol
+**Duration:** ~15 minutes
+**Completed:** app-server-protocol module (14 tests) - JSON-RPC types from 990 lines
+
+**Work done:**
+1. Read Rust source for app-server-protocol (5 files: lib.rs, jsonrpc_lite.rs, common.rs, v1.rs: 406 lines, v2.rs: 427 lines)
+2. Analyzed module structure:
+   - JSON-RPC 2.0-style message types
+   - Client/Server request and notification enums (macro-generated, IDE-specific)
+   - v1 and v2 protocol versions with extensive API definitions
+   - Schema generation and TypeScript export code
+3. Created library-focused TypeScript tests (14 test cases):
+   - RequestId (string and number variants)
+   - JSONRPCRequest (with/without params)
+   - JSONRPCNotification (with/without params)
+   - JSONRPCResponse (successful responses)
+   - JSONRPCError (error responses with optional data)
+   - Type guards for discriminating message types
+4. Implemented TypeScript port:
+   - JSON-RPC base types (RequestId, JSONRPCMessage union)
+   - Request, Notification, Response, Error interfaces
+   - Type guards: isJSONRPCRequest, isJSONRPCNotification, isJSONRPCResponse, isJSONRPCError
+   - Re-exported AuthMode from core/auth (already exists)
+5. All 14 tests passing (100%)
+6. Zero TypeScript errors
+7. Updated documentation
+
+**Notes:**
+- Library-first approach: Focused on reusable JSON-RPC types
+- Skipped IDE-specific protocol enums (macro-generated ClientRequest/ServerRequest)
+- Skipped schema generation and export code (build-time tooling)
+- AuthMode already exists in core/auth, re-exported for convenience
+- JSON-RPC types useful for any RPC-style communication
+- Minimal but complete port of core protocol primitives

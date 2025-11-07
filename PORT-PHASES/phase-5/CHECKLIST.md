@@ -46,11 +46,11 @@
 - [x] Update logs
 
 ### app-server-protocol
-- [ ] Read codex-rs/app-server-protocol/src/
-- [ ] Port protocol types
-- [ ] Create tests
-- [ ] Verify tests pass
-- [ ] Update logs
+- [x] Read codex-rs/app-server-protocol/src/
+- [x] Port JSON-RPC protocol types (library-focused)
+- [x] Create tests
+- [x] Verify tests pass
+- [x] Update logs
 
 ### app-server
 - [ ] Read codex-rs/app-server/src/
