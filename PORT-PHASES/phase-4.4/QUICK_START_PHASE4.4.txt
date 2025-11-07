@@ -12,13 +12,22 @@ PREREQUISITES:
 - Phase 4.2 ✅ (Anthropic Messages API - 148 tests)
 - Phase 4.3 ✅ (Backend services & MCP - 34 tests)
 
-IMMEDIATE TASK BEFORE STARTING:
-Fix 2 errors in Phase 4.2 retry.test.ts:
+IMMEDIATE TASKS BEFORE STARTING SCRIPT HARNESS:
+
+Task 1: Fix Phase 4.2 cleanup errors
 1. Run: npm test -- retry.test.ts
 2. Identify cleanup issues (likely AbortController/timers not cleared)
 3. Fix: Add proper cleanup in afterEach or test teardown
 4. Verify: npm test -- messages (should show 0 errors)
 5. Commit: git add -A && git commit -m "fix: cleanup errors in retry tests" && git push
+
+Task 2: Complete Phase 4.2 missing tests
+1. Review MESSAGES_API_INTEGRATION_DESIGN_CODEX.md Section 4.3 (RP tests)
+2. Implement messages/response-parser.ts (non-streaming response parsing)
+3. Write tests RP-01 through RP-20 (20 tests for complete responses)
+4. Verify: npm test -- response-parser (all passing)
+5. Update: Phase 4.2 now 167/167 tests complete
+6. Commit: git add -A && git commit -m "phase4.2: add missing response parser (Stage 6)" && git push
 
 THEN proceed with script harness implementation.
 

@@ -5,12 +5,15 @@
 
 ---
 
-## Setup
+## Setup & Phase 4.2 Cleanup
 
 - [x] Phase 4.2 complete (Messages API)
 - [x] Final design complete
 - [ ] Fix Phase 4.2 errors (2 errors in retry.test.ts cleanup)
-- [ ] Verify all tests passing (no errors)
+- [ ] Add missing Phase 4.2 tests (Stage 6: Response Parser)
+- [ ] Implement non-streaming response parser (20 tests from design RP-01 through RP-20)
+- [ ] Verify all 167 Phase 4.2 tests passing (currently 148)
+- [ ] Verify no errors
 - [ ] Review design document thoroughly
 - [ ] Install quickjs-emscripten
 
