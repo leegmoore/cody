@@ -146,16 +146,27 @@ export class ScriptStackOverflowError extends ScriptHarnessError {
  * Thrown into script; catchable; logged
  */
 export class ApprovalDeniedError extends ScriptHarnessError {
+  public readonly requestId?: string;
+
   constructor(
     public readonly toolName: string,
-    public readonly requestId?: string,
+    reasonOrRequestId?: string,
   ) {
+    // If reasonOrRequestId looks like an ID (starts with 'req_'), treat as requestId
+    // Otherwise treat as reason (custom message)
+    const isRequestId = reasonOrRequestId?.startsWith("req_");
+    const reason = isRequestId ? undefined : reasonOrRequestId;
+    const requestId = isRequestId ? reasonOrRequestId : undefined;
+
     super(
-      `User denied approval for tool: ${toolName}`,
+      reason || `User denied approval for tool: ${toolName}`,
       "ApprovalDeniedError",
       "executing",
       { toolName, requestId },
     );
+
+    // Store requestId as instance property
+    this.requestId = requestId;
   }
 }
 
