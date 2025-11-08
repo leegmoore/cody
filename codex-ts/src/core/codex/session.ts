@@ -25,6 +25,7 @@ import type {
   RunningTask,
 } from "./types.js";
 import type { AuthManager } from "../auth/index.js";
+import type { ModelClient } from "../client/client.js";
 import * as SessionStateHelpers from "./session-state.js";
 import * as TurnStateHelpers from "./turn-state.js";
 import { Features } from "../features/index.js";
