@@ -35,14 +35,70 @@ Phase 6 is the final integration phase where we wire together all the deferred m
 
 ## Success Criteria
 
-- [ ] All modules ported
+### Functional Requirements
+- [ ] All modules ported (core/codex, core/codex-conversation, core/conversation-manager)
 - [ ] Full conversation flow works end-to-end
 - [ ] Can create conversation
 - [ ] Can send message and get response
 - [ ] Can execute tools
 - [ ] Can persist and resume
-- [ ] 100% test pass rate
 - [ ] Integration tests cover full workflows
+
+### Code Quality Requirements (ENTIRE CODEBASE)
+
+**TypeScript:**
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] All pre-existing type errors resolved
+- [ ] No implicit `any` types
+- [ ] Proper type annotations throughout
+
+**ESLint:**
+- [ ] `npm run lint` reports 0 problems
+- [ ] All pre-existing lint errors resolved
+- [ ] All unused variables removed or prefixed with _
+- [ ] No explicit `any` types
+- [ ] All require() converted to imports
+
+**Testing:**
+- [ ] `npm test` reports 0 failures
+- [ ] `npm test` reports 0 skipped tests
+- [ ] All pre-existing test failures fixed
+- [ ] All skipped tests either removed (not needed), implemented (lazy), or converted to TODO comments (awaiting feature)
+- [ ] New tests for all ported modules
+
+**Format:**
+- [ ] `npm run format` makes no changes (already formatted)
+- [ ] Code follows prettier configuration
+
+### Quality Verification Command
+
+**Single command must run clean:**
+```bash
+npm run format && npm run lint && npx tsc --noEmit && npm test
+```
+
+**All must succeed with:**
+- Prettier: No file changes
+- ESLint: 0 problems
+- TypeScript: 0 errors
+- Tests: All passing, none skipped
+
+### Handling Issues
+
+**If agent encounters:**
+- Pre-existing errors blocking work
+- Ambiguous error resolution
+- Test failures from other modules
+- Uncertainty about correct fix
+
+**Agent must:**
+- STOP work on current module
+- Document the issue clearly
+- Discuss with user before proceeding
+- NOT declare phase complete with unresolved issues
+- NOT decide "not my responsibility"
+
+**Phase 6 is only complete when ENTIRE codebase is clean.**
 
 ## Next Steps
 
