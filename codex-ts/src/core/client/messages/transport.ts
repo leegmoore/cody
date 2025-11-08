@@ -135,13 +135,14 @@ async function handleErrorResponse(response: Response): Promise<never> {
     case "authentication_error":
       message = `Authentication failed: ${errorMessage}`;
       break;
-    case "rate_limit_error":
+    case "rate_limit_error": {
       const retryAfter = response.headers.get("retry-after");
       message = `Rate limit exceeded: ${errorMessage}`;
       if (retryAfter) {
         message += ` (retry after ${retryAfter}s)`;
       }
       break;
+    }
     case "api_error":
       message = `Anthropic API error: ${errorMessage}`;
       break;

@@ -218,31 +218,27 @@ export function createToolsProxy(
 
           // Create detached promise
           const taskPromise = (async () => {
-            try {
-              // Check if approval needed (in spawn mode, approvals are immediate or rejected)
-              if (
-                tool.requiresApproval &&
-                tool.requiresApproval(args) &&
-                approvalBridge
-              ) {
-                const toolCallId = `spawn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-                const approved = await approvalBridge.requestApproval({
-                  toolName,
-                  args,
-                  scriptId: config.scriptId,
-                  toolCallId,
-                });
-                if (!approved) {
-                  throw new ApprovalDeniedError(toolName);
-                }
+            // Check if approval needed (in spawn mode, approvals are immediate or rejected)
+            if (
+              tool.requiresApproval &&
+              tool.requiresApproval(args) &&
+              approvalBridge
+            ) {
+              const toolCallId = `spawn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+              const approved = await approvalBridge.requestApproval({
+                toolName,
+                args,
+                scriptId: config.scriptId,
+                toolCallId,
+              });
+              if (!approved) {
+                throw new ApprovalDeniedError(toolName);
               }
-
-              // Execute tool
-              const result = await tool.execute(args, { signal: abort.signal });
-              return result as T;
-            } catch (error) {
-              throw error;
             }
+
+            // Execute tool
+            const result = await tool.execute(args, { signal: abort.signal });
+            return result as T;
           })();
 
           // Register as DETACHED promise

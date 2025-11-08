@@ -152,7 +152,8 @@ export class WorkerPool {
 
     const startTime = Date.now();
 
-    // Wait for available worker
+    // Wait for available worker (poll with timeout)
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       // Find available worker
       const available = this.workers.find((w) => !w.inUse && w.healthy);

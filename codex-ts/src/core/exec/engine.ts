@@ -146,14 +146,10 @@ export async function executeExecEnv(
 ): Promise<ExecToolCallOutput> {
   const startTime = Date.now();
 
-  try {
-    const rawOutput = await executeCommand(env);
-    const duration = Date.now() - startTime;
+  const rawOutput = await executeCommand(env);
+  const duration = Date.now() - startTime;
 
-    return finalizeExecResult(rawOutput, env.sandbox, duration);
-  } catch (error) {
-    throw error;
-  }
+  return finalizeExecResult(rawOutput, env.sandbox, duration);
 }
 
 /**

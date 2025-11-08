@@ -110,7 +110,7 @@ export class SandboxManager {
         finalCommand = command;
         break;
 
-      case SandboxType.MacosSeatbelt:
+      case SandboxType.MacosSeatbelt: {
         sandboxEnv[CODEX_SANDBOX_ENV_VAR] = "seatbelt";
         const seatbeltArgs = createSeatbeltCommandArgs(
           command,
@@ -119,8 +119,9 @@ export class SandboxManager {
         );
         finalCommand = [MACOS_PATH_TO_SEATBELT_EXECUTABLE, ...seatbeltArgs];
         break;
+      }
 
-      case SandboxType.LinuxSeccomp:
+      case SandboxType.LinuxSeccomp: {
         if (!codexLinuxSandboxExe) {
           throw new SandboxTransformError(
             "missing codex-linux-sandbox executable path",
@@ -134,6 +135,7 @@ export class SandboxManager {
         finalCommand = [codexLinuxSandboxExe, ...linuxArgs];
         arg0Override = "codex-linux-sandbox";
         break;
+      }
 
       case SandboxType.WindowsRestrictedToken:
         // On Windows, the restricted token sandbox executes in-process.

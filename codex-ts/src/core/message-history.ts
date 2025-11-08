@@ -78,16 +78,11 @@ async function ensureOwnerOnlyPermissions(filepath: string): Promise<void> {
     return;
   }
 
-  try {
-    const stats = await fs.stat(filepath);
-    const currentMode = stats.mode & 0o777;
+  const stats = await fs.stat(filepath);
+  const currentMode = stats.mode & 0o777;
 
-    if (currentMode !== 0o600) {
-      await fs.chmod(filepath, 0o600);
-    }
-  } catch (error) {
-    // If we can't check/set permissions, let the caller handle the error
-    throw error;
+  if (currentMode !== 0o600) {
+    await fs.chmod(filepath, 0o600);
   }
 }
 

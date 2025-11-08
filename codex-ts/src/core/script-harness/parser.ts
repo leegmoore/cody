@@ -8,6 +8,7 @@
  * Design reference: SCRIPT_HARNESS_DESIGN_FINAL.md Section 8.3
  */
 
+import { createHash } from "node:crypto";
 import { scanForBannedIdentifiers } from "./hardening.js";
 import {
   BannedIdentifierError,
@@ -383,8 +384,7 @@ function checkUnclosedComments(code: string): {
  */
 function computeHash(code: string): string {
   // Use Node's crypto module for SHA-256
-  const crypto = require("crypto");
-  return crypto.createHash("sha256").update(code, "utf8").digest("hex");
+  return createHash("sha256").update(code, "utf8").digest("hex");
 }
 
 /**

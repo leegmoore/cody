@@ -103,7 +103,7 @@ function* processEvent(
       }
       break;
 
-    case "content_block_start":
+    case "content_block_start": {
       // Start tracking new content block
       const blockType = event.content_block.type;
       const blockState: BlockState = {
@@ -121,8 +121,9 @@ function* processEvent(
 
       state.blocks.set(event.index, blockState);
       break;
+    }
 
-    case "content_block_delta":
+    case "content_block_delta": {
       // Accumulate delta content
       const block = state.blocks.get(event.index);
       if (!block) {
@@ -142,8 +143,9 @@ function* processEvent(
         block.toolInputFragments.push(event.delta.partial_json);
       }
       break;
+    }
 
-    case "content_block_stop":
+    case "content_block_stop": {
       // Finalize content block and emit item
       const completedBlock = state.blocks.get(event.index);
       if (!completedBlock || state.completedBlocks.has(event.index)) {
@@ -187,6 +189,7 @@ function* processEvent(
         yield { type: "output_item_added", item };
       }
       break;
+    }
 
     case "message_delta":
       // Update usage from delta
@@ -200,7 +203,7 @@ function* processEvent(
       }
       break;
 
-    case "message_stop":
+    case "message_stop": {
       // Emit completion event
       if (!state.hasEmittedCompleted) {
         state.hasEmittedCompleted = true;
@@ -227,6 +230,7 @@ function* processEvent(
         };
       }
       break;
+    }
 
     case "ping":
       // Ignore ping events (keep-alive)
