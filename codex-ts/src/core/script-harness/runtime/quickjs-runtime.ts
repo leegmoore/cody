@@ -131,46 +131,87 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
         }
 
         try {
-          // Set up cancellation handler
-          if (signal) {
-            signal.addEventListener(
-              "abort",
-              () => {
-                vm.dispose();
-              },
-              { once: true },
-            );
-          }
+          // Set up interrupt handler for timeout and cancellation
+          vm.runtime.setInterruptHandler(() => {
+            // Check timeout
+            const elapsed = Date.now() - startTime;
+            if (elapsed > mergedLimits.timeoutMs) {
+              return true; // Interrupt execution
+            }
+
+            // Check abort signal
+            if (signal?.aborted) {
+              return true; // Interrupt execution
+            }
+
+            return false; // Continue execution
+          });
 
           // Inject globals into VM
           for (const [key, value] of Object.entries(globals)) {
-            try {
-              // Convert JS value to QuickJS handle
-              const handle = vm.unwrapResult(
-                vm.evalCode(`(${JSON.stringify(value)})`),
-              );
-              vm.setProp(vm.global, key, handle);
-              handle.dispose();
-            } catch (e) {
-              // If JSON.stringify fails, try as function or skip
-              if (typeof value === "function") {
-                // For functions, we need to wrap them as native functions
-                // This is complex in QuickJS, so for now we skip them
-                // TODO: Implement proper function marshalling
+            if (typeof value === "function") {
+              // Inject function as native QuickJS function
+              // Note: Only synchronous functions are fully supported
+              // Async functions cannot be bridged because:
+              // 1. vm.newFunction() callback must return synchronously
+              // 2. Promise .then() callbacks are queued as microtasks (async)
+              // 3. No way to synchronously extract a Promise's resolved value
+              const fnHandle = vm.newFunction(key, (...argHandles) => {
+                // Convert QuickJS handles to JS values
+                const args = argHandles.map((h) => vm.dump(h));
+
+                // Call the original function
+                const result = value(...args);
+
+                // Sync result - convert back to QuickJS handle
+                try {
+                  return vm.unwrapResult(
+                    vm.evalCode(`(${JSON.stringify(result)})`),
+                  );
+                } catch {
+                  // If result can't be serialized, return undefined
+                  return vm.undefined;
+                }
+              });
+
+              vm.setProp(vm.global, key, fnHandle);
+              fnHandle.dispose();
+            } else {
+              // Handle non-function values
+              try {
+                const handle = vm.unwrapResult(
+                  vm.evalCode(`(${JSON.stringify(value)})`),
+                );
+                vm.setProp(vm.global, key, handle);
+                handle.dispose();
+              } catch (e) {
+                // Skip values that can't be serialized
                 continue;
               }
             }
           }
 
-          // Detect if code has return statement
-          // If yes, wrap in IIFE. If no, eval directly for expression semantics.
+          // Detect if code has return statement or await
           const hasReturn = /\breturn\b/.test(sourceCode);
-          const wrappedCode = hasReturn
-            ? `(function() { ${sourceCode} })()`
-            : sourceCode;
+          const hasAwait = /\bawait\b/.test(sourceCode);
+
+          // Wrap code appropriately
+          let wrappedCode: string;
+          let evalOptions: { type?: 'global' | 'module' } = {};
+
+          if (hasAwait) {
+            // Async code - wrap in async IIFE (newline prevents comment consumption)
+            wrappedCode = `(async function() {\n${sourceCode}\n})()`;
+          } else if (hasReturn) {
+            // Sync code with return (newline prevents comment consumption)
+            wrappedCode = `(function() {\n${sourceCode}\n})()`;
+          } else {
+            // Expression or statement
+            wrappedCode = sourceCode;
+          }
 
           // Execute the script
-          const resultHandle = vm.evalCode(wrappedCode);
+          const resultHandle = vm.evalCode(wrappedCode, undefined, evalOptions);
 
           // Check if execution failed
           if (resultHandle.error) {
@@ -202,8 +243,53 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
             throw error;
           }
 
-          // Get the return value
-          const returnValue = vm.dump(resultHandle.value);
+          // Check if result is a promise (only if we wrapped in async IIFE)
+          let returnValue: any;
+
+          if (hasAwait) {
+            // We wrapped the code in async IIFE, so result is a promise
+            const promiseState = vm.getPromiseState(resultHandle.value);
+
+            if (promiseState.type === "pending") {
+              // Execute pending jobs until promise resolves
+              while (vm.runtime.hasPendingJob()) {
+                const jobResult = vm.runtime.executePendingJobs();
+                if (jobResult.error) {
+                  jobResult.error.dispose();
+                  break;
+                }
+                // Note: jobResult.value is a number (count), not a handle to dispose
+              }
+
+              // Check promise state again
+              const finalState = vm.getPromiseState(resultHandle.value);
+              if (finalState.error) {
+                const errorObj = vm.dump(finalState.error);
+                finalState.error.dispose();
+                throw new Error(String(errorObj));
+              }
+
+              if (finalState.type === "fulfilled" && finalState.value) {
+                returnValue = vm.dump(finalState.value);
+                finalState.value.dispose();
+              } else {
+                // Promise still pending or rejected without explicit error
+                throw new Error(`Promise in unexpected state: ${finalState.type}`);
+              }
+            } else if (promiseState.error) {
+              const errorObj = vm.dump(promiseState.error);
+              promiseState.error.dispose();
+              throw new Error(String(errorObj));
+            } else {
+              // Promise already resolved
+              returnValue = vm.dump(promiseState.value);
+              promiseState.value.dispose();
+            }
+          } else {
+            // Not async, just get the value directly
+            returnValue = vm.dump(resultHandle.value);
+          }
+
           resultHandle.value.dispose();
 
           return {
@@ -215,6 +301,9 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
             },
           };
         } finally {
+          // Clean up interrupt handler
+          vm.runtime.removeInterruptHandler();
+
           // Release worker back to pool (or dispose if pool disabled)
           if (worker && this.workerPool) {
             await this.workerPool.release(worker);
@@ -224,50 +313,38 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
         }
       };
 
-      // Execute with timeout
-      const timeoutPromise = new Promise<ScriptExecutionResult>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            ok: false,
-            error: {
-              code: "ScriptTimeoutError",
-              message: `Script exceeded timeout of ${mergedLimits.timeoutMs}ms`,
-              phase: "executing",
-            },
-            metadata: {
-              duration_ms: Date.now() - startTime,
-              tool_calls_made: 0,
-            },
-          });
-        }, mergedLimits.timeoutMs);
-      });
-
-      const result = await Promise.race([executeWithTimeout(), timeoutPromise]);
+      // Execute (interrupt handler will handle timeout/cancellation)
+      const result = await executeWithTimeout();
 
       return result;
-    } catch (error: unknown) {
+    } catch (error: any) {
       // Handle execution errors
-      const errorObj =
-        error && typeof error === "object" ? error : { message: String(error) };
-      const errorCode =
-        "name" in errorObj && typeof errorObj.name === "string"
-          ? errorObj.name
-          : errorObj.constructor?.name || "Error";
-      const errorMessage =
-        "message" in errorObj && typeof errorObj.message === "string"
-          ? errorObj.message
-          : String(error);
+      const errorCode = error.name || error.constructor?.name || "Error";
+      const errorMessage = error.message || String(error);
+
+      // Detect interrupt errors and classify them
+      let finalCode = errorCode;
+      let finalMessage = errorMessage;
+
+      // Check if this was an interrupt due to timeout or cancellation
+      if (errorCode === "InternalError" && errorMessage.includes("interrupted")) {
+        const elapsed = Date.now() - startTime;
+        if (signal?.aborted) {
+          finalCode = "ScriptCancelledError";
+          finalMessage = "Script execution was cancelled";
+        } else if (elapsed >= mergedLimits.timeoutMs) {
+          finalCode = "ScriptTimeoutError";
+          finalMessage = `Script exceeded timeout of ${mergedLimits.timeoutMs}ms`;
+        }
+      }
 
       return {
         ok: false,
         error: {
-          code: errorCode,
-          message: errorMessage,
-          phase: "executing" as const,
-          stack:
-            "stack" in errorObj && typeof errorObj.stack === "string"
-              ? errorObj.stack
-              : undefined,
+          code: finalCode,
+          message: finalMessage,
+          phase: "executing",
+          stack: error.stack,
         },
         metadata: {
           duration_ms: Date.now() - startTime,
