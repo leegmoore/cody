@@ -100,6 +100,86 @@ No conversation history accumulated.
 
 **This is the primary innovation - detailed in sections below.**
 
+### Strategy 4: Curated Compression
+
+**Model:** Agent-driven adaptive compression with learned heuristics, validated by human or quality model, offering surgical removal decisions over algorithmic rules.
+
+**Behavior:**
+```
+Active conversation progresses normally
+
+Background Compression Agent (continuous monitoring):
+  - Reads: Latest 20-30k token chunk
+  - References: 5k compression guide (principles & examples)
+  - Analyzes: What to keep, compress, or remove
+  - Produces: Candidate list (400-500 tokens to remove)
+    └─ Each: {chunk, reasoning, confidence score}
+  - Validates: With human or quality-checking model
+  - Compresses: Approved removals applied
+
+Result: Compressed history fed to main agent
+Next chunk: Process repeats
+```
+
+**The 5k Compression Guide contains:**
+- **Never Remove:** Decisions, technical specs, numerical data, requirements, commitments
+- **Always Remove:** Redundant explanations, verbose acknowledgments, repeated tool outputs, boilerplate
+- **Compress:** Long examples → summaries, back-and-forth → conclusions, verbose → concise
+- **Edge Cases:** Uncertainty handling, partial information, ambiguous contexts
+- **Quality Criteria:** What makes good compression (preserves meaning, maintains narrative flow, keeps critical details)
+
+**Characteristics:**
+- **Context-aware:** Agent understands conversation semantics, not just pattern matching
+- **Adaptive:** Learns from examples, adjusts to conversation style
+- **Surgical:** Removes specific chunks vs broad strokes
+- **Validated:** Human/model oversight prevents over-aggressive compression
+- **Teachable:** 5k guide is extensible with new patterns
+
+**Advantages:**
+- Higher quality than algorithmic (understands context)
+- Preserves nuance better than fixed rules
+- Can adapt to conversation type (technical vs planning vs brainstorming)
+- Learns from mistakes (guide refinement)
+- Handles edge cases with judgment
+
+**Limitations:**
+- Slower than algorithmic (agent reasoning time)
+- More expensive (model calls for compression)
+- Requires initial guide creation
+- Quality depends on compression agent capability
+
+**Comparison to Strategy 3 (Gradient):**
+
+| Aspect | Gradient (Algorithmic) | Curated (Agent-Driven) |
+|--------|----------------------|----------------------|
+| Approach | Fixed rules, preset bands | Adaptive decisions |
+| Speed | Fast (1-2s automated) | Slower (agent reasoning) |
+| Quality | Consistent, may miss nuance | High, context-aware |
+| Cost | Low (once built) | Higher (model calls) |
+| Adaptability | Fixed rules | Learns from examples |
+| Scope | Whole-turn compression | Surgical chunk removal |
+
+**Hybrid Approach (Recommended):**
+```
+1. Strategy 3 (Gradient) - Baseline compression (80% of work, fast)
+2. Strategy 4 (Curated) - Refinement pass (final 10-15%, critical decisions)
+3. Human validation - High-uncertainty cases only
+```
+
+**Use cases:**
+- **Curated alone:** High-value conversations, complex projects, bespoke consulting work
+- **Gradient alone:** High-volume, routine, automated agents where speed matters
+- **Hybrid:** Best of both - fast baseline + quality refinement
+
+**Implementation:**
+- Compression agent with 5k guide prompt
+- Candidate generation with reasoning
+- Validation loop (human or quality model)
+- Apply approved compressions
+- Update guide with learnings
+
+**Proven:** Manual proof-of-concept completed (GPT + Sonnet analyzed 1M tokens of context, compressed to 880k with zero noticed gaps or memory holes). Validates feasibility.
+
 ---
 
 ## Compression Gradient: Concept
