@@ -1,75 +1,153 @@
 ===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 6 =====
 
-ROLE: You are a TypeScript developer porting the Codex Rust codebase to TypeScript.
+ROLE: You are a senior TypeScript developer completing the final Codex port integration.
 
-PROJECT: Codex is an AI coding agent from OpenAI. We're porting from Rust to TypeScript to create a pure library (@openai/codex-core) that can be used without subprocess overhead.
+PROJECT: Codex TypeScript port - final three core modules that wire everything together.
 
-STRATEGY: Test-Driven Development - port Rust tests first, then implement. Use stateless logs to track progress across sessions.
+STRATEGY: Incremental porting (core/codex in 6 sections), comprehensive testing, quality maintenance.
 
-CURRENT PHASE: Phase 6 - Final Integration (3 modules, requires ALL previous phases)
+CURRENT PHASE: Phase 6 - Final Core Integration (3 modules, ~3,500 lines)
 
-PHASE 5 STATUS: ✅ COMPLETE (auth, CLI, app-server)
+PREREQUISITES (CRITICAL):
+- Phases 1-5.1 ✅ COMPLETE (All modules ported)
+- Phase 5.2 ✅ MUST BE COMPLETE (Code quality baseline)
+  - 0 TypeScript errors
+  - 0 ESLint problems
+  - 0 test failures
+  - 0 skipped tests
+
+⚠️ VERIFY BASELINE BEFORE STARTING:
+Run: npx tsc --noEmit && npm run lint && npm test
+All must be clean. If not, Phase 5.2 is incomplete. STOP and inform user.
 
 NOTE: Workspace is /Users/leemoore/code/codex-port-02
 (TypeScript port is in codex-ts/ subdirectory)
 
-FIRST: Read these logs to understand status (all in codex-ts/):
-- Read codex-ts/PORT_LOG_MASTER.md (overall status)
-- Read codex-ts/PORT_LOG_PHASE5.md (Phase 5 summary)
-- Read codex-ts/KNOWN_BUGS.md (bug tracking)
-- Read codex-ts/DEV_STANDARDS.md (code standards)
-
-THEN: Read full instructions:
-- Read PORT-PHASES/phase-6/README.md (detailed plan)
+FIRST: Read documentation and current state
+- Read PORT-PHASES/PLANNING-SYSTEM-GUIDE.md (understand the system)
+- Read PORT-PHASES/phase-6/README.md (phase overview)
+- Read PORT-PHASES/phase-6/CHECKLIST.md (detailed tasks)
 - Read PORT-PHASES/phase-6/STATUS.md (current progress)
-- Read PORT-PHASES/phase-6/CHECKLIST.md (task list)
+- Read codex-ts/PORT_LOG_MASTER.md (overall status)
 
-TASK: Port Phase 6 modules (final integration) using Test-Driven Development:
-1. Read Rust source: codex-rs/core/src/[MODULE].rs
-2. Read Rust tests: codex-rs/core/tests/ (if exists)
-3. Create codex-ts/src/core/[MODULE].test.ts - port tests to TypeScript/Vitest
-4. Run tests (should fail): cd codex-ts && npm test
-5. Create codex-ts/src/core/[MODULE].ts - implement until tests pass
-6. Run: npm test (must pass!)
-7. Type check: npx tsc --noEmit (must pass!)
-8. Format: npm run format
-9. Commit and push: git add -A && git commit -m "phase6: [MODULE]" && git push
-10. Update PORT-PHASES/phase-6/CHECKLIST.md (check off completed items)
-11. Update PORT-PHASES/phase-6/STATUS.md (add session log)
-12. Update codex-ts/PORT_LOG_MASTER.md (update module status)
-13. If bugs found: add to codex-ts/KNOWN_BUGS.md (don't fix unless critical)
+MODULES (3 total, port in order):
 
-START ORDER (3 modules - FINAL PHASE!):
-1. core/codex - Main orchestrator (requires ALL previous phases)
-2. core/codex-conversation - Conversation wrapper
-3. core/conversation-manager - High-level API (ConversationManager class)
+1. core/codex (3,145 lines) - COMPLEX
+   - Port in 6 sections (types, event loop, tools, turns, MCP, spawn)
+   - Test each section before next
+   - 75 dependencies (all from previous phases)
+   - 80-100 tests
 
-DEV STANDARDS (see codex-ts/DEV_STANDARDS.md):
-- Use npm (not pnpm/bun)
-- TypeScript strict mode (no 'any' types)
-- Prettier handles formatting (single quotes, 100 char width)
-- Every module needs comprehensive tests
-- 100% test pass rate maintained
-- Clear, descriptive variable names
-- JSDoc comments for public APIs
+2. core/codex-conversation (39 lines) - SIMPLE
+   - Thin wrapper
+   - Just delegation
+   - 10-15 tests
 
-CRITICAL: Phase 6 Integration Tests
-This is the final phase - must have end-to-end integration tests:
-- Full conversation flow (create → message → tool execution → persist → resume)
-- Authentication integration
-- MCP tool calls
-- File operations (apply patch)
-- Command execution with sandboxing
+3. core/conversation-manager (339 lines) - MEDIUM
+   - High-level API
+   - Conversation lifecycle
+   - 30-40 tests
 
-BEFORE ENDING SESSION:
-1. Update PORT-PHASES/phase-6/CHECKLIST.md (check off completed items)
-2. Update PORT-PHASES/phase-6/STATUS.md (add session log with what you did)
-3. Update codex-ts/PORT_LOG_MASTER.md (update module progress)
-4. Run: git add -A
-5. Run: git commit -m "phase6: [description of what you completed]"
-6. Run: git push
-7. Report to user: modules completed, test count, FINAL STATUS
+PORTING WORKFLOW (Per Section/Module):
+1. Read Rust source thoroughly
+2. Port types and interfaces
+3. Create test file FIRST (TDD)
+4. Port tests from Rust
+5. Run tests (should fail): npm test -- [module]
+6. Implement until tests pass
+7. Verify section complete: tests pass
+8. Check types: npx tsc --noEmit
+9. Check lint: npm run lint
+10. Fix any issues introduced
+11. Commit: git add -A && git commit -m "phase6: [section/module]"
+12. Update CHECKLIST (check off tasks)
+13. Update STATUS (session log)
+14. Move to next section
 
-GO! Start by reading STATUS.md to see current progress, then continue from where you left off.
+CRITICAL - core/codex Sections:
+Don't try to port all 3,145 lines at once. Follow the 6 sections from README:
+1. Core types & Session (500 lines)
+2. Event loop (400 lines)
+3. Tool integration (600 lines)
+4. Turn processing (800 lines)
+5. MCP & advanced (600 lines)
+6. Spawn/resume (245 lines)
 
-============================================================
+Test each section, commit each section, verify before moving on.
+
+QUALITY STANDARDS (MANDATORY):
+
+After EACH module/section:
+- Run: npx tsc --noEmit → must show 0 errors
+- Run: npm run lint → must show 0 problems
+- Run: npm test -- [module] → must pass
+
+If errors appear (new or pre-existing):
+- Fix them immediately
+- Don't accumulate debt
+- Don't declare section done with errors
+
+FINAL VERIFICATION (Before declaring Phase 6 complete):
+Run: npm run format && npm run lint && npx tsc --noEmit && npm test
+
+All must succeed:
+- Prettier: No changes
+- ESLint: 0 problems
+- TypeScript: 0 errors
+- Tests: All pass (1900+), 0 skipped
+
+If ANY fail: Phase 6 is NOT complete. Fix and re-verify.
+
+INTEGRATION TESTS (CRITICAL):
+Create tests/integration/ directory with full workflows:
+- Create conversation → send message → tool execution → persist → resume
+- Authentication → conversation → tool approval
+- MCP tool execution
+- Error handling across system
+
+These prove everything works together.
+
+DEV STANDARDS:
+- npm (not pnpm/bun)
+- TypeScript strict mode (no 'any')
+- Prettier formatting (single quotes, 100 char)
+- ESLint code quality only
+- Comprehensive tests
+- JSDoc on public APIs
+
+BEFORE ENDING EACH SESSION:
+1. Update PORT-PHASES/phase-6/CHECKLIST.md (check off completed)
+2. Update PORT-PHASES/phase-6/STATUS.md (session log with details)
+3. Update codex-ts/PORT_LOG_MASTER.md (overall progress)
+4. Run: npm run format && npm run lint && npx tsc --noEmit && npm test
+5. Verify all clean (or document what's not and why)
+6. Commit: git add -A && git commit -m "phase6: [session work]"
+7. Push: git push
+8. Report to user:
+   - Modules/sections completed
+   - Tests passing
+   - Quality status
+   - What's next
+
+HANDLING PRE-EXISTING ISSUES:
+If you encounter pre-existing errors:
+- Fix them (you're responsible for whole codebase)
+- Don't leave for later
+- Don't say "not my code"
+- Clean as you go
+
+If uncertain how to fix:
+- STOP work
+- Document the issue
+- Ask user for guidance
+- Don't guess
+
+START by:
+1. Verifying baseline is clean (run quality checks)
+2. Reading codex.rs structure
+3. Beginning Section 1 (Core types & Session)
+
+⚠️ CRITICAL: Phase 6 is only complete when ENTIRE codebase is clean and working.
+This is the final port phase - no cutting corners.
+
+GO! Start with baseline verification, then Section 1 of core/codex.

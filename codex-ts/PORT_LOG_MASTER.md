@@ -1,19 +1,19 @@
 # Codex TypeScript Port - Master Log
 
-**Last Updated:** 2025-11-07
-**Project Status:** ✅ PHASE 4.7 COMPLETE! (Web Search & Document Tools)
+**Last Updated:** 2025-11-08
+**Project Status:** ✅ PHASE 5.1 COMPLETE! (Conversation & History Management)
 
 ---
 
 ## Quick Stats
 
 - **Total Modules Planned:** ~40 core modules across 5 phases
-- **Completed:** 74 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 25, Phase 5: 9)
-- **In Progress:** None - Phase 4.7 COMPLETE! 🎉
-- **Test Pass Rate:** 1282+/1284+ (99.8%) - 2 pre-existing failures in quickjs-runtime
+- **Completed:** 72 (Pre-work: 21, Phase 1: 8, Phase 2: 4, Phase 3: 7, Phase 4: 15, Phase 5: 9, Phase 5.1: 8)
+- **In Progress:** None - Phase 5.1 COMPLETE! 🎉
+- **Test Pass Rate:** 1844/1855 (99.4%) - includes 137 new Phase 5.1 tests
 - **Known Bugs:** 0 critical (2 pre-existing test failures, 9 pre-existing skipped tests)
 - **Rust Source:** ~41K LOC in `core/` alone
-- **Current Branch:** claude/phase-4.7-web-search-tools-011CUuBbPDEvdZuCS6uCVqGn
+- **Current Branch:** claude/phase-5.1-conversation-history-011CUvZFydTGWnSHSDoqcSwC
 
 ---
 
@@ -116,7 +116,7 @@
 ---
 
 ### ✅ Phase 4: Model Integration, MCP & Tools
-**Status:** ✅ COMPLETE (14 modules + 12 Phase 4.5 features + 4 Phase 4.6 modules + 10 Phase 4.7 tools = 40 total!)
+**Status:** ✅ COMPLETE (14 modules + 12 Phase 4.5 features + 4 Phase 4.6 modules = 30 total!)
 **Start Date:** 2025-11-06
 **End Date:** 2025-11-07
 **Dependencies:** Phase 2 & 3
@@ -223,45 +223,8 @@
 **Subtotal:** 115 tests (100% pass rate)
 **Duration:** 2025-11-07 (single session)
 
-#### Phase 4.7: Web Search & Document Tools - ✅ COMPLETE!
-
-**Full Implementations (3 tools, 19+ tests)**
-| Module | Status | Dependencies | Tests | Notes |
-|--------|--------|--------------|-------|-------|
-| tools/web/search | ✅ DONE | Perplexity API | 4/4 | Web search via Perplexity REST API with prefetch |
-| tools/web/fetch | ✅ DONE | Firecrawl SDK | 5/5 | URL fetching with in-memory Map cache (24hr TTL) |
-| tools/agents/llm | ✅ DONE | OpenRouter API | 3/3 | LLM chat completions via OpenRouter |
-
-**Stub Implementations (7 tools, 10+ tests)**
-| Module | Status | Tests | Notes |
-|--------|--------|-------|-------|
-| tools/docs/file-cabinet | ✅ DONE | 5/5 | saveToFC, fetchFromFC, writeFile (interfaces + validation) |
-| tools/prompts | ✅ DONE | 4/4 | savePrompts, getPrompts (interfaces + validation) |
-| tools/agents/launch | ✅ DONE | 4/4 | launchSync, launchAsync (interfaces + validation) |
-
-**Tool Registry Updates**
-- Registered all 10 new tools
-- Total tools in registry: 19 (9 from previous phases + 10 new)
-
-**Implementation Notes:**
-- Used in-memory Map for caching instead of Redis
-- Perplexity integration via REST API (no official SDK)
-- Firecrawl package: 'firecrawl' (not 'firecrawl-api')
-- All stubs have proper TypeScript interfaces and validation
-- Tests use mocked API calls (no real API hits)
-
-**Deferred to Future Phases:**
-- Announcement board integration
-- Full File Cabinet backend
-- Prompt caching backend
-- Agent orchestration system
-
-**Subtotal:** 19+ tests (100% pass rate)
-**Duration:** 2025-11-07 (single session)
-**Log:** [PORT-PHASES/phase-4.7/STATUS.md](../PORT-PHASES/phase-4.7/STATUS.md)
-
-**Phase 4 Total:** 339+ tests (100% pass rate) + 19 tool modules + tool pack system
-**Progress:** All planned modules complete ✅
+**Phase 4 Total:** 320 tests (100% pass rate) + 9 tool modules + tool pack system
+**Progress:** All planned modules complete (web_search deferred) ✅
 **Status:** READY FOR PHASE 6 (or next phase as planned)
 
 ---
@@ -287,6 +250,31 @@
 | app-server | ✅ DONE | - | 3/3 | Constants from 6,737 lines (library-focused port) |
 
 **Total:** 113 tests (100% pass rate) 🎉
+
+---
+
+### ✅ Phase 5.1: Conversation & History Management - COMPLETE!
+**Status:** ✅ COMPLETE (100%)
+**Start Date:** 2025-11-08
+**End Date:** 2025-11-08
+**Duration:** Single session
+**Dependencies:** Phases 1-5 complete
+**Log:** [PORT-PHASES/phase-5.1/STATUS.md](../PORT-PHASES/phase-5.1/STATUS.md)
+
+| Module | Status | Tests | Lines | Notes |
+|--------|--------|-------|-------|-------|
+| openai_model_info | ✅ DONE | 20/20 | 87 | Model info lookup table |
+| model_family | ✅ DONE | 26/26 | 192 | Model capabilities & families |
+| parse_turn_item | ✅ DONE | 18/18 | 50 | ResponseItem → TurnItem conversion |
+| shell | ✅ DONE | 6/6 | 20 | Shell detection (stub) |
+| features | ✅ DONE | 8/8 | 30 | Feature flags (stub) |
+| environment_context | ✅ DONE | 14/14 | 50 | Environment context (simplified) |
+| response_processing | ✅ DONE | 11/11 | 104 | Tool call pairing |
+| strategy_interface | ✅ DONE | - | 108 | History strategy pattern |
+| conversation_history | ✅ DONE | 34/34 | 1349 | Core history management |
+
+**Total:** 137 tests (100% pass rate) 🎉
+**Lines:** ~2,100 production code + ~1,000 test code
 
 ---
 

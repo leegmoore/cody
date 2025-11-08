@@ -1,0 +1,83 @@
+===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 5.2 =====
+
+ROLE: Code quality specialist cleaning up TypeScript codebase.
+
+PROJECT: Codex TypeScript port - establish clean quality baseline.
+
+STRATEGY: Configure tools, run format, fix lint, fix types, fix tests, verify.
+
+CURRENT PHASE: Phase 5.2 - Code Quality & Test Cleanup
+
+PHASE 5.1 STATUS: ✅ COMPLETE (Conversation & history management)
+
+NOTE: Workspace is /Users/leemoore/code/codex-port-02/codex-ts
+
+CURRENT BASELINE:
+- TypeScript: 65 errors
+- ESLint: 319 problems
+- Tests: 1704 passing, 5 failing, 9 skipped
+
+TARGET:
+- TypeScript: 0 errors
+- ESLint: 0 problems
+- Tests: 1718+ passing, 0 failing, 0 skipped
+
+FIRST: Read documentation
+- Read PORT-PHASES/phase-5.2/README.md
+- Read PORT-PHASES/phase-5.2/CHECKLIST.md
+- Read PORT-PHASES/phase-5.2/STATUS.md
+
+WORKFLOW:
+
+1. Configure ESLint + Prettier
+   - Install eslint-config-prettier
+   - Update .eslintrc.json
+   - Disable formatting rules in ESLint
+
+2. Run Format
+   - npm run format
+   - Commit baseline: "chore: prettier format"
+
+3. Fix Lint (manual, systematic)
+   - Category by type (unused vars, any types, etc.)
+   - Fix in batches
+   - Run lint after each batch
+   - Commit: "fix: lint errors"
+
+4. Fix TypeScript (manual)
+   - Type mismatches
+   - Unused imports
+   - Implicit any
+   - Run tsc --noEmit frequently
+   - Commit: "fix: type errors"
+
+5. Fix Tests (manual)
+   - Git operations (2 failures)
+   - QuickJS isolation (2 failures)
+   - Exec working directory (1 failure)
+   - Commit: "fix: test failures"
+
+6. Skipped Tests (review each)
+   - Remove if not needed
+   - Implement if lazy
+   - Convert to TODO if awaiting feature
+   - Commit: "fix: skipped tests"
+
+7. Verification Cycle
+   - npm run format (no changes)
+   - npm run lint (0 problems)
+   - npx tsc --noEmit (0 errors)
+   - npm test (all pass, none skip)
+   - Repeat if any fail
+
+FINAL VERIFICATION:
+All 4 commands must be clean in single run.
+
+BEFORE ENDING SESSION:
+1. Update PORT-PHASES/phase-5.2/CHECKLIST.md
+2. Update PORT-PHASES/phase-5.2/STATUS.md
+3. Update codex-ts/PORT_LOG_MASTER.md
+4. git add -A && git commit -m "phase5.2: complete code quality cleanup" && git push
+5. Report: All metrics (lint, type, test)
+
+START with Step 1 (configure tools properly).

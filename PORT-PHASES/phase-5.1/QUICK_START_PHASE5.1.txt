@@ -1,0 +1,87 @@
+===== COPY THIS INTO FRESH CLAUDE CODE SESSION FOR PHASE 5.1 =====
+
+ROLE: You are a TypeScript developer porting Codex conversation and history management.
+
+PROJECT: Codex TypeScript port - core conversation modules with strategy pattern.
+
+STRATEGY: Faithful Rust port + extensibility for future compression gradient.
+
+CURRENT PHASE: Phase 5.1 - Conversation & History Management (8 modules)
+
+PREREQUISITES:
+- Phase 4 ✅ COMPLETE (Client, tools, script harness)
+- Phase 5 ✅ COMPLETE (Auth, CLI, utils)
+
+NOTE: Workspace is /Users/leemoore/code/codex-port-02
+(TypeScript port is in codex-ts/ subdirectory)
+
+FIRST: Read documentation
+- Read PORT-PHASES/phase-5.1/README.md
+- Read PORT-PHASES/phase-5.1/CHECKLIST.md
+- Read PORT-PHASES/phase-5.1/STATUS.md
+- Read codex-ts/DEV_STANDARDS.md
+
+MODULES (in dependency order):
+
+Easy (1-2 hours each):
+1. openai_model_info (87 lines) - Lookup table
+2. model_family (192 lines) - Model capabilities
+3. parse_turn_item (50 lines) - Type conversion
+4. shell (20 lines) - Bash stub
+5. features (30 lines) - Stub all disabled
+
+Medium (2-3 hours each):
+6. environment_context (50 lines) - Simplified
+7. response_processing (104 lines) - Tool call pairing
+
+Complex (4-6 hours):
+8. conversation_history (1,349 lines) - Core + strategy pattern
+
+CRITICAL - Strategy Pattern:
+
+Before porting conversation_history, create strategy interface:
+
+File: src/core/conversation-history/strategy.ts
+```typescript
+export interface HistoryStrategy {
+  recordTurn(turn: Turn): Promise<void>;
+  getHistory(budget: TokenBudget): Promise<ResponseItem[]>;
+  getTurn?(turnId: string, level: FidelityLevel): Promise<TurnContent>;
+  getStats(): HistoryStats;
+}
+```
+
+Then implement RegularHistoryStrategy as faithful Rust port.
+This prepares for GradientHistoryStrategy in Phase 7.
+
+WORKFLOW:
+1. Read Rust source
+2. Port types and interfaces
+3. Port implementation
+4. Port tests
+5. Run: npm test -- [module]
+6. Verify passing
+7. Commit: git add -A && git commit -m "phase5.1: [MODULE]" && git push
+8. Update logs
+
+STORAGE:
+- Use existing rollout.ts from Phase 2
+- JSONL format (filesystem)
+- Directory: sessions/YYYY/MM/DD/
+- Compatible with Rust format
+- NO database changes needed
+
+DEV STANDARDS:
+- Use npm
+- TypeScript strict mode
+- Prettier formatting
+- 100% test pass rate
+
+BEFORE ENDING SESSION:
+1. Update PORT-PHASES/phase-5.1/CHECKLIST.md
+2. Update PORT-PHASES/phase-5.1/STATUS.md
+3. Update codex-ts/PORT_LOG_MASTER.md
+4. git add -A && git commit -m "phase5.1: [what you did]" && git push
+5. Report: modules done, tests passing, what's next
+
+START with easy modules (openai_model_info, model_family) to build momentum.
