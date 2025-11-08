@@ -22,12 +22,12 @@
  * @returns String with tabs replaced by 4 spaces
  */
 export function expandTabs(s: string): string {
-  if (s.includes('\t')) {
+  if (s.includes("\t")) {
     // Keep it simple: replace each tab with 4 spaces.
     // We do not try to align to tab stops since most usages (like `nl`)
     // look acceptable with a fixed substitution and this avoids stateful math
     // across spans.
-    return s.replace(/\t/g, '    ');
+    return s.replace(/\t/g, "    ");
   }
   return s;
 }
@@ -56,16 +56,16 @@ export function processAnsiEscape(s: string): string {
  */
 export function processAnsiEscapeLine(s: string): string {
   const processed = processAnsiEscape(s);
-  const lines = processed.split('\n');
+  const lines = processed.split("\n");
 
   if (lines.length === 0) {
-    return '';
+    return "";
   } else if (lines.length === 1) {
     return lines[0];
   } else {
     // Warning: expected a single line but got multiple
     console.warn(
-      `ansi_escape_line: expected a single line, got ${lines.length} lines`
+      `ansi_escape_line: expected a single line, got ${lines.length} lines`,
     );
     return lines[0];
   }

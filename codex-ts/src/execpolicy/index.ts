@@ -8,7 +8,7 @@
  * version uses JSON for simplicity. The core checking logic is ported.
  */
 
-export * from './types.js';
-export * from './policy.js';
-export * from './checker.js';
-export * from './arg-types.js';
+export * from "./types.js";
+export * from "./policy.js";
+export * from "./checker.js";
+export * from "./arg-types.js";

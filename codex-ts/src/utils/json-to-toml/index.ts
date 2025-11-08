@@ -47,21 +47,21 @@ export type TomlValue =
 export function jsonToToml(value: JsonValue): TomlValue {
   // Handle null - TOML doesn't have null, use empty string
   if (value === null) {
-    return '';
+    return "";
   }
 
   // Handle boolean
-  if (typeof value === 'boolean') {
+  if (typeof value === "boolean") {
     return value;
   }
 
   // Handle number (TOML distinguishes int vs float, but we keep it simple)
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return value;
   }
 
   // Handle string
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return value;
   }
 
@@ -71,7 +71,7 @@ export function jsonToToml(value: JsonValue): TomlValue {
   }
 
   // Handle object (becomes TOML table)
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     const result: { [key: string]: TomlValue } = {};
     for (const [key, val] of Object.entries(value)) {
       result[key] = jsonToToml(val);

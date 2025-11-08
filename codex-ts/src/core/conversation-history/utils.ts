@@ -3,7 +3,7 @@
  * Ported from codex-rs/protocol/src/protocol.rs
  */
 
-import type { TokenUsage, TokenUsageInfo } from '../../protocol/protocol'
+import type { TokenUsage, TokenUsageInfo } from "../../protocol/protocol";
 
 /**
  * Creates a new TokenUsageInfo or appends to an existing one.
@@ -16,10 +16,10 @@ import type { TokenUsage, TokenUsageInfo } from '../../protocol/protocol'
 export function newOrAppendTokenUsage(
   existing: TokenUsageInfo | undefined,
   newUsage: TokenUsage | undefined,
-  contextWindow: number | undefined
+  contextWindow: number | undefined,
 ): TokenUsageInfo | undefined {
   if (!newUsage) {
-    return existing
+    return existing;
   }
 
   if (!existing) {
@@ -27,20 +27,24 @@ export function newOrAppendTokenUsage(
       total_token_usage: newUsage,
       last_token_usage: newUsage,
       model_context_window: contextWindow,
-    }
+    };
   }
 
   return {
     total_token_usage: {
-      input_tokens: existing.total_token_usage.input_tokens + newUsage.input_tokens,
+      input_tokens:
+        existing.total_token_usage.input_tokens + newUsage.input_tokens,
       cached_input_tokens:
-        existing.total_token_usage.cached_input_tokens + newUsage.cached_input_tokens,
-      output_tokens: existing.total_token_usage.output_tokens + newUsage.output_tokens,
-      reasoning_tokens: existing.total_token_usage.reasoning_tokens + newUsage.reasoning_tokens,
+        existing.total_token_usage.cached_input_tokens +
+        newUsage.cached_input_tokens,
+      output_tokens:
+        existing.total_token_usage.output_tokens + newUsage.output_tokens,
+      reasoning_tokens:
+        existing.total_token_usage.reasoning_tokens + newUsage.reasoning_tokens,
     },
     last_token_usage: newUsage,
     model_context_window: contextWindow ?? existing.model_context_window,
-  }
+  };
 }
 
 /**
@@ -49,9 +53,12 @@ export function newOrAppendTokenUsage(
  * @param info - Token usage info to modify
  * @param contextWindow - Context window size
  */
-export function fillToContextWindow(info: TokenUsageInfo, contextWindow: number): void {
-  info.total_token_usage.input_tokens = contextWindow
-  info.model_context_window = contextWindow
+export function fillToContextWindow(
+  info: TokenUsageInfo,
+  contextWindow: number,
+): void {
+  info.total_token_usage.input_tokens = contextWindow;
+  info.model_context_window = contextWindow;
 }
 
 /**
@@ -75,5 +82,5 @@ export function fullContextWindow(contextWindow: number): TokenUsageInfo {
       reasoning_tokens: 0,
     },
     model_context_window: contextWindow,
-  }
+  };
 }

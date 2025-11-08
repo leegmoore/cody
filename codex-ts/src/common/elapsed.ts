@@ -25,7 +25,7 @@ export function formatDuration(millis: number): string {
   } else {
     const minutes = Math.floor(millis / 60_000);
     const seconds = Math.floor((millis % 60_000) / 1000);
-    return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+    return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
   }
 }
 

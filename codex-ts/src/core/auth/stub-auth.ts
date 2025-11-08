@@ -19,9 +19,9 @@
  */
 export enum AuthMode {
   /** API key-based authentication */
-  ApiKey = 'apikey',
+  ApiKey = "apikey",
   /** ChatGPT OAuth authentication */
-  ChatGPT = 'chatgpt',
+  ChatGPT = "chatgpt",
 }
 
 /**
@@ -40,14 +40,14 @@ export enum AuthMode {
  */
 export class CodexAuth {
   /** Authentication mode */
-  public readonly mode: AuthMode
+  public readonly mode: AuthMode;
 
   /** Stored token/key */
-  private readonly token: string
+  private readonly token: string;
 
   private constructor(mode: AuthMode, token: string) {
-    this.mode = mode
-    this.token = token
+    this.mode = mode;
+    this.token = token;
   }
 
   /**
@@ -57,7 +57,7 @@ export class CodexAuth {
    * @returns CodexAuth instance with ApiKey mode
    */
   static fromApiKey(apiKey: string): CodexAuth {
-    return new CodexAuth(AuthMode.ApiKey, apiKey)
+    return new CodexAuth(AuthMode.ApiKey, apiKey);
   }
 
   /**
@@ -67,7 +67,7 @@ export class CodexAuth {
    * @returns CodexAuth instance with ChatGPT mode
    */
   static fromChatGPT(token: string): CodexAuth {
-    return new CodexAuth(AuthMode.ChatGPT, token)
+    return new CodexAuth(AuthMode.ChatGPT, token);
   }
 
   /**
@@ -83,7 +83,7 @@ export class CodexAuth {
   async getToken(): Promise<string> {
     // TODO(Phase 5): Add token refresh logic
     // TODO(Phase 5): Check expiration
-    return this.token
+    return this.token;
   }
 
   /**
@@ -96,19 +96,19 @@ export class CodexAuth {
    */
   getAccountId(): string | undefined {
     // TODO(Phase 5): Parse token and extract account_id
-    return undefined
+    return undefined;
   }
 }
 
 /**
  * Environment variable for OpenAI API key.
  */
-export const OPENAI_API_KEY_ENV_VAR = 'OPENAI_API_KEY'
+export const OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY";
 
 /**
  * Environment variable for Codex API key.
  */
-export const CODEX_API_KEY_ENV_VAR = 'CODEX_API_KEY'
+export const CODEX_API_KEY_ENV_VAR = "CODEX_API_KEY";
 
 /**
  * Read OpenAI API key from environment variables.
@@ -118,15 +118,15 @@ export const CODEX_API_KEY_ENV_VAR = 'CODEX_API_KEY'
  * @returns API key if found, undefined otherwise
  */
 export function readOpenaiApiKeyFromEnv(): string | undefined {
-  const openaiKey = process.env[OPENAI_API_KEY_ENV_VAR]?.trim()
+  const openaiKey = process.env[OPENAI_API_KEY_ENV_VAR]?.trim();
   if (openaiKey) {
-    return openaiKey
+    return openaiKey;
   }
 
-  const codexKey = process.env[CODEX_API_KEY_ENV_VAR]?.trim()
+  const codexKey = process.env[CODEX_API_KEY_ENV_VAR]?.trim();
   if (codexKey) {
-    return codexKey
+    return codexKey;
   }
 
-  return undefined
+  return undefined;
 }

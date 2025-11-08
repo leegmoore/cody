@@ -15,7 +15,11 @@
 import { detectScriptBlocks } from "./detector.js";
 import { parseScript } from "./parser.js";
 import { createScriptContext, type ContextSeed } from "./context.js";
-import { createToolsProxy, type ToolRegistry, type ApprovalBridge } from "./tool-facade.js";
+import {
+  createToolsProxy,
+  type ToolRegistry,
+  type ApprovalBridge,
+} from "./tool-facade.js";
 import { PromiseTracker } from "./runtime/promise-tracker.js";
 import type {
   ScriptRuntimeAdapter,
@@ -138,7 +142,7 @@ export class Orchestrator {
    */
   async execute(
     text: string,
-    options: ExecuteOptions = {}
+    options: ExecuteOptions = {},
   ): Promise<ExecutionResult> {
     if (!this.initialized) {
       throw new HarnessInternalError("Orchestrator not initialized");
@@ -276,7 +280,7 @@ export class Orchestrator {
             scriptId: `script-${i}`,
             mode: this.config.mode,
           },
-          this.config.approvalBridge
+          this.config.approvalBridge,
         );
 
         // 5. Execute script
@@ -287,7 +291,7 @@ export class Orchestrator {
             tools,
           },
           this.config.limits,
-          options.signal
+          options.signal,
         );
 
         results.push({

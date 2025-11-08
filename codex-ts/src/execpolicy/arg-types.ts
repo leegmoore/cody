@@ -2,8 +2,8 @@
  * Argument type helpers for building policies
  */
 
-import type { ArgMatcher, Opt, OptMeta } from './types.js';
-import { ArgType } from './types.js';
+import type { ArgMatcher, Opt, OptMeta } from "./types.js";
+import { ArgType } from "./types.js";
 
 /**
  * Create a flag option (no argument)
@@ -11,7 +11,7 @@ import { ArgType } from './types.js';
 export function flag(name: string): Opt {
   return {
     name,
-    meta: { type: 'Flag' },
+    meta: { type: "Flag" },
   };
 }
 
@@ -21,7 +21,7 @@ export function flag(name: string): Opt {
 export function opt(name: string, argType: ArgType, required = false): Opt {
   return {
     name,
-    meta: { type: 'Value', argType },
+    meta: { type: "Value", argType },
     required,
   };
 }
@@ -30,28 +30,28 @@ export function opt(name: string, argType: ArgType, required = false): Opt {
  * Create a literal argument matcher
  */
 export function literal(value: string): ArgMatcher {
-  return { type: 'Literal', value };
+  return { type: "Literal", value };
 }
 
 /**
  * Create a single argument matcher
  */
 export function single(argType: ArgType): ArgMatcher {
-  return { type: 'Single', argType };
+  return { type: "Single", argType };
 }
 
 /**
  * Create a zero-or-more argument matcher
  */
 export function zeroOrMore(argType: ArgType): ArgMatcher {
-  return { type: 'ZeroOrMore', argType };
+  return { type: "ZeroOrMore", argType };
 }
 
 /**
  * Create a one-or-more argument matcher
  */
 export function oneOrMore(argType: ArgType): ArgMatcher {
-  return { type: 'OneOrMore', argType };
+  return { type: "OneOrMore", argType };
 }
 
 // Common argument patterns (matching Rust default.policy constants)

@@ -13,16 +13,16 @@
  * Supports text and image inputs from users.
  */
 export type UserInput =
-  | { type: 'text'; text: string }
-  | { type: 'image'; image_url: string }
-  | { type: 'local_image'; path: string };
+  | { type: "text"; text: string }
+  | { type: "image"; image_url: string }
+  | { type: "local_image"; path: string };
 
 /**
  * Content within an agent message.
  *
  * Currently supports text content only.
  */
-export type AgentMessageContent = { type: 'text'; text: string };
+export type AgentMessageContent = { type: "text"; text: string };
 
 /**
  * A user message in a conversation turn.
@@ -80,10 +80,10 @@ export interface WebSearchItem {
  * A turn can contain user messages, agent messages, reasoning, or web searches.
  */
 export type TurnItem =
-  | { type: 'user_message'; item: UserMessageItem }
-  | { type: 'agent_message'; item: AgentMessageItem }
-  | { type: 'reasoning'; item: ReasoningItem }
-  | { type: 'web_search'; item: WebSearchItem };
+  | { type: "user_message"; item: UserMessageItem }
+  | { type: "agent_message"; item: AgentMessageItem }
+  | { type: "reasoning"; item: ReasoningItem }
+  | { type: "web_search"; item: WebSearchItem };
 
 /**
  * Helper functions for working with TurnItems
@@ -109,7 +109,9 @@ export function createUserMessageItem(content: UserInput[]): UserMessageItem {
 /**
  * Create an AgentMessageItem with a generated UUID.
  */
-export function createAgentMessageItem(content: AgentMessageContent[]): AgentMessageItem {
+export function createAgentMessageItem(
+  content: AgentMessageContent[],
+): AgentMessageItem {
   return {
     id: crypto.randomUUID(),
     content,
@@ -121,9 +123,9 @@ export function createAgentMessageItem(content: AgentMessageContent[]): AgentMes
  */
 export function extractUserMessageText(item: UserMessageItem): string {
   return item.content
-    .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+    .filter((c): c is { type: "text"; text: string } => c.type === "text")
     .map((c) => c.text)
-    .join('');
+    .join("");
 }
 
 /**
@@ -131,7 +133,9 @@ export function extractUserMessageText(item: UserMessageItem): string {
  */
 export function extractUserMessageImages(item: UserMessageItem): string[] {
   return item.content
-    .filter((c): c is { type: 'image'; image_url: string } => c.type === 'image')
+    .filter(
+      (c): c is { type: "image"; image_url: string } => c.type === "image",
+    )
     .map((c) => c.image_url);
 }
 

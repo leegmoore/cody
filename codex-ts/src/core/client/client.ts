@@ -19,36 +19,39 @@
  * TODO(Phase 4.5+): Add usage limit detection
  */
 
-import type { ModelProviderInfo, WireApi } from './model-provider-info.js'
-import { WireApi as WireApiEnum } from './model-provider-info.js'
-import type { CodexAuth } from '../auth/stub-auth.js'
-import type { ReasoningEffort, ReasoningSummary } from '../../protocol/config-types.js'
-import type { Prompt, ResponseEvent } from './client-common.js'
-import { streamMessages as streamAnthropicMessages } from './messages/index.js'
+import type { ModelProviderInfo, WireApi } from "./model-provider-info.js";
+import { WireApi as WireApiEnum } from "./model-provider-info.js";
+import type { CodexAuth } from "../auth/stub-auth.js";
+import type {
+  ReasoningEffort,
+  ReasoningSummary,
+} from "../../protocol/config-types.js";
+import type { Prompt, ResponseEvent } from "./client-common.js";
+import { streamMessages as streamAnthropicMessages } from "./messages/index.js";
 
 /**
  * Response stream type - async generator of response events.
  */
-export type ResponseStream = AsyncGenerator<ResponseEvent, void, unknown>
+export type ResponseStream = AsyncGenerator<ResponseEvent, void, unknown>;
 
 /**
  * Options for creating a ModelClient.
  */
 export interface ResponsesApiOptions {
   /** Model provider configuration */
-  provider: ModelProviderInfo
+  provider: ModelProviderInfo;
 
   /** Model identifier (e.g., "gpt-4", "gpt-3.5-turbo") */
-  modelSlug: string
+  modelSlug: string;
 
   /** Optional authentication */
-  auth?: CodexAuth
+  auth?: CodexAuth;
 
   /** Optional reasoning effort level */
-  reasoningEffort?: ReasoningEffort
+  reasoningEffort?: ReasoningEffort;
 
   /** Optional reasoning summary mode (defaults to 'auto') */
-  reasoningSummary?: ReasoningSummary
+  reasoningSummary?: ReasoningSummary;
 }
 
 /**
@@ -62,60 +65,60 @@ export interface ResponsesApiOptions {
  * provider's wire_api configuration.
  */
 export class ModelClient {
-  private readonly provider: ModelProviderInfo
-  private readonly modelSlug: string
-  private readonly auth?: CodexAuth
-  private readonly reasoningEffort?: ReasoningEffort
-  private readonly reasoningSummary: ReasoningSummary
+  private readonly provider: ModelProviderInfo;
+  private readonly modelSlug: string;
+  private readonly auth?: CodexAuth;
+  private readonly reasoningEffort?: ReasoningEffort;
+  private readonly reasoningSummary: ReasoningSummary;
 
   constructor(options: ResponsesApiOptions) {
-    this.provider = options.provider
-    this.modelSlug = options.modelSlug
-    this.auth = options.auth
-    this.reasoningEffort = options.reasoningEffort
-    this.reasoningSummary = options.reasoningSummary ?? 'auto'
+    this.provider = options.provider;
+    this.modelSlug = options.modelSlug;
+    this.auth = options.auth;
+    this.reasoningEffort = options.reasoningEffort;
+    this.reasoningSummary = options.reasoningSummary ?? "auto";
   }
 
   /**
    * Get the model provider configuration.
    */
   getProvider(): ModelProviderInfo {
-    return this.provider
+    return this.provider;
   }
 
   /**
    * Get the model slug.
    */
   getModelSlug(): string {
-    return this.modelSlug
+    return this.modelSlug;
   }
 
   /**
    * Get the wire API type.
    */
   getWireApi(): WireApi {
-    return this.provider.wireApi
+    return this.provider.wireApi;
   }
 
   /**
    * Get the authentication (if configured).
    */
   getAuth(): CodexAuth | undefined {
-    return this.auth
+    return this.auth;
   }
 
   /**
    * Get the reasoning effort level.
    */
   getReasoningEffort(): ReasoningEffort | undefined {
-    return this.reasoningEffort
+    return this.reasoningEffort;
   }
 
   /**
    * Get the reasoning summary mode.
    */
   getReasoningSummary(): ReasoningSummary {
-    return this.reasoningSummary
+    return this.reasoningSummary;
   }
 
   /**
@@ -131,13 +134,13 @@ export class ModelClient {
     // Route to appropriate API based on wire protocol
     switch (this.provider.wireApi) {
       case WireApiEnum.Responses:
-        return this.streamResponses(prompt)
+        return this.streamResponses(prompt);
       case WireApiEnum.Chat:
-        return this.streamChat(prompt)
+        return this.streamChat(prompt);
       case WireApiEnum.Messages:
-        return this.streamMessages(prompt)
+        return this.streamMessages(prompt);
       default:
-        throw new Error(`Unsupported wire API: ${this.provider.wireApi}`)
+        throw new Error(`Unsupported wire API: ${this.provider.wireApi}`);
     }
   }
 
@@ -151,7 +154,9 @@ export class ModelClient {
    */
   private async streamResponses(prompt: Prompt): Promise<ResponseStream> {
     // TODO(Phase 4.5+): Implement Responses API streaming
-    throw new Error('streamResponses() not yet implemented - deferred to Phase 4.5+')
+    throw new Error(
+      "streamResponses() not yet implemented - deferred to Phase 4.5+",
+    );
   }
 
   /**
@@ -164,7 +169,9 @@ export class ModelClient {
    */
   private async streamChat(prompt: Prompt): Promise<ResponseStream> {
     // TODO(Phase 4.5+): Implement Chat API streaming
-    throw new Error('streamChat() not yet implemented - deferred to Phase 4.5+')
+    throw new Error(
+      "streamChat() not yet implemented - deferred to Phase 4.5+",
+    );
   }
 
   /**
@@ -175,7 +182,7 @@ export class ModelClient {
    */
   private async streamMessages(prompt: Prompt): Promise<ResponseStream> {
     // Get API key from auth or environment
-    const apiKey = this.getApiKeyForMessages()
+    const apiKey = this.getApiKeyForMessages();
 
     // Build config
     const config = {
@@ -183,7 +190,7 @@ export class ModelClient {
       baseUrl: this.provider.baseUrl,
       anthropicVersion: (this.provider as any).anthropicVersion,
       beta: (this.provider as any).beta,
-    }
+    };
 
     // Build options from prompt metadata
     const options = {
@@ -193,10 +200,10 @@ export class ModelClient {
       stopSequences: (prompt as any).stopSequences,
       traceId: (prompt as any).traceId,
       toolChoice: (prompt as any).toolChoice,
-    }
+    };
 
     // Return async generator as ResponseStream
-    return streamAnthropicMessages(prompt, config, this.modelSlug, options)
+    return streamAnthropicMessages(prompt, config, this.modelSlug, options);
   }
 
   /**
@@ -205,19 +212,19 @@ export class ModelClient {
   private getApiKeyForMessages(): string {
     // Try experimental bearer token first (for testing)
     if (this.provider.experimentalBearerToken) {
-      return this.provider.experimentalBearerToken
+      return this.provider.experimentalBearerToken;
     }
 
     // Try environment variable
-    const envKey = this.provider.envKey || 'ANTHROPIC_API_KEY'
-    const apiKey = process.env[envKey]
+    const envKey = this.provider.envKey || "ANTHROPIC_API_KEY";
+    const apiKey = process.env[envKey];
 
     if (!apiKey) {
       throw new Error(
         `Missing API key for Anthropic. Set ${envKey} environment variable or configure experimentalBearerToken.`,
-      )
+      );
     }
 
-    return apiKey
+    return apiKey;
   }
 }

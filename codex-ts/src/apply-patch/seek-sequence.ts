@@ -24,7 +24,7 @@ export function seekSequence(
   lines: string[],
   pattern: string[],
   start: number,
-  eof: boolean
+  eof: boolean,
 ): number | undefined {
   if (pattern.length === 0) {
     return start;
@@ -41,33 +41,21 @@ export function seekSequence(
       : start;
 
   // 1. Exact match first
-  for (
-    let i = searchStart;
-    i <= lines.length - pattern.length;
-    i++
-  ) {
+  for (let i = searchStart; i <= lines.length - pattern.length; i++) {
     if (exactMatch(lines, pattern, i)) {
       return i;
     }
   }
 
   // 2. Then rstrip match (ignore trailing whitespace)
-  for (
-    let i = searchStart;
-    i <= lines.length - pattern.length;
-    i++
-  ) {
+  for (let i = searchStart; i <= lines.length - pattern.length; i++) {
     if (rstripMatch(lines, pattern, i)) {
       return i;
     }
   }
 
   // 3. Trim both sides to allow more lenience
-  for (
-    let i = searchStart;
-    i <= lines.length - pattern.length;
-    i++
-  ) {
+  for (let i = searchStart; i <= lines.length - pattern.length; i++) {
     if (trimMatch(lines, pattern, i)) {
       return i;
     }
@@ -75,11 +63,7 @@ export function seekSequence(
 
   // 4. Final, most permissive pass – attempt to match after normalising
   // common Unicode punctuation to their ASCII equivalents
-  for (
-    let i = searchStart;
-    i <= lines.length - pattern.length;
-    i++
-  ) {
+  for (let i = searchStart; i <= lines.length - pattern.length; i++) {
     if (normalizeMatch(lines, pattern, i)) {
       return i;
     }
@@ -91,11 +75,7 @@ export function seekSequence(
 /**
  * Check exact match at position i
  */
-function exactMatch(
-  lines: string[],
-  pattern: string[],
-  i: number
-): boolean {
+function exactMatch(lines: string[], pattern: string[], i: number): boolean {
   for (let j = 0; j < pattern.length; j++) {
     if (lines[i + j] !== pattern[j]) {
       return false;
@@ -107,11 +87,7 @@ function exactMatch(
 /**
  * Check match ignoring trailing whitespace
  */
-function rstripMatch(
-  lines: string[],
-  pattern: string[],
-  i: number
-): boolean {
+function rstripMatch(lines: string[], pattern: string[], i: number): boolean {
   for (let j = 0; j < pattern.length; j++) {
     if (lines[i + j].trimEnd() !== pattern[j].trimEnd()) {
       return false;
@@ -123,11 +99,7 @@ function rstripMatch(
 /**
  * Check match ignoring leading and trailing whitespace
  */
-function trimMatch(
-  lines: string[],
-  pattern: string[],
-  i: number
-): boolean {
+function trimMatch(lines: string[], pattern: string[], i: number): boolean {
   for (let j = 0; j < pattern.length; j++) {
     if (lines[i + j].trim() !== pattern[j].trim()) {
       return false;
@@ -142,7 +114,7 @@ function trimMatch(
 function normalizeMatch(
   lines: string[],
   pattern: string[],
-  i: number
+  i: number,
 ): boolean {
   for (let j = 0; j < pattern.length; j++) {
     if (normalize(lines[i + j]) !== normalize(pattern[j])) {
@@ -158,7 +130,7 @@ function normalizeMatch(
 function normalize(s: string): string {
   return s
     .trim()
-    .split('')
+    .split("")
     .map((c) => {
       const code = c.charCodeAt(0);
       // Various dash / hyphen code-points → ASCII '-'
@@ -171,7 +143,7 @@ function normalize(s: string): string {
         code === 0x2015 || // HORIZONTAL BAR
         code === 0x2212 // MINUS SIGN
       ) {
-        return '-';
+        return "-";
       }
       // Fancy single quotes → "'"
       if (
@@ -207,9 +179,9 @@ function normalize(s: string): string {
         code === 0x205f || // MEDIUM MATHEMATICAL SPACE
         code === 0x3000 // IDEOGRAPHIC SPACE
       ) {
-        return ' ';
+        return " ";
       }
       return c;
     })
-    .join('');
+    .join("");
 }

@@ -5,15 +5,15 @@
  * when the agent needs permission to perform potentially risky operations.
  */
 
-import type { ParsedCommand } from './parse-command.js';
+import type { ParsedCommand } from "./parse-command.js";
 
 /**
  * Sandbox risk level for command execution.
  */
 export enum SandboxRiskLevel {
-  Low = 'low',
-  Medium = 'medium',
-  High = 'high',
+  Low = "low",
+  Medium = "medium",
+  High = "high",
 }
 
 /**
@@ -30,9 +30,9 @@ export interface SandboxCommandAssessment {
  * File change operation for apply patch approval.
  */
 export type FileChange =
-  | { type: 'create'; content: string }
-  | { type: 'modify'; content: string }
-  | { type: 'delete' };
+  | { type: "create"; content: string }
+  | { type: "modify"; content: string }
+  | { type: "delete" };
 
 /**
  * Exec approval request event.

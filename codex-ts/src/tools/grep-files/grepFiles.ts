@@ -54,7 +54,7 @@ export async function grepFiles(
   try {
     subprocess = spawn(cmdExec, args, {
       cwd,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
     throw new Error(
@@ -70,7 +70,7 @@ export async function grepFiles(
       streamToString(subprocess.stderr),
     ]);
     const exitCode = await new Promise<number>((resolve) => {
-      subprocess.on('exit', (code) => resolve(code ?? 0));
+      subprocess.on("exit", (code) => resolve(code ?? 0));
     });
     return { stdout, stderr, exitCode };
   })();
@@ -126,7 +126,9 @@ async function verifyPathExists(path: string): Promise<void> {
   try {
     await fs.stat(path);
   } catch (error) {
-    throw new Error(`unable to access \`${path}\`: ${(error as Error).message}`);
+    throw new Error(
+      `unable to access \`${path}\`: ${(error as Error).message}`,
+    );
   }
 }
 
@@ -154,7 +156,7 @@ async function streamToString(
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  return Buffer.concat(chunks).toString('utf8');
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function withTimeout<T>(

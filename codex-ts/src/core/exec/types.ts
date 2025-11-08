@@ -74,7 +74,7 @@ export class SandboxDeniedError extends Error {
     public output: ExecToolCallOutput,
   ) {
     super(message);
-    this.name = 'SandboxDeniedError';
+    this.name = "SandboxDeniedError";
   }
 }
 
@@ -84,7 +84,7 @@ export class SandboxTimeoutError extends Error {
     public output: ExecToolCallOutput,
   ) {
     super(message);
-    this.name = 'SandboxTimeoutError';
+    this.name = "SandboxTimeoutError";
   }
 }
 
@@ -94,6 +94,6 @@ export class SandboxSignalError extends Error {
     public signal: number,
   ) {
     super(message);
-    this.name = 'SandboxSignalError';
+    this.name = "SandboxSignalError";
   }
 }

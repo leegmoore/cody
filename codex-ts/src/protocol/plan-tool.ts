@@ -14,11 +14,11 @@
  */
 export enum StepStatus {
   /** Step has not been started yet */
-  Pending = 'pending',
+  Pending = "pending",
   /** Step is currently being executed */
-  InProgress = 'in_progress',
+  InProgress = "in_progress",
   /** Step has been completed */
-  Completed = 'completed',
+  Completed = "completed",
 }
 
 /**

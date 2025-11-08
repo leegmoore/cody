@@ -10,7 +10,7 @@
  * transforming portable CommandSpec into platform-specific ExecEnv.
  */
 
-export * from './types.js';
-export * from './platform.js';
-export * from './manager.js';
-export * from './wrappers.js';
+export * from "./types.js";
+export * from "./platform.js";
+export * from "./manager.js";
+export * from "./wrappers.js";

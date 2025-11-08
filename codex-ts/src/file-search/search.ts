@@ -2,14 +2,20 @@
  * File search implementation using globby and fuzzysort
  */
 
-import { globby } from 'globby';
-import Fuzzysort from 'fuzzysort';
-import type { FileMatch, FileSearchResults, FileSearchOptions } from './types.js';
+import { globby } from "globby";
+import Fuzzysort from "fuzzysort";
+import type {
+  FileMatch,
+  FileSearchResults,
+  FileSearchOptions,
+} from "./types.js";
 
 /**
  * Run file search with fuzzy matching
  */
-export async function run(options: FileSearchOptions): Promise<FileSearchResults> {
+export async function run(
+  options: FileSearchOptions,
+): Promise<FileSearchResults> {
   const {
     pattern,
     limit = 64,
@@ -39,7 +45,7 @@ export async function run(options: FileSearchOptions): Promise<FileSearchResults
   };
 
   // Get all files
-  const files = await globby('**/*', globOptions);
+  const files = await globby("**/*", globOptions);
 
   // If signal was aborted, return empty results
   if (signal?.aborted) {
@@ -57,20 +63,18 @@ export async function run(options: FileSearchOptions): Promise<FileSearchResults
 
   // Convert to our format
   const totalMatchCount = results.total;
-  const matches: FileMatch[] = results
-    .slice(0, limit)
-    .map((result) => {
-      const match: FileMatch = {
-        score: result.score,
-        path: result.target,
-      };
+  const matches: FileMatch[] = results.slice(0, limit).map((result) => {
+    const match: FileMatch = {
+      score: result.score,
+      path: result.target,
+    };
 
-      if (computeIndices && result.indexes) {
-        match.indices = Array.from(result.indexes);
-      }
+    if (computeIndices && result.indexes) {
+      match.indices = Array.from(result.indexes);
+    }
 
-      return match;
-    });
+    return match;
+  });
 
   // Sort by score (descending) then path (ascending)
   matches.sort(compareByScoreDescThenPathAsc);

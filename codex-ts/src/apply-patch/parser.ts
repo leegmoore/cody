@@ -21,13 +21,13 @@
  * eof_line: "*** End of File" LF
  */
 
-import * as path from 'node:path';
+import * as path from "node:path";
 import type {
   ParseError,
   Hunk,
   UpdateFileChunk,
   ApplyPatchArgs,
-} from './types.js';
+} from "./types.js";
 import {
   BEGIN_PATCH_MARKER,
   END_PATCH_MARKER,
@@ -38,18 +38,18 @@ import {
   EOF_MARKER,
   CHANGE_CONTEXT_MARKER,
   EMPTY_CHANGE_CONTEXT_MARKER,
-} from './types.js';
+} from "./types.js";
 
 // Currently parse in lenient mode for all models (matching Rust behavior)
 const PARSE_IN_STRICT_MODE = false;
 
-type ParseMode = 'Strict' | 'Lenient';
+type ParseMode = "Strict" | "Lenient";
 
 /**
  * Parse patch text into structured hunks
  */
 export function parsePatch(patch: string): ApplyPatchArgs {
-  const mode: ParseMode = PARSE_IN_STRICT_MODE ? 'Strict' : 'Lenient';
+  const mode: ParseMode = PARSE_IN_STRICT_MODE ? "Strict" : "Lenient";
   return parsePatchText(patch, mode);
 }
 
@@ -57,14 +57,14 @@ export function parsePatch(patch: string): ApplyPatchArgs {
  * Internal parsing function with mode selection
  */
 function parsePatchText(patch: string, mode: ParseMode): ApplyPatchArgs {
-  const lines = patch.trim().split('\n');
+  const lines = patch.trim().split("\n");
 
   let processedLines: string[];
   try {
     checkPatchBoundariesStrict(lines);
     processedLines = lines;
   } catch (e) {
-    if (mode === 'Strict') {
+    if (mode === "Strict") {
       throw e;
     }
     // Try lenient mode
@@ -84,7 +84,7 @@ function parsePatchText(patch: string, mode: ParseMode): ApplyPatchArgs {
   }
 
   return {
-    patch: processedLines.join('\n'),
+    patch: processedLines.join("\n"),
     hunks,
   };
 }
@@ -98,14 +98,14 @@ function checkPatchBoundariesStrict(lines: string[]): void {
 
   if (firstLine !== BEGIN_PATCH_MARKER) {
     throw {
-      type: 'InvalidPatchError',
+      type: "InvalidPatchError",
       message: "The first line of the patch must be '*** Begin Patch'",
     } as ParseError;
   }
 
   if (lastLine !== END_PATCH_MARKER) {
     throw {
-      type: 'InvalidPatchError',
+      type: "InvalidPatchError",
       message: "The last line of the patch must be '*** End Patch'",
     } as ParseError;
   }
@@ -116,7 +116,7 @@ function checkPatchBoundariesStrict(lines: string[]): void {
  */
 function checkPatchBoundariesLenient(
   originalLines: string[],
-  originalError: ParseError
+  originalError: ParseError,
 ): string[] {
   if (originalLines.length < 4) {
     throw originalError;
@@ -127,8 +127,8 @@ function checkPatchBoundariesLenient(
 
   // Check for heredoc markers
   if (
-    (first === '<<EOF' || first === "<<'EOF'" || first === '<<"EOF"') &&
-    last.endsWith('EOF')
+    (first === "<<EOF" || first === "<<'EOF'" || first === '<<"EOF"') &&
+    last.endsWith("EOF")
   ) {
     const innerLines = originalLines.slice(1, originalLines.length - 1);
     checkPatchBoundariesStrict(innerLines);
@@ -141,37 +141,31 @@ function checkPatchBoundariesLenient(
 /**
  * Parse a single hunk from the lines
  */
-function parseOneHunk(
-  lines: string[],
-  lineNumber: number
-): [Hunk, number] {
+function parseOneHunk(lines: string[], lineNumber: number): [Hunk, number] {
   const firstLine = lines[0].trim();
 
   // Add File
   if (firstLine.startsWith(ADD_FILE_MARKER)) {
     const filePath = firstLine.slice(ADD_FILE_MARKER.length);
-    let contents = '';
+    let contents = "";
     let parsedLines = 1;
 
     for (const line of lines.slice(1)) {
-      if (line.startsWith('+')) {
-        contents += line.slice(1) + '\n';
+      if (line.startsWith("+")) {
+        contents += line.slice(1) + "\n";
         parsedLines++;
       } else {
         break;
       }
     }
 
-    return [
-      { type: 'AddFile', path: filePath, contents },
-      parsedLines,
-    ];
+    return [{ type: "AddFile", path: filePath, contents }, parsedLines];
   }
 
   // Delete File
   if (firstLine.startsWith(DELETE_FILE_MARKER)) {
     const filePath = firstLine.slice(DELETE_FILE_MARKER.length);
-    return [{ type: 'DeleteFile', path: filePath }, 1];
+    return [{ type: "DeleteFile", path: filePath }, 1];
   }
 
   // Update File
@@ -182,7 +176,10 @@ function parseOneHunk(
 
     // Check for optional "Move to" line
     let movePath: string | undefined;
-    if (remainingLines.length > 0 && remainingLines[0].startsWith(MOVE_TO_MARKER)) {
+    if (
+      remainingLines.length > 0 &&
+      remainingLines[0].startsWith(MOVE_TO_MARKER)
+    ) {
       movePath = remainingLines[0].slice(MOVE_TO_MARKER.length);
       remainingLines = remainingLines.slice(1);
       parsedLines++;
@@ -191,21 +188,21 @@ function parseOneHunk(
     const chunks: UpdateFileChunk[] = [];
     while (remainingLines.length > 0) {
       // Skip blank lines
-      if (remainingLines[0].trim() === '') {
+      if (remainingLines[0].trim() === "") {
         parsedLines++;
         remainingLines = remainingLines.slice(1);
         continue;
       }
 
       // Stop at next hunk header
-      if (remainingLines[0].startsWith('***')) {
+      if (remainingLines[0].startsWith("***")) {
         break;
       }
 
       const [chunk, chunkLines] = parseUpdateFileChunk(
         remainingLines,
         lineNumber + parsedLines,
-        chunks.length === 0
+        chunks.length === 0,
       );
       chunks.push(chunk);
       parsedLines += chunkLines;
@@ -214,20 +211,20 @@ function parseOneHunk(
 
     if (chunks.length === 0) {
       throw {
-        type: 'InvalidHunkError',
+        type: "InvalidHunkError",
         message: `Update file hunk for path '${filePath}' is empty`,
         lineNumber,
       } as ParseError;
     }
 
     return [
-      { type: 'UpdateFile', path: filePath, movePath, chunks },
+      { type: "UpdateFile", path: filePath, movePath, chunks },
       parsedLines,
     ];
   }
 
   throw {
-    type: 'InvalidHunkError',
+    type: "InvalidHunkError",
     message: `'${firstLine}' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'`,
     lineNumber,
   } as ParseError;
@@ -239,12 +236,12 @@ function parseOneHunk(
 function parseUpdateFileChunk(
   lines: string[],
   lineNumber: number,
-  allowMissingContext: boolean
+  allowMissingContext: boolean,
 ): [UpdateFileChunk, number] {
   if (lines.length === 0) {
     throw {
-      type: 'InvalidHunkError',
-      message: 'Update hunk does not contain any lines',
+      type: "InvalidHunkError",
+      message: "Update hunk does not contain any lines",
       lineNumber,
     } as ParseError;
   }
@@ -261,7 +258,7 @@ function parseUpdateFileChunk(
     startIndex = 1;
   } else if (!allowMissingContext) {
     throw {
-      type: 'InvalidHunkError',
+      type: "InvalidHunkError",
       message: `Expected update hunk to start with a @@ context marker, got: '${lines[0]}'`,
       lineNumber,
     } as ParseError;
@@ -269,8 +266,8 @@ function parseUpdateFileChunk(
 
   if (startIndex >= lines.length) {
     throw {
-      type: 'InvalidHunkError',
-      message: 'Update hunk does not contain any lines',
+      type: "InvalidHunkError",
+      message: "Update hunk does not contain any lines",
       lineNumber: lineNumber + 1,
     } as ParseError;
   }
@@ -287,8 +284,8 @@ function parseUpdateFileChunk(
     if (line === EOF_MARKER) {
       if (parsedLines === 0) {
         throw {
-          type: 'InvalidHunkError',
-          message: 'Update hunk does not contain any lines',
+          type: "InvalidHunkError",
+          message: "Update hunk does not contain any lines",
           lineNumber: lineNumber + 1,
         } as ParseError;
       }
@@ -299,8 +296,8 @@ function parseUpdateFileChunk(
 
     if (line.length === 0) {
       // Empty line
-      chunk.oldLines.push('');
-      chunk.newLines.push('');
+      chunk.oldLines.push("");
+      chunk.newLines.push("");
       parsedLines++;
       continue;
     }
@@ -309,23 +306,23 @@ function parseUpdateFileChunk(
     const content = line.slice(1);
 
     switch (prefix) {
-      case ' ':
+      case " ":
         chunk.oldLines.push(content);
         chunk.newLines.push(content);
         parsedLines++;
         break;
-      case '+':
+      case "+":
         chunk.newLines.push(content);
         parsedLines++;
         break;
-      case '-':
+      case "-":
         chunk.oldLines.push(content);
         parsedLines++;
         break;
       default:
         if (parsedLines === 0) {
           throw {
-            type: 'InvalidHunkError',
+            type: "InvalidHunkError",
             message: `Unexpected line found in update hunk: '${line}'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)`,
             lineNumber: lineNumber + 1,
           } as ParseError;
@@ -342,10 +339,11 @@ function parseUpdateFileChunk(
  * Helper to resolve hunk path relative to cwd
  */
 export function resolveHunkPath(hunk: Hunk, cwd: string): string {
-  const hunkPath = hunk.type === 'AddFile'
-    ? hunk.path
-    : hunk.type === 'DeleteFile'
-    ? hunk.path
-    : hunk.path;
+  const hunkPath =
+    hunk.type === "AddFile"
+      ? hunk.path
+      : hunk.type === "DeleteFile"
+        ? hunk.path
+        : hunk.path;
   return path.resolve(cwd, hunkPath);
 }

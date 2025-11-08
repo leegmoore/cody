@@ -146,7 +146,9 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
           for (const [key, value] of Object.entries(globals)) {
             try {
               // Convert JS value to QuickJS handle
-              const handle = vm.unwrapResult(vm.evalCode(`(${JSON.stringify(value)})`));
+              const handle = vm.unwrapResult(
+                vm.evalCode(`(${JSON.stringify(value)})`),
+              );
               vm.setProp(vm.global, key, handle);
               handle.dispose();
             } catch (e) {

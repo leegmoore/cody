@@ -7,7 +7,7 @@ let cachedFormatter: Intl.NumberFormat | null = null;
 
 function getFormatter(): Intl.NumberFormat {
   if (!cachedFormatter) {
-    cachedFormatter = new Intl.NumberFormat('en-US');
+    cachedFormatter = new Intl.NumberFormat("en-US");
   }
   return cachedFormatter;
 }
@@ -60,13 +60,17 @@ export function formatSiSuffix(n: number): string {
   }
 
   const units: Array<[number, string]> = [
-    [1_000, 'K'],
-    [1_000_000, 'M'],
-    [1_000_000_000, 'G'],
+    [1_000, "K"],
+    [1_000_000, "M"],
+    [1_000_000_000, "G"],
   ];
 
   // Helper to format with specific fractional digits
-  const formatScaled = (value: number, scale: number, fracDigits: number): string => {
+  const formatScaled = (
+    value: number,
+    scale: number,
+    fracDigits: number,
+  ): string => {
     const scaled = value / scale;
     return scaled.toFixed(fracDigits);
   };

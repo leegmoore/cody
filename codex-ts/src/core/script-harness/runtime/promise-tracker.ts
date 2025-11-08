@@ -380,7 +380,9 @@ export class PromiseTracker {
    * Get details about a specific tracked promise
    */
   getPromiseInfo(id: string): TrackedPromise | undefined {
-    return this.pending.get(id) || this.detached.get(id) || this.completed.get(id);
+    return (
+      this.pending.get(id) || this.detached.get(id) || this.completed.get(id)
+    );
   }
 
   /**

@@ -7,34 +7,34 @@
  */
 export enum ArgType {
   /** Readable file or files */
-  ReadableFile = 'ReadableFile',
+  ReadableFile = "ReadableFile",
   /** Writeable file */
-  WriteableFile = 'WriteableFile',
+  WriteableFile = "WriteableFile",
   /** Readable files, or current directory if empty */
-  ReadableFilesOrCwd = 'ReadableFilesOrCwd',
+  ReadableFilesOrCwd = "ReadableFilesOrCwd",
   /** Positive integer */
-  PositiveInt = 'PositiveInt',
+  PositiveInt = "PositiveInt",
   /** Opaque value (not validated) */
-  OpaqueValue = 'OpaqueValue',
+  OpaqueValue = "OpaqueValue",
   /** Literal string (must match exactly) */
-  Literal = 'Literal',
+  Literal = "Literal",
 }
 
 /**
  * Argument matcher patterns
  */
 export type ArgMatcher =
-  | { type: 'Literal'; value: string }
-  | { type: 'Single'; argType: ArgType }
-  | { type: 'ZeroOrMore'; argType: ArgType }
-  | { type: 'OneOrMore'; argType: ArgType };
+  | { type: "Literal"; value: string }
+  | { type: "Single"; argType: ArgType }
+  | { type: "ZeroOrMore"; argType: ArgType }
+  | { type: "OneOrMore"; argType: ArgType };
 
 /**
  * Option metadata
  */
 export type OptMeta =
-  | { type: 'Flag' } // No argument expected
-  | { type: 'Value'; argType: ArgType }; // Expects an argument
+  | { type: "Flag" } // No argument expected
+  | { type: "Value"; argType: ArgType }; // Expects an argument
 
 /**
  * Command-line option specification
@@ -137,22 +137,22 @@ export interface ValidExec {
  * Cause of a forbidden execution
  */
 export type ForbiddenCause =
-  | { type: 'Program'; program: string; execCall: ExecCall }
-  | { type: 'Arg'; arg: string; execCall: ExecCall }
-  | { type: 'Exec'; exec: ValidExec };
+  | { type: "Program"; program: string; execCall: ExecCall }
+  | { type: "Arg"; arg: string; execCall: ExecCall }
+  | { type: "Exec"; exec: ValidExec };
 
 /**
  * Result of checking an execution
  */
 export type CheckResult =
   /** Command is safe to run (reads only) */
-  | { result: 'safe'; match: ValidExec }
+  | { result: "safe"; match: ValidExec }
   /** Command matched a rule but caller should check writeable files */
-  | { result: 'match'; match: ValidExec }
+  | { result: "match"; match: ValidExec }
   /** Command is forbidden */
-  | { result: 'forbidden'; reason: string; cause: ForbiddenCause }
+  | { result: "forbidden"; reason: string; cause: ForbiddenCause }
   /** Safety cannot be determined */
-  | { result: 'unverified'; error: string };
+  | { result: "unverified"; error: string };
 
 /**
  * Error types
@@ -160,30 +160,30 @@ export type CheckResult =
 export class ExecPolicyError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ExecPolicyError';
+    this.name = "ExecPolicyError";
   }
 }
 
 export class NoSpecForProgramError extends ExecPolicyError {
   constructor(public readonly program: string) {
     super(`No specification found for program: ${program}`);
-    this.name = 'NoSpecForProgramError';
+    this.name = "NoSpecForProgramError";
   }
 }
 
 export class UnknownOptionError extends ExecPolicyError {
   constructor(
     public readonly program: string,
-    public readonly option: string
+    public readonly option: string,
   ) {
     super(`Unknown option '${option}' for program '${program}'`);
-    this.name = 'UnknownOptionError';
+    this.name = "UnknownOptionError";
   }
 }
 
 export class ArgumentMismatchError extends ExecPolicyError {
   constructor(message: string) {
     super(message);
-    this.name = 'ArgumentMismatchError';
+    this.name = "ArgumentMismatchError";
   }
 }

@@ -3,7 +3,7 @@
  * @module core
  */
 
-export * from './config'
-export * from './config-loader'
-export * from './message-history'
-export * from './rollout'
+export * from "./config";
+export * from "./config-loader";
+export * from "./message-history";
+export * from "./rollout";

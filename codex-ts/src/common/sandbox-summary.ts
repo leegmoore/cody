@@ -1,4 +1,4 @@
-import { SandboxPolicy } from '../protocol/types.js';
+import { SandboxPolicy } from "../protocol/types.js";
 
 /**
  * Create a human-readable summary of a sandbox policy.
@@ -23,32 +23,32 @@ import { SandboxPolicy } from '../protocol/types.js';
  */
 export function summarizeSandboxPolicy(sandboxPolicy: SandboxPolicy): string {
   switch (sandboxPolicy.type) {
-    case 'danger-full-access':
-      return 'danger-full-access';
+    case "danger-full-access":
+      return "danger-full-access";
 
-    case 'read-only':
-      return 'read-only';
+    case "read-only":
+      return "read-only";
 
-    case 'workspace-write': {
-      let summary = 'workspace-write';
+    case "workspace-write": {
+      let summary = "workspace-write";
 
       // Build list of writable entries
-      const writableEntries: string[] = ['workdir'];
+      const writableEntries: string[] = ["workdir"];
 
       if (!sandboxPolicy.excludeSlashTmp) {
-        writableEntries.push('/tmp');
+        writableEntries.push("/tmp");
       }
 
       if (!sandboxPolicy.excludeTmpdirEnvVar) {
-        writableEntries.push('$TMPDIR');
+        writableEntries.push("$TMPDIR");
       }
 
       writableEntries.push(...sandboxPolicy.writableRoots);
 
-      summary += ` [${writableEntries.join(', ')}]`;
+      summary += ` [${writableEntries.join(", ")}]`;
 
       if (sandboxPolicy.networkAccess) {
-        summary += ' (network access enabled)';
+        summary += " (network access enabled)";
       }
 
       return summary;

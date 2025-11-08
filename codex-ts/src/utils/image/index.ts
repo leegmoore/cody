@@ -10,31 +10,31 @@
 /**
  * Maximum width for resized images.
  */
-export const MAX_WIDTH = 2048
+export const MAX_WIDTH = 2048;
 
 /**
  * Maximum height for resized images.
  */
-export const MAX_HEIGHT = 768
+export const MAX_HEIGHT = 768;
 
 /**
  * Encoded image with metadata.
  */
 export interface EncodedImage {
   /** Image bytes */
-  bytes: Buffer
+  bytes: Buffer;
   /** MIME type (e.g., "image/png", "image/jpeg") */
-  mime: string
+  mime: string;
   /** Image width in pixels */
-  width: number
+  width: number;
   /** Image height in pixels */
-  height: number
+  height: number;
 }
 
 /**
  * Image processing error types.
  */
-export type ImageProcessingErrorType = 'Read' | 'Decode' | 'Encode'
+export type ImageProcessingErrorType = "Read" | "Decode" | "Encode";
 
 /**
  * Error that occurs during image processing.
@@ -47,8 +47,8 @@ export class ImageProcessingError extends Error {
     public readonly format?: string,
     public readonly source?: Error,
   ) {
-    super(message)
-    this.name = 'ImageProcessingError'
+    super(message);
+    this.name = "ImageProcessingError";
   }
 }
 
@@ -56,35 +56,35 @@ export class ImageProcessingError extends Error {
  * Helper to create image processing errors with consistent formatting.
  */
 export function createImageProcessingError(
-  type: 'Read',
+  type: "Read",
   details: { path: string; message: string },
-): ImageProcessingError
+): ImageProcessingError;
 export function createImageProcessingError(
-  type: 'Decode',
+  type: "Decode",
   details: { path: string; message: string },
-): ImageProcessingError
+): ImageProcessingError;
 export function createImageProcessingError(
-  type: 'Encode',
+  type: "Encode",
   details: { format: string; message: string },
-): ImageProcessingError
+): ImageProcessingError;
 export function createImageProcessingError(
   type: ImageProcessingErrorType,
   details: { path?: string; format?: string; message: string },
 ): ImageProcessingError {
-  let message: string
+  let message: string;
   switch (type) {
-    case 'Read':
-      message = `failed to read image at ${details.path}: ${details.message}`
-      break
-    case 'Decode':
-      message = `failed to decode image at ${details.path}: ${details.message}`
-      break
-    case 'Encode':
-      message = `failed to encode image as ${details.format}: ${details.message}`
-      break
+    case "Read":
+      message = `failed to read image at ${details.path}: ${details.message}`;
+      break;
+    case "Decode":
+      message = `failed to decode image at ${details.path}: ${details.message}`;
+      break;
+    case "Encode":
+      message = `failed to encode image as ${details.format}: ${details.message}`;
+      break;
   }
 
-  return new ImageProcessingError(type, message, details.path, details.format)
+  return new ImageProcessingError(type, message, details.path, details.format);
 }
 
 /**
@@ -94,8 +94,8 @@ export function createImageProcessingError(
  * @returns Data URL string (e.g., "data:image/png;base64,...")
  */
 export function toDataUrl(image: EncodedImage): string {
-  const base64 = image.bytes.toString('base64')
-  return `data:${image.mime};base64,${base64}`
+  const base64 = image.bytes.toString("base64");
+  return `data:${image.mime};base64,${base64}`;
 }
 
 /**
@@ -133,4 +133,4 @@ export function toDataUrl(image: EncodedImage): string {
  * }
  * ```
  */
-export const loadAndResizeToFit: undefined = undefined
+export const loadAndResizeToFit: undefined = undefined;

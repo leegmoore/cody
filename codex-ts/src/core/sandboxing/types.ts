@@ -7,13 +7,13 @@
  */
 export enum SandboxType {
   /** No sandboxing */
-  None = 'none',
+  None = "none",
   /** macOS Seatbelt sandbox */
-  MacosSeatbelt = 'macos-seatbelt',
+  MacosSeatbelt = "macos-seatbelt",
   /** Linux Seccomp/Landlock sandbox */
-  LinuxSeccomp = 'linux-seccomp',
+  LinuxSeccomp = "linux-seccomp",
   /** Windows Restricted Token sandbox */
-  WindowsRestrictedToken = 'windows-restricted-token',
+  WindowsRestrictedToken = "windows-restricted-token",
 }
 
 /**
@@ -21,11 +21,11 @@ export enum SandboxType {
  */
 export enum SandboxPreference {
   /** Automatically choose based on policy */
-  Auto = 'auto',
+  Auto = "auto",
   /** Require sandbox if available */
-  Require = 'require',
+  Require = "require",
   /** Forbid sandbox usage */
-  Forbid = 'forbid',
+  Forbid = "forbid",
 }
 
 /**
@@ -76,16 +76,17 @@ export interface ExecEnv {
 export class SandboxTransformError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'SandboxTransformError';
+    this.name = "SandboxTransformError";
   }
 }
 
 /**
  * Environment variable indicating sandbox is active
  */
-export const CODEX_SANDBOX_ENV_VAR = 'CODEX_SANDBOX';
+export const CODEX_SANDBOX_ENV_VAR = "CODEX_SANDBOX";
 
 /**
  * Environment variable indicating network is disabled
  */
-export const CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR = 'CODEX_SANDBOX_NETWORK_DISABLED';
+export const CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR =
+  "CODEX_SANDBOX_NETWORK_DISABLED";

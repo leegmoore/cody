@@ -3,4 +3,4 @@
  * Supports viewing local images in the conversation flow
  */
 
-export { viewImage, type ViewImageParams } from './viewImage.js'
+export { viewImage, type ViewImageParams } from "./viewImage.js";

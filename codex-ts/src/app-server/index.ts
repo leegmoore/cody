@@ -17,14 +17,14 @@
  *
  * This error is returned when the server receives a malformed JSON-RPC request.
  */
-export const INVALID_REQUEST_ERROR_CODE = -32600
+export const INVALID_REQUEST_ERROR_CODE = -32600;
 
 /**
  * JSON-RPC error code for internal error (-32603).
  *
  * This error is returned when the server encounters an internal processing error.
  */
-export const INTERNAL_ERROR_CODE = -32603
+export const INTERNAL_ERROR_CODE = -32603;
 
 /**
  * Channel capacity for message queues in the app-server.
@@ -33,7 +33,7 @@ export const INTERNAL_ERROR_CODE = -32603
  * between tasks. A value of 128 balances throughput and memory usage for
  * an interactive CLI application.
  */
-export const CHANNEL_CAPACITY = 128
+export const CHANNEL_CAPACITY = 128;
 
 /**
  * The app-server implementation is intentionally not ported.
@@ -59,4 +59,4 @@ export const CHANNEL_CAPACITY = 128
  * - Configuration management
  * - Telemetry and logging integration
  */
-export const APP_SERVER_IMPLEMENTATION = undefined
+export const APP_SERVER_IMPLEMENTATION = undefined;

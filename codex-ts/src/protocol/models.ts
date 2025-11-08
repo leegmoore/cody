@@ -7,7 +7,7 @@
  * Ported from: codex-rs/protocol/src/models.rs
  */
 
-import type { UserInput } from './items.js';
+import type { UserInput } from "./items.js";
 
 /**
  * Content item within a message.
@@ -15,9 +15,9 @@ import type { UserInput } from './items.js';
  * Represents text or image content in user/agent messages.
  */
 export type ContentItem =
-  | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string }
-  | { type: 'output_text'; text: string };
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; image_url: string }
+  | { type: "output_text"; text: string };
 
 /**
  * Response input item types.
@@ -26,22 +26,22 @@ export type ContentItem =
  */
 export type ResponseInputItem =
   | {
-      type: 'message';
+      type: "message";
       role: string;
       content: ContentItem[];
     }
   | {
-      type: 'function_call_output';
+      type: "function_call_output";
       call_id: string;
       output: FunctionCallOutputPayload;
     }
   | {
-      type: 'mcp_tool_call_output';
+      type: "mcp_tool_call_output";
       call_id: string;
       result: CallToolResult | { error: string };
     }
   | {
-      type: 'custom_tool_call_output';
+      type: "custom_tool_call_output";
       call_id: string;
       output: string;
     };
@@ -49,7 +49,7 @@ export type ResponseInputItem =
 /**
  * Local shell execution status.
  */
-export type LocalShellStatus = 'completed' | 'in_progress' | 'incomplete';
+export type LocalShellStatus = "completed" | "in_progress" | "incomplete";
 
 /**
  * Local shell execution action details.
@@ -71,21 +71,21 @@ export interface LocalShellExecAction {
  * Local shell action types.
  */
 export type LocalShellAction = {
-  type: 'exec';
+  type: "exec";
 } & LocalShellExecAction;
 
 /**
  * Web search action types.
  */
 export type WebSearchAction =
-  | { type: 'search'; query: string }
-  | { type: 'other' };
+  | { type: "search"; query: string }
+  | { type: "other" };
 
 /**
  * Reasoning item summary content.
  */
 export type ReasoningItemReasoningSummary = {
-  type: 'summary_text';
+  type: "summary_text";
   text: string;
 };
 
@@ -93,8 +93,8 @@ export type ReasoningItemReasoningSummary = {
  * Reasoning item content types.
  */
 export type ReasoningItemContent =
-  | { type: 'reasoning_text'; text: string }
-  | { type: 'text'; text: string };
+  | { type: "reasoning_text"; text: string }
+  | { type: "text"; text: string };
 
 /**
  * Ghost commit information for tracking uncommitted changes.
@@ -117,14 +117,14 @@ export interface GhostCommit {
  */
 export type ResponseItem =
   | {
-      type: 'message';
+      type: "message";
       /** Optional ID (not serialized, internal use only) */
       id?: string;
       role: string;
       content: ContentItem[];
     }
   | {
-      type: 'reasoning';
+      type: "reasoning";
       /** ID (not serialized, internal use only) */
       id?: string;
       summary: ReasoningItemReasoningSummary[];
@@ -133,7 +133,7 @@ export type ResponseItem =
       encrypted_content?: string;
     }
   | {
-      type: 'local_shell_call';
+      type: "local_shell_call";
       /** Optional ID (chat completions API) */
       id?: string;
       /** Optional call_id (responses API) */
@@ -142,7 +142,7 @@ export type ResponseItem =
       action: LocalShellAction;
     }
   | {
-      type: 'function_call';
+      type: "function_call";
       /** Optional ID (not serialized, internal use only) */
       id?: string;
       name: string;
@@ -151,12 +151,12 @@ export type ResponseItem =
       call_id: string;
     }
   | {
-      type: 'function_call_output';
+      type: "function_call_output";
       call_id: string;
       output: FunctionCallOutputPayload;
     }
   | {
-      type: 'custom_tool_call';
+      type: "custom_tool_call";
       /** Optional ID (not serialized, internal use only) */
       id?: string;
       /** Optional status */
@@ -167,12 +167,12 @@ export type ResponseItem =
       input: string;
     }
   | {
-      type: 'custom_tool_call_output';
+      type: "custom_tool_call_output";
       call_id: string;
       output: string;
     }
   | {
-      type: 'web_search_call';
+      type: "web_search_call";
       /** Optional ID (not serialized, internal use only) */
       id?: string;
       /** Optional status */
@@ -180,11 +180,11 @@ export type ResponseItem =
       action: WebSearchAction;
     }
   | {
-      type: 'ghost_snapshot';
+      type: "ghost_snapshot";
       ghost_commit: GhostCommit;
     }
   | {
-      type: 'other';
+      type: "other";
     };
 
 /**
@@ -211,8 +211,8 @@ export interface ShellToolCallParams {
  * Content items that can be returned by tool calls.
  */
 export type FunctionCallOutputContentItem =
-  | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string };
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; image_url: string };
 
 /**
  * MCP CallToolResult structure (simplified).
@@ -232,10 +232,10 @@ export interface CallToolResult {
  * MCP Content block types.
  */
 export type ContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'image'; data: string; mime_type: string }
-  | { type: 'resource'; uri: string; text?: string; mime_type?: string }
-  | { type: 'embedded_resource'; content: string; mime_type?: string };
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mime_type: string }
+  | { type: "resource"; uri: string; text?: string; mime_type?: string }
+  | { type: "embedded_resource"; content: string; mime_type?: string };
 
 /**
  * Function call output payload.
@@ -260,39 +260,39 @@ export interface FunctionCallOutputPayload {
  * Convert a ResponseInputItem to a ResponseItem.
  */
 export function responseInputItemToResponseItem(
-  item: ResponseInputItem
+  item: ResponseInputItem,
 ): ResponseItem {
   switch (item.type) {
-    case 'message':
+    case "message":
       return {
-        type: 'message',
+        type: "message",
         role: item.role,
         content: item.content,
         id: undefined,
       };
-    case 'function_call_output':
+    case "function_call_output":
       return {
-        type: 'function_call_output',
+        type: "function_call_output",
         call_id: item.call_id,
         output: item.output,
       };
-    case 'mcp_tool_call_output': {
+    case "mcp_tool_call_output": {
       const output =
-        'error' in item.result
+        "error" in item.result
           ? {
               content: `err: ${item.result.error}`,
               success: false,
             }
           : callToolResultToOutputPayload(item.result);
       return {
-        type: 'function_call_output',
+        type: "function_call_output",
         call_id: item.call_id,
         output,
       };
     }
-    case 'custom_tool_call_output':
+    case "custom_tool_call_output":
       return {
-        type: 'custom_tool_call_output',
+        type: "custom_tool_call_output",
         call_id: item.call_id,
         output: item.output,
       };
@@ -303,22 +303,22 @@ export function responseInputItemToResponseItem(
  * Convert UserInput array to ResponseInputItem message.
  */
 export function userInputToResponseInputItem(
-  inputs: UserInput[]
+  inputs: UserInput[],
 ): ResponseInputItem {
   return {
-    type: 'message',
-    role: 'user',
+    type: "message",
+    role: "user",
     content: inputs.map((input) => {
       switch (input.type) {
-        case 'text':
-          return { type: 'input_text', text: input.text };
-        case 'image':
-          return { type: 'input_image', image_url: input.image_url };
-        case 'local_image':
+        case "text":
+          return { type: "input_text", text: input.text };
+        case "image":
+          return { type: "input_image", image_url: input.image_url };
+        case "local_image":
           // In a real implementation, this would load and convert the image
           // For now, just return a placeholder
           return {
-            type: 'input_text',
+            type: "input_text",
             text: `[Local image: ${input.path}]`,
           };
       }
@@ -330,7 +330,7 @@ export function userInputToResponseInputItem(
  * Convert CallToolResult to FunctionCallOutputPayload.
  */
 export function callToolResultToOutputPayload(
-  result: CallToolResult
+  result: CallToolResult,
 ): FunctionCallOutputPayload {
   const isSuccess = result.is_error !== true;
 
@@ -359,21 +359,21 @@ export function callToolResultToOutputPayload(
  * Returns undefined if no images are present (text-only can use plain string).
  */
 function convertContentBlocksToItems(
-  blocks: ContentBlock[]
+  blocks: ContentBlock[],
 ): FunctionCallOutputContentItem[] | undefined {
   let sawImage = false;
   const items: FunctionCallOutputContentItem[] = [];
 
   for (const block of blocks) {
-    if (block.type === 'text') {
-      items.push({ type: 'input_text', text: block.text });
-    } else if (block.type === 'image') {
+    if (block.type === "text") {
+      items.push({ type: "input_text", text: block.text });
+    } else if (block.type === "image") {
       sawImage = true;
       // Ensure data URL format
-      const imageUrl = block.data.startsWith('data:')
+      const imageUrl = block.data.startsWith("data:")
         ? block.data
         : `data:${block.mime_type};base64,${block.data}`;
-      items.push({ type: 'input_image', image_url: imageUrl });
+      items.push({ type: "input_image", image_url: imageUrl });
     } else {
       // Unsupported block type (audio, resource, etc.)
       return undefined;
@@ -391,7 +391,7 @@ function convertContentBlocksToItems(
  * - Otherwise: serialize as plain string
  */
 export function serializeFunctionCallOutputPayload(
-  payload: FunctionCallOutputPayload
+  payload: FunctionCallOutputPayload,
 ): string | FunctionCallOutputContentItem[] {
   if (payload.content_items) {
     return payload.content_items;
@@ -403,9 +403,9 @@ export function serializeFunctionCallOutputPayload(
  * Deserialize FunctionCallOutputPayload from JSON-compatible format.
  */
 export function deserializeFunctionCallOutputPayload(
-  data: string | FunctionCallOutputContentItem[]
+  data: string | FunctionCallOutputContentItem[],
 ): FunctionCallOutputPayload {
-  if (typeof data === 'string') {
+  if (typeof data === "string") {
     return {
       content: data,
       success: undefined,
@@ -426,8 +426,8 @@ export function deserializeFunctionCallOutputPayload(
  * Content is skipped if it contains no reasoning_text items.
  */
 export function shouldSerializeReasoningContent(
-  content?: ReasoningItemContent[]
+  content?: ReasoningItemContent[],
 ): boolean {
   if (!content) return false;
-  return content.some((c) => c.type === 'reasoning_text');
+  return content.some((c) => c.type === "reasoning_text");
 }

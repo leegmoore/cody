@@ -7,42 +7,42 @@
  */
 
 export interface ZshShell {
-  type: 'zsh'
-  shellPath: string
-  zshrcPath: string
+  type: "zsh";
+  shellPath: string;
+  zshrcPath: string;
 }
 
 export interface BashShell {
-  type: 'bash'
-  shellPath: string
-  bashrcPath: string
+  type: "bash";
+  shellPath: string;
+  bashrcPath: string;
 }
 
 export interface PowerShellConfig {
-  type: 'powershell'
-  exe: string
-  bashExeFallback?: string
+  type: "powershell";
+  exe: string;
+  bashExeFallback?: string;
 }
 
 export interface UnknownShell {
-  type: 'unknown'
+  type: "unknown";
 }
 
-export type Shell = ZshShell | BashShell | PowerShellConfig | UnknownShell
+export type Shell = ZshShell | BashShell | PowerShellConfig | UnknownShell;
 
 /**
  * Get shell name from Shell object.
  */
 export function getShellName(shell: Shell): string | undefined {
   switch (shell.type) {
-    case 'zsh':
-      return 'zsh'
-    case 'bash':
-      return 'bash'
-    case 'powershell':
-      return shell.exe
-    case 'unknown':
-      return undefined
+    case "zsh":
+      return "zsh";
+    case "bash":
+      return "bash";
+    case "powershell":
+      return shell.exe;
+    case "unknown":
+      return undefined;
   }
 }
 
@@ -55,8 +55,8 @@ export function getShellName(shell: Shell): string | undefined {
 export async function defaultUserShell(): Promise<Shell> {
   // Stub implementation - always return bash
   return {
-    type: 'bash',
-    shellPath: '/bin/bash',
-    bashrcPath: '~/.bashrc',
-  }
+    type: "bash",
+    shellPath: "/bin/bash",
+    bashrcPath: "~/.bashrc",
+  };
 }

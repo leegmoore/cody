@@ -2,15 +2,15 @@
  * Events emitted while pulling a model from Ollama.
  */
 export type PullEvent =
-  | { type: 'status'; status: string }
+  | { type: "status"; status: string }
   | {
-      type: 'chunk_progress';
+      type: "chunk_progress";
       digest: string;
       total: number | undefined;
       completed: number | undefined;
     }
-  | { type: 'success' }
-  | { type: 'error'; message: string };
+  | { type: "success" }
+  | { type: "error"; message: string };
 
 /**
  * Convert a single JSON object representing a pull update into one or more events.
@@ -33,28 +33,31 @@ export type PullEvent =
  * // [{ type: 'chunk_progress', digest: 'sha256:abc', total: 100, completed: 50 }]
  * ```
  */
-export function pullEventsFromValue(value: Record<string, unknown>): PullEvent[] {
+export function pullEventsFromValue(
+  value: Record<string, unknown>,
+): PullEvent[] {
   const events: PullEvent[] = [];
 
   // Parse status field
-  if (typeof value.status === 'string') {
-    events.push({ type: 'status', status: value.status });
+  if (typeof value.status === "string") {
+    events.push({ type: "status", status: value.status });
 
     // Success status also emits a Success event
-    if (value.status === 'success') {
-      events.push({ type: 'success' });
+    if (value.status === "success") {
+      events.push({ type: "success" });
     }
   }
 
   // Parse progress fields
-  const digest = typeof value.digest === 'string' ? value.digest : '';
-  const total = typeof value.total === 'number' ? value.total : undefined;
-  const completed = typeof value.completed === 'number' ? value.completed : undefined;
+  const digest = typeof value.digest === "string" ? value.digest : "";
+  const total = typeof value.total === "number" ? value.total : undefined;
+  const completed =
+    typeof value.completed === "number" ? value.completed : undefined;
 
   // Only emit progress event if we have total or completed
   if (total !== undefined || completed !== undefined) {
     events.push({
-      type: 'chunk_progress',
+      type: "chunk_progress",
       digest,
       total,
       completed,

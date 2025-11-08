@@ -20,7 +20,7 @@
  */
 export function formatEnvDisplay(
   env: Map<string, string> | null | undefined,
-  envVars: string[]
+  envVars: string[],
 ): string {
   const parts: string[] = [];
 
@@ -37,8 +37,8 @@ export function formatEnvDisplay(
 
   // Return "-" if no entries, otherwise join with ", "
   if (parts.length === 0) {
-    return '-';
+    return "-";
   }
 
-  return parts.join(', ');
+  return parts.join(", ");
 }

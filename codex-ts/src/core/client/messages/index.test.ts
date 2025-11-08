@@ -497,7 +497,9 @@ describe("Integration - Stage 8", () => {
 /**
  * Helper: Create SSE stream from fixture data
  */
-function createSseStreamFromFixture(fixture: any[]): ReadableStream<Uint8Array> {
+function createSseStreamFromFixture(
+  fixture: any[],
+): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();

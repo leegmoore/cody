@@ -127,7 +127,11 @@ export function segmentText(text: string): SegmentedText {
     if (script.startIndex > lastIndex) {
       const textContent = text.substring(lastIndex, script.startIndex);
       if (textContent.length > 0) {
-        segments.push({ type: "text", content: textContent, index: segmentIndex++ });
+        segments.push({
+          type: "text",
+          content: textContent,
+          index: segmentIndex++,
+        });
       }
     }
 
@@ -141,7 +145,11 @@ export function segmentText(text: string): SegmentedText {
   if (lastIndex < text.length) {
     const textContent = text.substring(lastIndex);
     if (textContent.length > 0) {
-      segments.push({ type: "text", content: textContent, index: segmentIndex++ });
+      segments.push({
+        type: "text",
+        content: textContent,
+        index: segmentIndex++,
+      });
     }
   }
 

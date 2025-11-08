@@ -9,31 +9,31 @@
  * @module core/config-loader
  */
 
-import { promises as fs } from 'fs'
-import { join } from 'path'
-import * as TOML from 'smol-toml'
-import { CONFIG_TOML_FILE } from './config'
+import { promises as fs } from "fs";
+import { join } from "path";
+import * as TOML from "smol-toml";
+import { CONFIG_TOML_FILE } from "./config";
 
 /**
  * Type representing a TOML value (any valid TOML type)
  */
-export type TomlValue = unknown
+export type TomlValue = unknown;
 
 /**
  * Type representing a TOML table (object with string keys)
  */
-export type TomlTable = Record<string, TomlValue>
+export type TomlTable = Record<string, TomlValue>;
 
 /**
  * Configuration layers loaded from different sources
  */
 export interface LoadedConfigLayers {
   /** Base configuration (after merging with managed layers) */
-  base: TomlTable
+  base: TomlTable;
   /** Managed configuration layer (optional) */
-  managedConfig?: TomlTable
+  managedConfig?: TomlTable;
   /** Managed preferences layer (macOS only - not implemented in Phase 2) */
-  managedPreferences?: TomlTable
+  managedPreferences?: TomlTable;
 }
 
 /**
@@ -41,15 +41,15 @@ export interface LoadedConfigLayers {
  */
 export interface LoaderOverrides {
   /** Override path to managed_config.toml */
-  managedConfigPath?: string
+  managedConfigPath?: string;
   /** Override for managed preferences base64 (macOS only - not implemented in Phase 2) */
-  managedPreferencesBase64?: string
+  managedPreferencesBase64?: string;
 }
 
 /**
  * Default path for system-level managed config
  */
-const CODEX_MANAGED_CONFIG_SYSTEM_PATH = '/etc/codex/managed_config.toml'
+const CODEX_MANAGED_CONFIG_SYSTEM_PATH = "/etc/codex/managed_config.toml";
 
 /**
  * Load configuration as a TOML value
@@ -58,7 +58,7 @@ const CODEX_MANAGED_CONFIG_SYSTEM_PATH = '/etc/codex/managed_config.toml'
  * @returns Parsed TOML configuration
  */
 export async function loadConfigAsTOML(codexHome: string): Promise<TomlTable> {
-  return loadConfigAsTOMLWithOverrides(codexHome, {})
+  return loadConfigAsTOMLWithOverrides(codexHome, {});
 }
 
 /**
@@ -72,7 +72,7 @@ export async function loadConfigLayersWithOverrides(
   codexHome: string,
   overrides: LoaderOverrides,
 ): Promise<LoadedConfigLayers> {
-  return loadConfigLayersInternal(codexHome, overrides)
+  return loadConfigLayersInternal(codexHome, overrides);
 }
 
 /**
@@ -86,8 +86,8 @@ export async function loadConfigAsTOMLWithOverrides(
   codexHome: string,
   overrides: LoaderOverrides,
 ): Promise<TomlTable> {
-  const layers = await loadConfigLayersInternal(codexHome, overrides)
-  return applyManagedLayers(layers)
+  const layers = await loadConfigLayersInternal(codexHome, overrides);
+  return applyManagedLayers(layers);
 }
 
 /**
@@ -101,20 +101,21 @@ async function loadConfigLayersInternal(
   codexHome: string,
   overrides: LoaderOverrides,
 ): Promise<LoadedConfigLayers> {
-  const managedConfigPath = overrides.managedConfigPath || managedConfigDefaultPath(codexHome)
+  const managedConfigPath =
+    overrides.managedConfigPath || managedConfigDefaultPath(codexHome);
 
-  const userConfigPath = join(codexHome, CONFIG_TOML_FILE)
-  const userConfig = await readConfigFromPath(userConfigPath, true)
-  const managedConfig = await readConfigFromPath(managedConfigPath, false)
+  const userConfigPath = join(codexHome, CONFIG_TOML_FILE);
+  const userConfig = await readConfigFromPath(userConfigPath, true);
+  const managedConfig = await readConfigFromPath(managedConfigPath, false);
 
   // Phase 2: Skip macOS managed preferences (will implement in Phase 4/5)
-  const managedPreferences = undefined
+  const managedPreferences = undefined;
 
   return {
     base: userConfig || defaultEmptyTable(),
     managedConfig,
     managedPreferences,
-  }
+  };
 }
 
 /**
@@ -129,25 +130,25 @@ async function readConfigFromPath(
   logMissingAsInfo: boolean,
 ): Promise<TomlTable | undefined> {
   try {
-    const contents = await fs.readFile(path, 'utf-8')
+    const contents = await fs.readFile(path, "utf-8");
     try {
-      const parsed = TOML.parse(contents)
-      return parsed as TomlTable
+      const parsed = TOML.parse(contents);
+      return parsed as TomlTable;
     } catch (err) {
-      console.error(`Failed to parse ${path}:`, err)
-      throw new Error(`Failed to parse TOML config: ${err}`)
+      console.error(`Failed to parse ${path}:`, err);
+      throw new Error(`Failed to parse TOML config: ${err}`);
     }
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       if (logMissingAsInfo) {
-        console.info(`${path} not found, using defaults`)
+        console.info(`${path} not found, using defaults`);
       } else {
-        console.debug(`${path} not found`)
+        console.debug(`${path} not found`);
       }
-      return undefined
+      return undefined;
     }
-    console.error(`Failed to read ${path}:`, err)
-    throw err
+    console.error(`Failed to read ${path}:`, err);
+    throw err;
   }
 }
 
@@ -165,10 +166,10 @@ export function mergeTomlValues(base: TomlTable, overlay: TomlTable): void {
     for (const [key, value] of Object.entries(overlay)) {
       if (key in base && isTomlTable(base[key]) && isTomlTable(value)) {
         // Both are tables, merge recursively
-        mergeTomlValues(base[key] as TomlTable, value as TomlTable)
+        mergeTomlValues(base[key] as TomlTable, value as TomlTable);
       } else {
         // Replace value
-        base[key] = value
+        base[key] = value;
       }
     }
   }
@@ -182,11 +183,11 @@ export function mergeTomlValues(base: TomlTable, overlay: TomlTable): void {
  */
 function isTomlTable(value: TomlValue): value is TomlTable {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
     !Array.isArray(value) &&
     Object.getPrototypeOf(value) === Object.prototype
-  )
+  );
 }
 
 /**
@@ -198,10 +199,10 @@ function isTomlTable(value: TomlValue): value is TomlTable {
 function managedConfigDefaultPath(codexHome: string): string {
   // On Unix systems, use system path
   // On Windows, use codexHome path
-  if (process.platform !== 'win32') {
-    return CODEX_MANAGED_CONFIG_SYSTEM_PATH
+  if (process.platform !== "win32") {
+    return CODEX_MANAGED_CONFIG_SYSTEM_PATH;
   } else {
-    return join(codexHome, 'managed_config.toml')
+    return join(codexHome, "managed_config.toml");
   }
 }
 
@@ -212,22 +213,22 @@ function managedConfigDefaultPath(codexHome: string): string {
  * @returns Merged configuration
  */
 function applyManagedLayers(layers: LoadedConfigLayers): TomlTable {
-  const { base, managedConfig, managedPreferences } = layers
+  const { base, managedConfig, managedPreferences } = layers;
 
   // Create a mutable copy of base
-  const result = { ...base }
+  const result = { ...base };
 
   // Apply managed config layer
   if (managedConfig) {
-    mergeTomlValues(result, managedConfig)
+    mergeTomlValues(result, managedConfig);
   }
 
   // Apply managed preferences layer (Phase 2: not implemented)
   if (managedPreferences) {
-    mergeTomlValues(result, managedPreferences)
+    mergeTomlValues(result, managedPreferences);
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -236,5 +237,5 @@ function applyManagedLayers(layers: LoadedConfigLayers): TomlTable {
  * @returns Empty TOML table
  */
 function defaultEmptyTable(): TomlTable {
-  return {}
+  return {};
 }

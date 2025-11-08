@@ -9,7 +9,7 @@
  * the essential cryptographic utilities and type definitions needed for core/auth.
  */
 
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from "node:crypto";
 
 /**
  * PKCE (Proof Key for Code Exchange) codes for OAuth authorization code flow.
@@ -19,9 +19,9 @@ import { createHash, randomBytes } from 'node:crypto'
  */
 export interface PkceCodes {
   /** The code verifier (URL-safe base64, 43-128 characters) */
-  codeVerifier: string
+  codeVerifier: string;
   /** The code challenge (base64url-encoded SHA256 hash of verifier) */
-  codeChallenge: string
+  codeChallenge: string;
 }
 
 /**
@@ -33,19 +33,19 @@ export interface PkceCodes {
  */
 export function generatePkce(): PkceCodes {
   // Generate 64 random bytes for the verifier
-  const bytes = randomBytes(64)
+  const bytes = randomBytes(64);
 
   // Verifier: URL-safe base64 without padding (43..128 chars per RFC 7636)
-  const codeVerifier = bytes.toString('base64url')
+  const codeVerifier = bytes.toString("base64url");
 
   // Challenge (S256 method): BASE64URL-ENCODE(SHA256(verifier)) without padding
-  const hash = createHash('sha256').update(codeVerifier).digest()
-  const codeChallenge = hash.toString('base64url')
+  const hash = createHash("sha256").update(codeVerifier).digest();
+  const codeChallenge = hash.toString("base64url");
 
   return {
     codeVerifier,
     codeChallenge,
-  }
+  };
 }
 
 /**
@@ -55,11 +55,11 @@ export function generatePkce(): PkceCodes {
  */
 export enum AuthCredentialsStoreMode {
   /** Store credentials in keyring only */
-  KeyringOnly = 'KeyringOnly',
+  KeyringOnly = "KeyringOnly",
   /** Store credentials in file system only */
-  FileSystemOnly = 'FileSystemOnly',
+  FileSystemOnly = "FileSystemOnly",
   /** Store credentials in both keyring and file system */
-  Both = 'Both',
+  Both = "Both",
 }
 
 /**
@@ -70,21 +70,21 @@ export enum AuthCredentialsStoreMode {
  */
 export interface ServerOptions {
   /** Codex home directory path */
-  codexHome: string
+  codexHome: string;
   /** OAuth client ID */
-  clientId: string
+  clientId: string;
   /** OAuth issuer URL (e.g., "https://auth.openai.com") */
-  issuer: string
+  issuer: string;
   /** Port for local callback server */
-  port: number
+  port: number;
   /** Whether to automatically open browser for authentication */
-  openBrowser: boolean
+  openBrowser: boolean;
   /** Forced state value for testing (optional) */
-  forceState?: string
+  forceState?: string;
   /** Restrict login to specific ChatGPT workspace ID */
-  forcedChatgptWorkspaceId?: string
+  forcedChatgptWorkspaceId?: string;
   /** How to store authentication credentials */
-  cliAuthCredentialsStoreMode: AuthCredentialsStoreMode
+  cliAuthCredentialsStoreMode: AuthCredentialsStoreMode;
 }
 
 /**
@@ -105,12 +105,12 @@ export function createServerOptions(
   return {
     codexHome,
     clientId,
-    issuer: 'https://auth.openai.com',
+    issuer: "https://auth.openai.com",
     port: 1455,
     openBrowser: true,
     forcedChatgptWorkspaceId,
     cliAuthCredentialsStoreMode,
-  }
+  };
 }
 
 /**
@@ -120,7 +120,7 @@ export function createServerOptions(
  */
 export interface ShutdownHandle {
   /** Cancel the login flow */
-  shutdown(): void
+  shutdown(): void;
 }
 
 /**
@@ -132,15 +132,15 @@ export interface ShutdownHandle {
  */
 export interface LoginServer {
   /** The authorization URL to direct the user to */
-  authUrl: string
+  authUrl: string;
   /** The actual port the server is listening on */
-  actualPort: number
+  actualPort: number;
   /** Wait for the login flow to complete */
-  blockUntilDone(): Promise<void>
+  blockUntilDone(): Promise<void>;
   /** Cancel the login flow */
-  cancel(): void
+  cancel(): void;
   /** Get a handle to cancel the login flow */
-  cancelHandle(): ShutdownHandle
+  cancelHandle(): ShutdownHandle;
 }
 
 /**

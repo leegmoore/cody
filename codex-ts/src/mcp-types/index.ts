@@ -115,7 +115,7 @@ export type {
   CreateMessageRequest,
   CreateMessageResult,
   SamplingMessage,
-} from '@modelcontextprotocol/sdk/types.js'
+} from "@modelcontextprotocol/sdk/types.js";
 
 // Re-export schemas for validation
 export {
@@ -193,12 +193,12 @@ export {
   CreateMessageRequestSchema,
   CreateMessageResultSchema,
   SamplingMessageSchema,
-} from '@modelcontextprotocol/sdk/types.js'
+} from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * MCP schema version used by this implementation.
  * Matches the Rust implementation's MCP_SCHEMA_VERSION constant.
  */
-export const MCP_SCHEMA_VERSION = '2025-06-18'
+export const MCP_SCHEMA_VERSION = "2025-06-18";
 
 // JSONRPC_VERSION is already exported above in the re-export list

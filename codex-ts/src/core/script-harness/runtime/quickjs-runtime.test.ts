@@ -7,10 +7,7 @@ import {
   QuickJSRuntime,
   type QuickJSRuntimeConfig,
 } from "./quickjs-runtime.js";
-import type {
-  ScriptExecutionLimits,
-  ScriptExecutionResult,
-} from "./types.js";
+import type { ScriptExecutionLimits, ScriptExecutionResult } from "./types.js";
 
 describe("quickjs-runtime.ts", () => {
   let runtime: QuickJSRuntime;
@@ -92,11 +89,7 @@ describe("quickjs-runtime.ts", () => {
         myValue: 42,
       };
 
-      const result = await runtime.execute(
-        "return myValue * 2",
-        globals,
-        {},
-      );
+      const result = await runtime.execute("return myValue * 2", globals, {});
 
       expect(result.ok).toBe(true);
       expect(result.returnValue).toBe(84);
@@ -344,11 +337,7 @@ describe("quickjs-runtime.ts", () => {
         {},
       );
 
-      const result2 = await runtime.execute(
-        "return typeof myValue",
-        {},
-        {},
-      );
+      const result2 = await runtime.execute("return typeof myValue", {}, {});
 
       expect(result1.returnValue).toBe(10);
       expect(result2.returnValue).toBe("undefined");

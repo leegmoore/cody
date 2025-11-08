@@ -2,7 +2,7 @@
  * Sandbox manager for selecting and transforming commands
  */
 
-import type { SandboxPolicy } from '../../protocol/protocol.js';
+import type { SandboxPolicy } from "../../protocol/protocol.js";
 import {
   CODEX_SANDBOX_ENV_VAR,
   CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR,
@@ -11,18 +11,24 @@ import {
   SandboxPreference,
   SandboxTransformError,
   SandboxType,
-} from './types.js';
-import { getPlatformSandbox, MACOS_PATH_TO_SEATBELT_EXECUTABLE } from './platform.js';
-import { createLinuxSandboxCommandArgs, createSeatbeltCommandArgs } from './wrappers.js';
+} from "./types.js";
+import {
+  getPlatformSandbox,
+  MACOS_PATH_TO_SEATBELT_EXECUTABLE,
+} from "./platform.js";
+import {
+  createLinuxSandboxCommandArgs,
+  createSeatbeltCommandArgs,
+} from "./wrappers.js";
 
 /**
  * Helper to check if policy has full network access
  */
 function hasFullNetworkAccess(policy: SandboxPolicy): boolean {
-  if (policy.mode === 'danger-full-access') {
+  if (policy.mode === "danger-full-access") {
     return true;
   }
-  if (policy.mode === 'workspace-write') {
+  if (policy.mode === "workspace-write") {
     return policy.network_access === true;
   }
   return false;
@@ -41,7 +47,10 @@ export class SandboxManager {
    * @param preference - Sandbox preference (Auto/Require/Forbid)
    * @returns Selected sandbox type
    */
-  selectInitial(policy: SandboxPolicy, preference: SandboxPreference): SandboxType {
+  selectInitial(
+    policy: SandboxPolicy,
+    preference: SandboxPreference,
+  ): SandboxType {
     switch (preference) {
       case SandboxPreference.Forbid:
         return SandboxType.None;
@@ -52,7 +61,7 @@ export class SandboxManager {
 
       case SandboxPreference.Auto:
         // Use sandbox for all policies except danger-full-access
-        if (policy.mode === 'danger-full-access') {
+        if (policy.mode === "danger-full-access") {
           return SandboxType.None;
         }
         return getPlatformSandbox() ?? SandboxType.None;
@@ -85,7 +94,7 @@ export class SandboxManager {
 
     // Add network disabled flag if policy doesn't allow network
     if (!hasFullNetworkAccess(policy)) {
-      env[CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR] = '1';
+      env[CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR] = "1";
     }
 
     // Build initial command array
@@ -102,18 +111,28 @@ export class SandboxManager {
         break;
 
       case SandboxType.MacosSeatbelt:
-        sandboxEnv[CODEX_SANDBOX_ENV_VAR] = 'seatbelt';
-        const seatbeltArgs = createSeatbeltCommandArgs(command, policy, sandboxPolicyCwd);
+        sandboxEnv[CODEX_SANDBOX_ENV_VAR] = "seatbelt";
+        const seatbeltArgs = createSeatbeltCommandArgs(
+          command,
+          policy,
+          sandboxPolicyCwd,
+        );
         finalCommand = [MACOS_PATH_TO_SEATBELT_EXECUTABLE, ...seatbeltArgs];
         break;
 
       case SandboxType.LinuxSeccomp:
         if (!codexLinuxSandboxExe) {
-          throw new SandboxTransformError('missing codex-linux-sandbox executable path');
+          throw new SandboxTransformError(
+            "missing codex-linux-sandbox executable path",
+          );
         }
-        const linuxArgs = createLinuxSandboxCommandArgs(command, policy, sandboxPolicyCwd);
+        const linuxArgs = createLinuxSandboxCommandArgs(
+          command,
+          policy,
+          sandboxPolicyCwd,
+        );
         finalCommand = [codexLinuxSandboxExe, ...linuxArgs];
-        arg0Override = 'codex-linux-sandbox';
+        arg0Override = "codex-linux-sandbox";
         break;
 
       case SandboxType.WindowsRestrictedToken:

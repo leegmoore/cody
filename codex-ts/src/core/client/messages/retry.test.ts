@@ -28,7 +28,12 @@ describe("Retry Logic - Stage 10", () => {
 
   describe("Retry Delay Calculation", () => {
     it("should calculate exponential backoff correctly", () => {
-      const config = { initialDelay: 250, factor: 2, jitter: 0, maxDelay: 4000 };
+      const config = {
+        initialDelay: 250,
+        factor: 2,
+        jitter: 0,
+        maxDelay: 4000,
+      };
 
       expect(calculateRetryDelay(0, config)).toBe(250); // 250 * 2^0
       expect(calculateRetryDelay(1, config)).toBe(500); // 250 * 2^1
@@ -39,7 +44,12 @@ describe("Retry Logic - Stage 10", () => {
     });
 
     it("should apply jitter to delay", () => {
-      const config = { initialDelay: 1000, factor: 1, jitter: 0.2, maxDelay: 10000 };
+      const config = {
+        initialDelay: 1000,
+        factor: 1,
+        jitter: 0.2,
+        maxDelay: 10000,
+      };
 
       // With 20% jitter, delay should be between 800-1200ms
       const delay = calculateRetryDelay(0, config);
@@ -55,7 +65,12 @@ describe("Retry Logic - Stage 10", () => {
     });
 
     it("should respect maxDelay cap", () => {
-      const config = { initialDelay: 1000, factor: 10, jitter: 0, maxDelay: 2000 };
+      const config = {
+        initialDelay: 1000,
+        factor: 10,
+        jitter: 0,
+        maxDelay: 2000,
+      };
 
       // Even with factor of 10, should be capped at 2000ms
       expect(calculateRetryDelay(5, config)).toBe(2000);
@@ -182,9 +197,9 @@ describe("Retry Logic - Stage 10", () => {
     it("should not retry on non-retryable errors", async () => {
       const fn = vi.fn().mockRejectedValue({ statusCode: 401 });
 
-      await expect(
-        withRetry(fn, { maxAttempts: 3 }),
-      ).rejects.toMatchObject({ statusCode: 401 });
+      await expect(withRetry(fn, { maxAttempts: 3 })).rejects.toMatchObject({
+        statusCode: 401,
+      });
 
       expect(fn).toHaveBeenCalledTimes(1);
     });

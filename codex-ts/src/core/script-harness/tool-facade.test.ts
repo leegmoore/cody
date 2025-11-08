@@ -54,7 +54,10 @@ describe("tool-facade.ts", () => {
   const createTool = (name: string, overrides?: Partial<ToolDefinition>) => {
     return {
       name,
-      execute: vi.fn(async (args: any) => ({ result: `${name} executed`, args })),
+      execute: vi.fn(async (args: any) => ({
+        result: `${name} executed`,
+        args,
+      })),
       ...overrides,
     } as ToolDefinition;
   };
@@ -244,7 +247,9 @@ describe("tool-facade.ts", () => {
       const tools = createToolsProxy(registry, tracker, createConfig());
 
       expect(() => tools.nonexistent_tool).toThrow(ToolNotFoundError);
-      expect(() => tools.nonexistent_tool).toThrow("Tool not found: nonexistent_tool");
+      expect(() => tools.nonexistent_tool).toThrow(
+        "Tool not found: nonexistent_tool",
+      );
     });
 
     it("TF14: throws ToolNotFoundError for tool not in registry", () => {
@@ -268,7 +273,9 @@ describe("tool-facade.ts", () => {
 
       const tools = createToolsProxy(registry, tracker, createConfig());
 
-      await expect(tools.test_tool({})).rejects.toThrow("Tool execution failed");
+      await expect(tools.test_tool({})).rejects.toThrow(
+        "Tool execution failed",
+      );
     });
   });
 
@@ -287,7 +294,9 @@ describe("tool-facade.ts", () => {
       const tools = createToolsProxy(registry, tracker, createConfig());
 
       await expect(tools.test_tool({})).rejects.toThrow(ToolValidationError);
-      await expect(tools.test_tool({})).rejects.toThrow("Missing required field");
+      await expect(tools.test_tool({})).rejects.toThrow(
+        "Missing required field",
+      );
     });
 
     it("TF17: accepts valid arguments", async () => {
@@ -336,7 +345,9 @@ describe("tool-facade.ts", () => {
       await tools.test_tool({});
 
       // 4th call exceeds budget
-      await expect(tools.test_tool({})).rejects.toThrow(ToolBudgetExceededError);
+      await expect(tools.test_tool({})).rejects.toThrow(
+        ToolBudgetExceededError,
+      );
     });
 
     it("TF20: enforces concurrency limit", async () => {
@@ -664,7 +675,9 @@ describe("tool-facade.ts", () => {
   describe("Integration scenarios", () => {
     it("TF38: complete workflow with multiple tools", async () => {
       registry.register(createTool("read_file"));
-      registry.register(createTool("write_file", { requiresApproval: () => true }));
+      registry.register(
+        createTool("write_file", { requiresApproval: () => true }),
+      );
 
       const tools = createToolsProxy(
         registry,

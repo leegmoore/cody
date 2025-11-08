@@ -233,11 +233,7 @@ export class ApprovalBridge {
    * @param approved - Whether user approved
    * @param reason - Optional reason for denial
    */
-  onUserResponse(
-    requestId: string,
-    approved: boolean,
-    reason?: string,
-  ): void {
+  onUserResponse(requestId: string, approved: boolean, reason?: string): void {
     const entry = this.pending.get(requestId);
     if (!entry) {
       // Request not found (already completed or timed out)

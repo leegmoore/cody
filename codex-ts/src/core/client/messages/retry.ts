@@ -126,10 +126,7 @@ export function shouldRetry(error: any): boolean {
  * @param signal - Optional AbortSignal to cancel sleep
  * @returns Promise that resolves after delay or rejects if aborted
  */
-export async function sleep(
-  ms: number,
-  signal?: AbortSignal,
-): Promise<void> {
+export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(new Error("Aborted"));

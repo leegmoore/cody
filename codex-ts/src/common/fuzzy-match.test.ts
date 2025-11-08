@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { fuzzyMatch, fuzzyIndices } from './fuzzy-match.js';
+import { describe, it, expect } from "vitest";
+import { fuzzyMatch, fuzzyIndices } from "./fuzzy-match.js";
 
-describe('fuzzyMatch', () => {
-  it('matches basic ASCII subsequence with indices', () => {
-    const result = fuzzyMatch('hello', 'hl');
+describe("fuzzyMatch", () => {
+  it("matches basic ASCII subsequence with indices", () => {
+    const result = fuzzyMatch("hello", "hl");
     expect(result).toBeTruthy();
     if (result) {
       const [idx, score] = result;
@@ -13,8 +13,8 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('handles Unicode dotted İ (Istanbul) highlighting correctly', () => {
-    const result = fuzzyMatch('İstanbul', 'is');
+  it("handles Unicode dotted İ (Istanbul) highlighting correctly", () => {
+    const result = fuzzyMatch("İstanbul", "is");
     expect(result).toBeTruthy();
     if (result) {
       const [idx, score] = result;
@@ -24,16 +24,16 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('handles German sharp s (ß) casefold correctly', () => {
+  it("handles German sharp s (ß) casefold correctly", () => {
     // ß lowercases to "ss", but "strasse" has 7 chars while "straße" has 6
     // This test verifies that lowercase expansion is handled correctly
-    const result = fuzzyMatch('straße', 'strasse');
+    const result = fuzzyMatch("straße", "strasse");
     expect(result).toBeNull();
   });
 
-  it('prefers contiguous match over spread', () => {
-    const resultA = fuzzyMatch('abc', 'abc');
-    const resultB = fuzzyMatch('a-b-c', 'abc');
+  it("prefers contiguous match over spread", () => {
+    const resultA = fuzzyMatch("abc", "abc");
+    const resultB = fuzzyMatch("a-b-c", "abc");
 
     expect(resultA).toBeTruthy();
     expect(resultB).toBeTruthy();
@@ -50,9 +50,9 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('applies start-of-string bonus', () => {
-    const resultA = fuzzyMatch('file_name', 'file');
-    const resultB = fuzzyMatch('my_file_name', 'file');
+  it("applies start-of-string bonus", () => {
+    const resultA = fuzzyMatch("file_name", "file");
+    const resultB = fuzzyMatch("my_file_name", "file");
 
     expect(resultA).toBeTruthy();
     expect(resultB).toBeTruthy();
@@ -69,8 +69,8 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('matches empty needle with max score and no indices', () => {
-    const result = fuzzyMatch('anything', '');
+  it("matches empty needle with max score and no indices", () => {
+    const result = fuzzyMatch("anything", "");
     expect(result).toBeTruthy();
     if (result) {
       const [idx, score] = result;
@@ -79,8 +79,8 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('performs case insensitive matching', () => {
-    const result = fuzzyMatch('FooBar', 'foO');
+  it("performs case insensitive matching", () => {
+    const result = fuzzyMatch("FooBar", "foO");
     expect(result).toBeTruthy();
     if (result) {
       const [idx, score] = result;
@@ -90,10 +90,10 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('dedups indices for multichar lowercase expansion', () => {
+  it("dedups indices for multichar lowercase expansion", () => {
     // İ lowercases to "i" + combining dot above (two characters)
-    const needle = '\u{0069}\u{0307}'; // "i" + combining dot above
-    const result = fuzzyMatch('İ', needle);
+    const needle = "\u{0069}\u{0307}"; // "i" + combining dot above
+    const result = fuzzyMatch("İ", needle);
     expect(result).toBeTruthy();
     if (result) {
       const [idx, score] = result;
@@ -103,25 +103,25 @@ describe('fuzzyMatch', () => {
     }
   });
 
-  it('returns null when no match is found', () => {
-    const result = fuzzyMatch('hello', 'xyz');
+  it("returns null when no match is found", () => {
+    const result = fuzzyMatch("hello", "xyz");
     expect(result).toBeNull();
   });
 });
 
-describe('fuzzyIndices', () => {
-  it('returns only the indices without score', () => {
-    const result = fuzzyIndices('hello', 'hl');
+describe("fuzzyIndices", () => {
+  it("returns only the indices without score", () => {
+    const result = fuzzyIndices("hello", "hl");
     expect(result).toEqual([0, 2]);
   });
 
-  it('returns null when no match', () => {
-    const result = fuzzyIndices('hello', 'xyz');
+  it("returns null when no match", () => {
+    const result = fuzzyIndices("hello", "xyz");
     expect(result).toBeNull();
   });
 
-  it('returns empty array for empty needle', () => {
-    const result = fuzzyIndices('anything', '');
+  it("returns empty array for empty needle", () => {
+    const result = fuzzyIndices("anything", "");
     expect(result).toEqual([]);
   });
 });

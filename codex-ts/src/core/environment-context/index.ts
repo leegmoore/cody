@@ -7,23 +7,23 @@
  * Omits complex writable_roots logic and approval_policy for MVP.
  */
 
-import type { Shell } from '../shell'
+import type { Shell } from "../shell";
 
 /**
  * Network access level.
  */
 export enum NetworkAccess {
-  Restricted = 'restricted',
-  Enabled = 'enabled',
+  Restricted = "restricted",
+  Enabled = "enabled",
 }
 
 /**
  * Sandbox mode setting.
  */
 export enum SandboxMode {
-  DangerFullAccess = 'danger-full-access',
-  ReadOnly = 'read-only',
-  WorkspaceWrite = 'workspace-write',
+  DangerFullAccess = "danger-full-access",
+  ReadOnly = "read-only",
+  WorkspaceWrite = "workspace-write",
 }
 
 /**
@@ -32,13 +32,13 @@ export enum SandboxMode {
  */
 export interface EnvironmentContext {
   /** Current working directory */
-  cwd?: string
+  cwd?: string;
   /** Sandbox mode setting */
-  sandboxMode?: SandboxMode
+  sandboxMode?: SandboxMode;
   /** Network access level */
-  networkAccess?: NetworkAccess
+  networkAccess?: NetworkAccess;
   /** Shell configuration */
-  shell?: Shell
+  shell?: Shell;
 }
 
 /**
@@ -53,14 +53,14 @@ export function createEnvironmentContext(
   cwd?: string,
   sandboxMode?: SandboxMode,
   networkAccess?: NetworkAccess,
-  shell?: Shell
+  shell?: Shell,
 ): EnvironmentContext {
   return {
     cwd,
     sandboxMode,
     networkAccess,
     shell,
-  }
+  };
 }
 
 /**
@@ -70,13 +70,13 @@ export function createEnvironmentContext(
  */
 export function equalsExceptShell(
   a: EnvironmentContext,
-  b: EnvironmentContext
+  b: EnvironmentContext,
 ): boolean {
   return (
     a.cwd === b.cwd &&
     a.sandboxMode === b.sandboxMode &&
     a.networkAccess === b.networkAccess
-  )
+  );
 }
 
 /**
@@ -86,23 +86,23 @@ export function equalsExceptShell(
  * TODO: Add proper XML/markdown formatting when needed.
  */
 export function serializeEnvironmentContext(ctx: EnvironmentContext): string {
-  const parts: string[] = []
+  const parts: string[] = [];
 
   if (ctx.cwd !== undefined) {
-    parts.push(`cwd: ${ctx.cwd}`)
+    parts.push(`cwd: ${ctx.cwd}`);
   }
 
   if (ctx.sandboxMode !== undefined) {
-    parts.push(`sandbox_mode: ${ctx.sandboxMode}`)
+    parts.push(`sandbox_mode: ${ctx.sandboxMode}`);
   }
 
   if (ctx.networkAccess !== undefined) {
-    parts.push(`network_access: ${ctx.networkAccess}`)
+    parts.push(`network_access: ${ctx.networkAccess}`);
   }
 
   if (ctx.shell !== undefined) {
-    parts.push(`shell: ${ctx.shell.type}`)
+    parts.push(`shell: ${ctx.shell.type}`);
   }
 
-  return `<environment_context>\n${parts.join('\n')}\n</environment_context>`
+  return `<environment_context>\n${parts.join("\n")}\n</environment_context>`;
 }

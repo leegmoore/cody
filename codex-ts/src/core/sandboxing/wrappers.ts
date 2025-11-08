@@ -5,7 +5,7 @@
  * sandbox policy files and templates which will be implemented when needed.
  */
 
-import type { SandboxPolicy } from '../../protocol/protocol.js';
+import type { SandboxPolicy } from "../../protocol/protocol.js";
 
 /**
  * Create macOS Seatbelt sandbox command arguments
@@ -27,7 +27,7 @@ export function createSeatbeltCommandArgs(
   const args: string[] = [];
 
   // -p flag provides inline profile (simplified for now)
-  args.push('-p', '(version 1)(allow default)');
+  args.push("-p", "(version 1)(allow default)");
 
   // Append the original command
   args.push(...command);
@@ -55,22 +55,22 @@ export function createLinuxSandboxCommandArgs(
   const args: string[] = [];
 
   // Add policy configuration (simplified)
-  args.push('--cwd', policyBasePath);
+  args.push("--cwd", policyBasePath);
 
   // Add policy type
-  if (policy.mode === 'read-only') {
-    args.push('--read-only');
-  } else if (policy.mode === 'workspace-write') {
-    args.push('--workspace-write');
+  if (policy.mode === "read-only") {
+    args.push("--read-only");
+  } else if (policy.mode === "workspace-write") {
+    args.push("--workspace-write");
     if (policy.writable_roots) {
       for (const root of policy.writable_roots) {
-        args.push('--writable-root', root);
+        args.push("--writable-root", root);
       }
     }
   }
 
   // Separator before command
-  args.push('--');
+  args.push("--");
 
   // Append the original command
   args.push(...command);

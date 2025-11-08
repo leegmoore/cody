@@ -10,21 +10,21 @@
  */
 export enum AskForApproval {
   /** All commands require user approval */
-  OnRequest = 'on-request',
+  OnRequest = "on-request",
   /** Auto-approve safe commands, ask for risky ones */
-  UnlessTrusted = 'untrusted',
+  UnlessTrusted = "untrusted",
   /** Never ask for approval (dangerous!) */
-  Never = 'never',
+  Never = "never",
 }
 
 /**
  * Sandbox policy for restricting tool access.
  */
 export type SandboxPolicy =
-  | { type: 'danger-full-access' }
-  | { type: 'read-only' }
+  | { type: "danger-full-access" }
+  | { type: "read-only" }
   | {
-      type: 'workspace-write';
+      type: "workspace-write";
       writableRoots: string[];
       networkAccess: boolean;
       excludeTmpdirEnvVar: boolean;
@@ -40,10 +40,10 @@ export function newWorkspaceWritePolicy(
     networkAccess?: boolean;
     excludeTmpdirEnvVar?: boolean;
     excludeSlashTmp?: boolean;
-  } = {}
+  } = {},
 ): SandboxPolicy {
   return {
-    type: 'workspace-write',
+    type: "workspace-write",
     writableRoots: options.writableRoots || [],
     networkAccess: options.networkAccess || false,
     excludeTmpdirEnvVar: options.excludeTmpdirEnvVar || false,
@@ -55,8 +55,8 @@ export function newWorkspaceWritePolicy(
  * Reasoning effort level for models that support reasoning.
  */
 export enum ReasoningEffort {
-  Minimal = 'minimal',
-  Low = 'low',
-  Medium = 'medium',
-  High = 'high',
+  Minimal = "minimal",
+  Low = "low",
+  Medium = "medium",
+  High = "high",
 }

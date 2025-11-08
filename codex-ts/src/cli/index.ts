@@ -26,10 +26,10 @@
  */
 export function safeFormatKey(key: string): string {
   if (key.length <= 13) {
-    return '***'
+    return "***";
   }
 
-  const prefix = key.slice(0, 8)
-  const suffix = key.slice(-5)
-  return `${prefix}***${suffix}`
+  const prefix = key.slice(0, 8);
+  const suffix = key.slice(-5);
+  return `${prefix}***${suffix}`;
 }

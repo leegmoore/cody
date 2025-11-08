@@ -173,7 +173,8 @@ describe("Script Block Detector", () => {
     });
 
     it("should maintain chronological order", () => {
-      const text = "A <tool-calls>1</tool-calls> B <tool-calls>2</tool-calls> C";
+      const text =
+        "A <tool-calls>1</tool-calls> B <tool-calls>2</tool-calls> C";
       const result = segmentText(text);
 
       // Check indices are sequential
@@ -315,7 +316,8 @@ describe("Script Block Detector", () => {
       });
 
       it("should remove multiple scripts", () => {
-        const text = "A <tool-calls>x</tool-calls> B <tool-calls>y</tool-calls> C";
+        const text =
+          "A <tool-calls>x</tool-calls> B <tool-calls>y</tool-calls> C";
         const result = removeScriptBlocks(text);
 
         expect(result).toBe("A  B  C");
@@ -377,12 +379,11 @@ describe("Script Block Detector", () => {
       const text = '<tool-calls>const s = "test\\n";</tool-calls>';
       const blocks = detectScriptBlocks(text);
 
-      expect(blocks[0].code).toContain('test\\n');
+      expect(blocks[0].code).toContain("test\\n");
     });
 
     it("should handle code with HTML-like content", () => {
-      const text =
-        "<tool-calls>const html = '<div>test</div>';</tool-calls>";
+      const text = "<tool-calls>const html = '<div>test</div>';</tool-calls>";
       const blocks = detectScriptBlocks(text);
 
       expect(blocks).toHaveLength(1);
@@ -425,8 +426,7 @@ describe("Script Block Detector", () => {
     });
 
     it("should handle newlines in various formats", () => {
-      const text =
-        "<tool-calls>line1\nline2\r\nline3\rline4</tool-calls>";
+      const text = "<tool-calls>line1\nline2\r\nline3\rline4</tool-calls>";
       const blocks = detectScriptBlocks(text);
 
       expect(blocks).toHaveLength(1);

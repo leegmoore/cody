@@ -2,7 +2,7 @@
  * Platform detection and sandbox capability checking
  */
 
-import { SandboxType } from './types.js';
+import { SandboxType } from "./types.js";
 
 /**
  * Global flag to enable experimental Windows sandbox
@@ -31,15 +31,17 @@ export function getPlatformSandbox(): SandboxType | undefined {
   const platform = process.platform;
 
   switch (platform) {
-    case 'darwin':
+    case "darwin":
       return SandboxType.MacosSeatbelt;
 
-    case 'linux':
+    case "linux":
       return SandboxType.LinuxSeccomp;
 
-    case 'win32':
+    case "win32":
       // Windows sandbox is experimental and opt-in
-      return windowsSandboxEnabled ? SandboxType.WindowsRestrictedToken : undefined;
+      return windowsSandboxEnabled
+        ? SandboxType.WindowsRestrictedToken
+        : undefined;
 
     default:
       return undefined;
@@ -49,7 +51,7 @@ export function getPlatformSandbox(): SandboxType | undefined {
 /**
  * Path to macOS seatbelt executable
  */
-export const MACOS_PATH_TO_SEATBELT_EXECUTABLE = '/usr/bin/sandbox-exec';
+export const MACOS_PATH_TO_SEATBELT_EXECUTABLE = "/usr/bin/sandbox-exec";
 
 /**
  * Check if a sandbox type is available on the current platform
@@ -60,13 +62,13 @@ export function isSandboxAvailable(sandboxType: SandboxType): boolean {
       return true;
 
     case SandboxType.MacosSeatbelt:
-      return process.platform === 'darwin';
+      return process.platform === "darwin";
 
     case SandboxType.LinuxSeccomp:
-      return process.platform === 'linux';
+      return process.platform === "linux";
 
     case SandboxType.WindowsRestrictedToken:
-      return process.platform === 'win32' && windowsSandboxEnabled;
+      return process.platform === "win32" && windowsSandboxEnabled;
 
     default:
       return false;

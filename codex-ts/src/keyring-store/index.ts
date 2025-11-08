@@ -10,8 +10,8 @@
  */
 export class CredentialStoreError extends Error {
   constructor(message: string) {
-    super(message)
-    this.name = 'CredentialStoreError'
+    super(message);
+    this.name = "CredentialStoreError";
   }
 }
 
@@ -29,7 +29,7 @@ export interface KeyringStore {
    * @returns The credential value if found, undefined otherwise
    * @throws {CredentialStoreError} If the operation fails
    */
-  load(service: string, account: string): Promise<string | undefined>
+  load(service: string, account: string): Promise<string | undefined>;
 
   /**
    * Save a credential to the store.
@@ -39,7 +39,7 @@ export interface KeyringStore {
    * @param value - The credential value to store
    * @throws {CredentialStoreError} If the operation fails
    */
-  save(service: string, account: string, value: string): Promise<void>
+  save(service: string, account: string, value: string): Promise<void>;
 
   /**
    * Delete a credential from the store.
@@ -49,15 +49,15 @@ export interface KeyringStore {
    * @returns true if a credential was deleted, false if it didn't exist
    * @throws {CredentialStoreError} If the operation fails
    */
-  delete(service: string, account: string): Promise<boolean>
+  delete(service: string, account: string): Promise<boolean>;
 }
 
 /**
  * Internal credential state for MockKeyringStore.
  */
 interface MockCredential {
-  value?: string
-  error?: CredentialStoreError
+  value?: string;
+  error?: CredentialStoreError;
 }
 
 /**
@@ -67,10 +67,10 @@ interface MockCredential {
  * for testing error handling paths.
  */
 export class MockKeyringStore implements KeyringStore {
-  private credentials: Map<string, MockCredential>
+  private credentials: Map<string, MockCredential>;
 
   constructor() {
-    this.credentials = new Map()
+    this.credentials = new Map();
   }
 
   /**
@@ -78,53 +78,53 @@ export class MockKeyringStore implements KeyringStore {
    */
   private getCredential(account: string): MockCredential {
     if (!this.credentials.has(account)) {
-      this.credentials.set(account, {})
+      this.credentials.set(account, {});
     }
-    return this.credentials.get(account)!
+    return this.credentials.get(account)!;
   }
 
   async load(_service: string, account: string): Promise<string | undefined> {
-    const credential = this.credentials.get(account)
+    const credential = this.credentials.get(account);
 
     if (!credential) {
-      return undefined
+      return undefined;
     }
 
     if (credential.error) {
-      throw credential.error
+      throw credential.error;
     }
 
-    return credential.value
+    return credential.value;
   }
 
   async save(_service: string, account: string, value: string): Promise<void> {
-    const credential = this.getCredential(account)
+    const credential = this.getCredential(account);
 
     if (credential.error) {
-      throw credential.error
+      throw credential.error;
     }
 
-    credential.value = value
+    credential.value = value;
   }
 
   async delete(_service: string, account: string): Promise<boolean> {
-    const credential = this.credentials.get(account)
+    const credential = this.credentials.get(account);
 
     if (!credential) {
-      return false
+      return false;
     }
 
     if (credential.error) {
-      throw credential.error
+      throw credential.error;
     }
 
     // Check if credential had a value before deletion
-    const hadValue = credential.value !== undefined
+    const hadValue = credential.value !== undefined;
 
     // Remove the credential from the store
-    this.credentials.delete(account)
+    this.credentials.delete(account);
 
-    return hadValue
+    return hadValue;
   }
 
   /**
@@ -134,8 +134,8 @@ export class MockKeyringStore implements KeyringStore {
    * @returns The saved value if it exists
    */
   savedValue(account: string): string | undefined {
-    const credential = this.credentials.get(account)
-    return credential?.value
+    const credential = this.credentials.get(account);
+    return credential?.value;
   }
 
   /**
@@ -145,7 +145,7 @@ export class MockKeyringStore implements KeyringStore {
    * @returns true if the account exists
    */
   contains(account: string): boolean {
-    return this.credentials.has(account)
+    return this.credentials.has(account);
   }
 
   /**
@@ -157,7 +157,7 @@ export class MockKeyringStore implements KeyringStore {
    * @param error - The error to throw on next operation
    */
   setError(account: string, error: CredentialStoreError): void {
-    const credential = this.getCredential(account)
-    credential.error = error
+    const credential = this.getCredential(account);
+    credential.error = error;
   }
 }

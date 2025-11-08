@@ -86,7 +86,11 @@ export async function readFile(params: ReadFileParams): Promise<ToolResult> {
   };
 }
 
-function readSliceMode(lines: string[], offset: number, limit: number): string[] {
+function readSliceMode(
+  lines: string[],
+  offset: number,
+  limit: number,
+): string[] {
   if (lines.length === 0 || offset > lines.length) {
     throw new Error("offset exceeds file length");
   }
@@ -111,7 +115,14 @@ function readIndentationMode(
     includeHeader: boolean;
   },
 ): string[] {
-  const { anchorLine, limit, guardLimit, maxLevels, includeSiblings, includeHeader } = options;
+  const {
+    anchorLine,
+    limit,
+    guardLimit,
+    maxLevels,
+    includeSiblings,
+    includeHeader,
+  } = options;
 
   if (anchorLine <= 0) {
     throw new Error("anchor_line must be a 1-indexed line number");
@@ -231,7 +242,9 @@ function splitLines(content: string): string[] {
     rawLines.pop();
   }
 
-  return rawLines.map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+  return rawLines.map((line) =>
+    line.endsWith("\r") ? line.slice(0, -1) : line,
+  );
 }
 
 function formatLine(line: string): string {
@@ -294,7 +307,10 @@ function trimEmptyLines(records: LineRecord[]): void {
   while (records.length > 0 && records[0].raw.trim().length === 0) {
     records.shift();
   }
-  while (records.length > 0 && records[records.length - 1].raw.trim().length === 0) {
+  while (
+    records.length > 0 &&
+    records[records.length - 1].raw.trim().length === 0
+  ) {
     records.pop();
   }
 }

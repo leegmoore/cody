@@ -2,7 +2,7 @@
  * Error type representing cancellation of an async operation.
  */
 export enum CancelErr {
-  Cancelled = 'Cancelled',
+  Cancelled = "Cancelled",
 }
 
 /**
@@ -38,7 +38,7 @@ export type Result<T> =
  */
 export async function orCancel<T>(
   promise: Promise<T>,
-  signal: AbortSignal
+  signal: AbortSignal,
 ): Promise<Result<T>> {
   // If already aborted, return immediately
   if (signal.aborted) {
@@ -51,7 +51,7 @@ export async function orCancel<T>(
     abortHandler = () => {
       reject({ ok: false, error: CancelErr.Cancelled });
     };
-    signal.addEventListener('abort', abortHandler);
+    signal.addEventListener("abort", abortHandler);
   });
 
   try {
@@ -59,21 +59,21 @@ export async function orCancel<T>(
     const value = await Promise.race([promise, abortPromise]);
     // Clean up the abort listener if the promise won first
     if (abortHandler) {
-      signal.removeEventListener('abort', abortHandler);
+      signal.removeEventListener("abort", abortHandler);
     }
     return { ok: true, value };
   } catch (error) {
     // Clean up the abort listener
     if (abortHandler) {
-      signal.removeEventListener('abort', abortHandler);
+      signal.removeEventListener("abort", abortHandler);
     }
     // If it's our cancellation error, return it
     if (
-      typeof error === 'object' &&
+      typeof error === "object" &&
       error !== null &&
-      'ok' in error &&
+      "ok" in error &&
       error.ok === false &&
-      'error' in error &&
+      "error" in error &&
       error.error === CancelErr.Cancelled
     ) {
       return error as Result<T>;

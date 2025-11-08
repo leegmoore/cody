@@ -10,13 +10,16 @@
  * Design reference: MESSAGES_API_INTEGRATION_DESIGN_CODEX.md
  */
 
-import type { Prompt } from '../client-common.js';
-import type { ResponseEvent } from '../client-common.js';
-import type { AnthropicProviderConfig } from './types.js';
-import { buildMessagesRequest, type MessagesRequestOptions } from './request-builder.js';
-import { createAnthropicTransport } from './transport.js';
-import { parseSseStream } from './sse-parser.js';
-import { adaptAnthropicStream } from './adapter.js';
+import type { Prompt } from "../client-common.js";
+import type { ResponseEvent } from "../client-common.js";
+import type { AnthropicProviderConfig } from "./types.js";
+import {
+  buildMessagesRequest,
+  type MessagesRequestOptions,
+} from "./request-builder.js";
+import { createAnthropicTransport } from "./transport.js";
+import { parseSseStream } from "./sse-parser.js";
+import { adaptAnthropicStream } from "./adapter.js";
 
 /**
  * Stream responses from the Anthropic Messages API.
@@ -37,7 +40,7 @@ export async function* streamMessages(
   prompt: Prompt,
   config: AnthropicProviderConfig & { apiKey: string },
   model: string,
-  options?: MessagesRequestOptions
+  options?: MessagesRequestOptions,
 ): AsyncGenerator<ResponseEvent, void, unknown> {
   // Step 1: Build the Messages API request
   const request = buildMessagesRequest(prompt, config, model, options);
@@ -48,7 +51,7 @@ export async function* streamMessages(
 
   // Ensure we have a response body
   if (!response.body) {
-    throw new Error('No response body received from Anthropic API');
+    throw new Error("No response body received from Anthropic API");
   }
 
   // Step 3: Parse SSE stream
@@ -59,16 +62,16 @@ export async function* streamMessages(
 }
 
 // Re-export types for convenience
-export type { AnthropicProviderConfig, MessagesApiRequest } from './types.js';
-export type { MessagesRequestOptions } from './request-builder.js';
-export type { ToolExecutionResult } from './tool-result-builder.js';
-export type { RetryConfig } from './retry.js';
-export { AnthropicTransportError } from './transport.js';
+export type { AnthropicProviderConfig, MessagesApiRequest } from "./types.js";
+export type { MessagesRequestOptions } from "./request-builder.js";
+export type { ToolExecutionResult } from "./tool-result-builder.js";
+export type { RetryConfig } from "./retry.js";
+export { AnthropicTransportError } from "./transport.js";
 export {
   buildToolResult,
   buildToolResultMessage,
   appendToolResults,
-} from './tool-result-builder.js';
+} from "./tool-result-builder.js";
 export {
   withRetry,
   calculateRetryDelay,
@@ -76,4 +79,4 @@ export {
   DEFAULT_RETRY_CONFIG,
   RETRYABLE_STATUS_CODES,
   RETRYABLE_ERROR_TYPES,
-} from './retry.js';
+} from "./retry.js";

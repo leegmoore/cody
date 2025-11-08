@@ -5,21 +5,21 @@
  * and token refresh for both API key and ChatGPT OAuth authentication.
  */
 
-import { mkdir, readFile, writeFile, unlink, access } from 'node:fs/promises'
-import { readFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
-import { TokenData } from '../../token-data'
+import { mkdir, readFile, writeFile, unlink, access } from "node:fs/promises";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { TokenData } from "../../token-data";
 
 /**
  * Determine where Codex should store CLI auth credentials.
  */
 export enum AuthCredentialsStoreMode {
   /** Persist credentials in CODEX_HOME/auth.json */
-  File = 'file',
+  File = "file",
   /** Persist credentials in the system keyring */
-  Keyring = 'keyring',
+  Keyring = "keyring",
   /** Use keyring when available; otherwise fall back to file */
-  Auto = 'auto',
+  Auto = "auto",
 }
 
 /**
@@ -27,9 +27,9 @@ export enum AuthCredentialsStoreMode {
  */
 export enum AuthMode {
   /** API key authentication */
-  ApiKey = 'ApiKey',
+  ApiKey = "ApiKey",
   /** ChatGPT OAuth authentication */
-  ChatGPT = 'ChatGPT',
+  ChatGPT = "ChatGPT",
 }
 
 /**
@@ -37,23 +37,23 @@ export enum AuthMode {
  */
 export interface AuthDotJson {
   /** OpenAI API key */
-  OPENAI_API_KEY?: string
+  OPENAI_API_KEY?: string;
   /** OAuth token data */
-  tokens?: TokenData
+  tokens?: TokenData;
   /** Last token refresh timestamp */
-  last_refresh?: Date
+  last_refresh?: Date;
 }
 
 /**
  * Environment variable names for API keys.
  */
-export const OPENAI_API_KEY_ENV_VAR = 'OPENAI_API_KEY'
-export const CODEX_API_KEY_ENV_VAR = 'CODEX_API_KEY'
+export const OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY";
+export const CODEX_API_KEY_ENV_VAR = "CODEX_API_KEY";
 
 /**
  * OAuth client ID for token refresh.
  */
-export const CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
+export const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 
 /**
  * Read OpenAI API key from environment variable.
@@ -61,10 +61,10 @@ export const CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
  * @returns API key if set, undefined otherwise
  */
 export function readOpenaiApiKeyFromEnv(): string | undefined {
-  const value = process.env[OPENAI_API_KEY_ENV_VAR]
-  if (!value) return undefined
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : undefined
+  const value = process.env[OPENAI_API_KEY_ENV_VAR];
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 /**
@@ -73,26 +73,26 @@ export function readOpenaiApiKeyFromEnv(): string | undefined {
  * @returns API key if set, undefined otherwise
  */
 export function readCodexApiKeyFromEnv(): string | undefined {
-  const value = process.env[CODEX_API_KEY_ENV_VAR]
-  if (!value) return undefined
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : undefined
+  const value = process.env[CODEX_API_KEY_ENV_VAR];
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 /**
  * Get the auth.json file path.
  */
 function getAuthFile(codexHome: string): string {
-  return join(codexHome, 'auth.json')
+  return join(codexHome, "auth.json");
 }
 
 /**
  * Storage backend interface for auth credentials.
  */
 interface AuthStorageBackend {
-  load(): Promise<AuthDotJson | undefined>
-  save(auth: AuthDotJson): Promise<void>
-  delete(): Promise<boolean>
+  load(): Promise<AuthDotJson | undefined>;
+  save(auth: AuthDotJson): Promise<void>;
+  delete(): Promise<boolean>;
 }
 
 /**
@@ -102,51 +102,51 @@ class FileAuthStorage implements AuthStorageBackend {
   constructor(private codexHome: string) {}
 
   async load(): Promise<AuthDotJson | undefined> {
-    const authFile = getAuthFile(this.codexHome)
+    const authFile = getAuthFile(this.codexHome);
     try {
-      const content = await readFile(authFile, 'utf-8')
-      const data = JSON.parse(content)
+      const content = await readFile(authFile, "utf-8");
+      const data = JSON.parse(content);
 
       // Parse date if present
       if (data.last_refresh) {
-        data.last_refresh = new Date(data.last_refresh)
+        data.last_refresh = new Date(data.last_refresh);
       }
 
-      return data
+      return data;
     } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        return undefined
+      if (error.code === "ENOENT") {
+        return undefined;
       }
-      throw error
+      throw error;
     }
   }
 
   async save(auth: AuthDotJson): Promise<void> {
-    const authFile = getAuthFile(this.codexHome)
+    const authFile = getAuthFile(this.codexHome);
 
     // Ensure directory exists
-    const dir = this.codexHome
+    const dir = this.codexHome;
     try {
-      await access(dir)
+      await access(dir);
     } catch {
-      await mkdir(dir, { recursive: true, mode: 0o700 })
+      await mkdir(dir, { recursive: true, mode: 0o700 });
     }
 
     // Write with restrictive permissions (0600 on Unix)
-    const json = JSON.stringify(auth, null, 2)
-    await writeFile(authFile, json, { mode: 0o600 })
+    const json = JSON.stringify(auth, null, 2);
+    await writeFile(authFile, json, { mode: 0o600 });
   }
 
   async delete(): Promise<boolean> {
-    const authFile = getAuthFile(this.codexHome)
+    const authFile = getAuthFile(this.codexHome);
     try {
-      await unlink(authFile)
-      return true
+      await unlink(authFile);
+      return true;
     } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        return false
+      if (error.code === "ENOENT") {
+        return false;
       }
-      throw error
+      throw error;
     }
   }
 }
@@ -163,7 +163,7 @@ function createAuthStorage(
 ): AuthStorageBackend {
   // For library port, always use file storage
   // Full keyring integration can be added later using keyring-store module
-  return new FileAuthStorage(codexHome)
+  return new FileAuthStorage(codexHome);
 }
 
 /**
@@ -187,8 +187,8 @@ export class CodexAuth {
       AuthMode.ApiKey,
       apiKey,
       undefined,
-      createAuthStorage('', AuthCredentialsStoreMode.File),
-    )
+      createAuthStorage("", AuthCredentialsStoreMode.File),
+    );
   }
 
   /**
@@ -199,22 +199,22 @@ export class CodexAuth {
       OPENAI_API_KEY: undefined,
       tokens: tokenData || {
         id_token: {
-          email: 'test@example.com',
-          raw_jwt: 'fake.jwt.token',
+          email: "test@example.com",
+          raw_jwt: "fake.jwt.token",
         },
-        access_token: 'test-access-token',
-        refresh_token: 'test-refresh-token',
-        account_id: 'test-account',
+        access_token: "test-access-token",
+        refresh_token: "test-refresh-token",
+        account_id: "test-account",
       },
       last_refresh: new Date(),
-    }
+    };
 
     return new CodexAuth(
       AuthMode.ChatGPT,
       undefined,
       authData,
-      createAuthStorage('', AuthCredentialsStoreMode.File),
-    )
+      createAuthStorage("", AuthCredentialsStoreMode.File),
+    );
   }
 
   /**
@@ -224,52 +224,57 @@ export class CodexAuth {
     codexHome: string,
     authCredentialsStoreMode: AuthCredentialsStoreMode,
   ): Promise<CodexAuth | undefined> {
-    const storage = createAuthStorage(codexHome, authCredentialsStoreMode)
-    const authData = await storage.load()
+    const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
+    const authData = await storage.load();
 
     if (!authData) {
-      return undefined
+      return undefined;
     }
 
     // Prefer API key if set
     if (authData.OPENAI_API_KEY) {
-      return new CodexAuth(AuthMode.ApiKey, authData.OPENAI_API_KEY, authData, storage)
+      return new CodexAuth(
+        AuthMode.ApiKey,
+        authData.OPENAI_API_KEY,
+        authData,
+        storage,
+      );
     }
 
     // Otherwise use ChatGPT tokens
     if (authData.tokens) {
-      return new CodexAuth(AuthMode.ChatGPT, undefined, authData, storage)
+      return new CodexAuth(AuthMode.ChatGPT, undefined, authData, storage);
     }
 
-    return undefined
+    return undefined;
   }
 
   /**
    * Get the API key (for API key auth mode).
    */
   getApiKey(): string | undefined {
-    return this.apiKey
+    return this.apiKey;
   }
 
   /**
    * Get the account ID from token data.
    */
   getAccountId(): string | undefined {
-    return this.authDotJson?.tokens?.account_id
+    return this.authDotJson?.tokens?.account_id;
   }
 
   /**
    * Get the account email from token data.
    */
   getAccountEmail(): string | undefined {
-    return this.authDotJson?.tokens?.id_token.email
+    return this.authDotJson?.tokens?.id_token.email;
   }
 
   /**
    * Get current token data.
    */
   getTokenData(): TokenData | undefined {
-    return this.authDotJson?.tokens
+    return this.authDotJson?.tokens;
   }
 
   /**
@@ -277,15 +282,15 @@ export class CodexAuth {
    */
   async getToken(): Promise<string> {
     if (this.mode === AuthMode.ApiKey) {
-      return this.apiKey || ''
+      return this.apiKey || "";
     }
 
-    const tokenData = this.getTokenData()
+    const tokenData = this.getTokenData();
     if (!tokenData) {
-      throw new Error('Token data is not available')
+      throw new Error("Token data is not available");
     }
 
-    return tokenData.access_token
+    return tokenData.access_token;
   }
 }
 
@@ -297,8 +302,8 @@ export async function saveAuth(
   auth: AuthDotJson,
   authCredentialsStoreMode: AuthCredentialsStoreMode,
 ): Promise<void> {
-  const storage = createAuthStorage(codexHome, authCredentialsStoreMode)
-  await storage.save(auth)
+  const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
+  await storage.save(auth);
 }
 
 /**
@@ -308,8 +313,8 @@ export async function loadAuthDotJson(
   codexHome: string,
   authCredentialsStoreMode: AuthCredentialsStoreMode,
 ): Promise<AuthDotJson | undefined> {
-  const storage = createAuthStorage(codexHome, authCredentialsStoreMode)
-  return await storage.load()
+  const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
+  return await storage.load();
 }
 
 /**
@@ -326,8 +331,8 @@ export async function loginWithApiKey(
     OPENAI_API_KEY: apiKey,
     tokens: undefined,
     last_refresh: undefined,
-  }
-  await saveAuth(codexHome, authData, authCredentialsStoreMode)
+  };
+  await saveAuth(codexHome, authData, authCredentialsStoreMode);
 }
 
 /**
@@ -339,8 +344,8 @@ export async function logout(
   codexHome: string,
   authCredentialsStoreMode: AuthCredentialsStoreMode,
 ): Promise<boolean> {
-  const storage = createAuthStorage(codexHome, authCredentialsStoreMode)
-  return await storage.delete()
+  const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
+  return await storage.delete();
 }
 
 /**
@@ -354,7 +359,7 @@ export async function logout(
  * is called explicitly.
  */
 export class AuthManager {
-  private cachedAuth: CodexAuth | undefined
+  private cachedAuth: CodexAuth | undefined;
 
   /**
    * Create auth manager (loads auth synchronously from environment and storage).
@@ -365,7 +370,7 @@ export class AuthManager {
     private authCredentialsStoreMode: AuthCredentialsStoreMode,
   ) {
     // Load auth synchronously from environment and storage
-    this.cachedAuth = this.loadAuthSync()
+    this.cachedAuth = this.loadAuthSync();
   }
 
   /**
@@ -376,23 +381,27 @@ export class AuthManager {
     enableCodexApiKeyEnv: boolean,
     authCredentialsStoreMode: AuthCredentialsStoreMode,
   ): AuthManager {
-    return new AuthManager(codexHome, enableCodexApiKeyEnv, authCredentialsStoreMode)
+    return new AuthManager(
+      codexHome,
+      enableCodexApiKeyEnv,
+      authCredentialsStoreMode,
+    );
   }
 
   /**
    * Create test manager with specific auth.
    */
   static fromAuthForTesting(auth: CodexAuth): AuthManager {
-    const manager = new AuthManager('', false, AuthCredentialsStoreMode.File)
-    manager.cachedAuth = auth
-    return manager
+    const manager = new AuthManager("", false, AuthCredentialsStoreMode.File);
+    manager.cachedAuth = auth;
+    return manager;
   }
 
   /**
    * Get current cached auth (may be undefined if not logged in).
    */
   auth(): CodexAuth | undefined {
-    return this.cachedAuth
+    return this.cachedAuth;
   }
 
   /**
@@ -401,10 +410,10 @@ export class AuthManager {
    * @returns true if the auth value changed
    */
   reload(): boolean {
-    const newAuth = this.loadAuthSync()
-    const changed = !this.authsEqual(this.cachedAuth, newAuth)
-    this.cachedAuth = newAuth
-    return changed
+    const newAuth = this.loadAuthSync();
+    const changed = !this.authsEqual(this.cachedAuth, newAuth);
+    this.cachedAuth = newAuth;
+    return changed;
   }
 
   /**
@@ -413,9 +422,9 @@ export class AuthManager {
    * @returns true if a file was removed
    */
   async logout(): Promise<boolean> {
-    const removed = await logout(this.codexHome, this.authCredentialsStoreMode)
-    this.reload() // Clear cache
-    return removed
+    const removed = await logout(this.codexHome, this.authCredentialsStoreMode);
+    this.reload(); // Clear cache
+    return removed;
   }
 
   /**
@@ -424,51 +433,62 @@ export class AuthManager {
   private loadAuthSync(): CodexAuth | undefined {
     // Check environment first
     if (this.enableCodexApiKeyEnv) {
-      const envApiKey = readCodexApiKeyFromEnv()
+      const envApiKey = readCodexApiKeyFromEnv();
       if (envApiKey) {
-        return CodexAuth.fromApiKey(envApiKey)
+        return CodexAuth.fromApiKey(envApiKey);
       }
     }
 
     // Load from storage (sync)
-    const authFile = getAuthFile(this.codexHome)
+    const authFile = getAuthFile(this.codexHome);
     if (!existsSync(authFile)) {
-      return undefined
+      return undefined;
     }
 
     try {
-      const content = readFileSync(authFile, 'utf-8')
-      const authData = JSON.parse(content)
+      const content = readFileSync(authFile, "utf-8");
+      const authData = JSON.parse(content);
 
       // Parse date if present
       if (authData.last_refresh) {
-        authData.last_refresh = new Date(authData.last_refresh)
+        authData.last_refresh = new Date(authData.last_refresh);
       }
 
-      const storage = createAuthStorage(this.codexHome, this.authCredentialsStoreMode)
+      const storage = createAuthStorage(
+        this.codexHome,
+        this.authCredentialsStoreMode,
+      );
 
       // Prefer API key if set
       if (authData.OPENAI_API_KEY) {
-        return new CodexAuth(AuthMode.ApiKey, authData.OPENAI_API_KEY, authData, storage)
+        return new CodexAuth(
+          AuthMode.ApiKey,
+          authData.OPENAI_API_KEY,
+          authData,
+          storage,
+        );
       }
 
       // Otherwise use ChatGPT tokens
       if (authData.tokens) {
-        return new CodexAuth(AuthMode.ChatGPT, undefined, authData, storage)
+        return new CodexAuth(AuthMode.ChatGPT, undefined, authData, storage);
       }
 
-      return undefined
+      return undefined;
     } catch (error) {
-      return undefined
+      return undefined;
     }
   }
 
   /**
    * Compare two auth objects for equality.
    */
-  private authsEqual(a: CodexAuth | undefined, b: CodexAuth | undefined): boolean {
-    if (a === undefined && b === undefined) return true
-    if (a === undefined || b === undefined) return false
-    return a.mode === b.mode
+  private authsEqual(
+    a: CodexAuth | undefined,
+    b: CodexAuth | undefined,
+  ): boolean {
+    if (a === undefined && b === undefined) return true;
+    if (a === undefined || b === undefined) return false;
+    return a.mode === b.mode;
   }
 }

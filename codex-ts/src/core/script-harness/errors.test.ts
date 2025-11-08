@@ -232,7 +232,11 @@ describe("Script Harness Errors", () => {
 
       expect(error.code).toBe("ToolNotFoundError");
       expect(error.toolName).toBe("badTool");
-      expect(error.availableTools).toEqual(["applyPatch", "exec", "fileSearch"]);
+      expect(error.availableTools).toEqual([
+        "applyPatch",
+        "exec",
+        "fileSearch",
+      ]);
       expect(error.message).toContain("applyPatch");
       expect(error.message).toContain("exec");
     });
@@ -407,13 +411,13 @@ describe("Script Harness Errors", () => {
         expect(isRetryableError(new ScriptSyntaxError("Parse error"))).toBe(
           true,
         );
-        expect(isRetryableError(new ScriptTimeoutError(30000, 30012, 10, 1))).toBe(
+        expect(
+          isRetryableError(new ScriptTimeoutError(30000, 30012, 10, 1)),
+        ).toBe(true);
+        expect(isRetryableError(new ScriptMemoryError(96))).toBe(true);
+        expect(isRetryableError(new ToolNotFoundError("bad", ["good"]))).toBe(
           true,
         );
-        expect(isRetryableError(new ScriptMemoryError(96))).toBe(true);
-        expect(
-          isRetryableError(new ToolNotFoundError("bad", ["good"])),
-        ).toBe(true);
         expect(
           isRetryableError(new ToolValidationError("exec", ["error"])),
         ).toBe(true);
@@ -427,9 +431,9 @@ describe("Script Harness Errors", () => {
         expect(isRetryableError(new ToolBudgetExceededError(32, 33))).toBe(
           false,
         );
-        expect(
-          isRetryableError(new BannedIdentifierError(["eval"])),
-        ).toBe(false);
+        expect(isRetryableError(new BannedIdentifierError(["eval"]))).toBe(
+          false,
+        );
         expect(isRetryableError(new ScriptCancelledError())).toBe(false);
       });
 
@@ -454,9 +458,9 @@ describe("Script Harness Errors", () => {
       const error = new ToolNotFoundError("bad", ["good"]);
 
       expect(Object.getPrototypeOf(error)).toBe(ToolNotFoundError.prototype);
-      expect(
-        Object.getPrototypeOf(Object.getPrototypeOf(error)),
-      ).toBe(ScriptHarnessError.prototype);
+      expect(Object.getPrototypeOf(Object.getPrototypeOf(error))).toBe(
+        ScriptHarnessError.prototype,
+      );
     });
   });
 

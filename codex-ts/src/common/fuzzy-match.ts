@@ -19,7 +19,7 @@
  */
 export function fuzzyMatch(
   haystack: string,
-  needle: string
+  needle: string,
 ): [number[], number] | null {
   if (needle.length === 0) {
     return [[], Number.MAX_SAFE_INTEGER];
@@ -68,19 +68,18 @@ export function fuzzyMatch(
   }
 
   // Calculate score
-  const firstLowerPos = resultOrigIndices.length === 0
-    ? 0
-    : loweredToOrigCharIdx.findIndex(
-        (oi) => oi === resultOrigIndices[0]
-      ) ?? 0;
+  const firstLowerPos =
+    resultOrigIndices.length === 0
+      ? 0
+      : (loweredToOrigCharIdx.findIndex((oi) => oi === resultOrigIndices[0]) ??
+        0);
 
   // last defaults to first for single-hit
   const finalLastLowerPos = lastLowerPos ?? firstLowerPos;
 
   // Score = extra span between first/last hit minus needle length (≥0)
   // Strongly reward prefix matches by subtracting 100 when the first hit is at index 0
-  const window =
-    finalLastLowerPos - firstLowerPos + 1 - loweredNeedle.length;
+  const window = finalLastLowerPos - firstLowerPos + 1 - loweredNeedle.length;
   let score = Math.max(window, 0);
 
   if (firstLowerPos === 0) {
@@ -90,7 +89,7 @@ export function fuzzyMatch(
   // Deduplicate indices (important when lowercase expansion causes multiple lowered
   // characters to map to the same original character)
   const uniqueIndices = Array.from(new Set(resultOrigIndices)).sort(
-    (a, b) => a - b
+    (a, b) => a - b,
   );
 
   return [uniqueIndices, score];
@@ -105,7 +104,7 @@ export function fuzzyMatch(
  */
 export function fuzzyIndices(
   haystack: string,
-  needle: string
+  needle: string,
 ): number[] | null {
   const result = fuzzyMatch(haystack, needle);
   if (result === null) {

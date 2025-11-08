@@ -4,14 +4,18 @@
  * Ported from: codex-rs/core/src/tools/handlers/plan.rs
  */
 
-import { ToolResult } from '../types.js'
-import { UpdatePlanArgs, StepStatus, PlanItemArg } from '../../protocol/plan-tool.js'
+import { ToolResult } from "../types.js";
+import {
+  UpdatePlanArgs,
+  StepStatus,
+  PlanItemArg,
+} from "../../protocol/plan-tool.js";
 
 export interface UpdatePlanParams {
   /** Optional explanation or context for the plan update */
-  explanation?: string
+  explanation?: string;
   /** Array of plan items with their current statuses */
-  plan: PlanItemArg[]
+  plan: PlanItemArg[];
 }
 
 /**
@@ -29,18 +33,20 @@ export interface UpdatePlanParams {
  * @returns Tool result indicating plan was updated
  * @throws Error if validation fails (e.g., multiple in_progress steps)
  */
-export async function updatePlan(params: UpdatePlanParams): Promise<ToolResult> {
+export async function updatePlan(
+  params: UpdatePlanParams,
+): Promise<ToolResult> {
   // Validate the arguments (throws on error)
-  validateUpdatePlanArgs(params)
+  validateUpdatePlanArgs(params);
 
   // In a full implementation, this would emit a plan_update event
   // For now, we just validate and return success
   // The event emission happens at a higher level in the session/conversation
 
   return {
-    content: 'Plan updated',
+    content: "Plan updated",
     success: true,
-  }
+  };
 }
 
 /**
@@ -57,35 +63,39 @@ export async function updatePlan(params: UpdatePlanParams): Promise<ToolResult> 
  */
 function validateUpdatePlanArgs(args: UpdatePlanParams): UpdatePlanArgs {
   if (!args.plan) {
-    throw new Error('failed to parse function arguments: missing plan field')
+    throw new Error("failed to parse function arguments: missing plan field");
   }
 
   if (!Array.isArray(args.plan)) {
-    throw new Error('failed to parse function arguments: plan must be an array')
+    throw new Error(
+      "failed to parse function arguments: plan must be an array",
+    );
   }
 
   // Count in_progress steps
-  let inProgressCount = 0
+  let inProgressCount = 0;
   for (const item of args.plan) {
     if (!item.step) {
-      throw new Error('failed to parse function arguments: plan item missing step field')
+      throw new Error(
+        "failed to parse function arguments: plan item missing step field",
+      );
     }
 
     if (!item.status) {
       throw new Error(
-        'failed to parse function arguments: plan item missing status field',
-      )
+        "failed to parse function arguments: plan item missing status field",
+      );
     }
 
     // Validate status is a valid enum value
     if (!Object.values(StepStatus).includes(item.status)) {
       throw new Error(
         `failed to parse function arguments: invalid status "${item.status}"`,
-      )
+      );
     }
 
     if (item.status === StepStatus.InProgress) {
-      inProgressCount++
+      inProgressCount++;
     }
   }
 
@@ -93,13 +103,13 @@ function validateUpdatePlanArgs(args: UpdatePlanParams): UpdatePlanArgs {
   if (inProgressCount > 1) {
     throw new Error(
       `failed to validate plan: at most one step can be in_progress, found ${inProgressCount}`,
-    )
+    );
   }
 
   return {
     explanation: args.explanation,
     plan: args.plan,
-  }
+  };
 }
 
 /**
@@ -108,39 +118,39 @@ function validateUpdatePlanArgs(args: UpdatePlanParams): UpdatePlanArgs {
  * This defines the tool schema that can be sent to the model.
  */
 export const PLAN_TOOL_SPEC = {
-  name: 'update_plan',
+  name: "update_plan",
   description: `Updates the task plan.
 Provide an optional explanation and a list of plan items, each with a step and status.
 At most one step can be in_progress at a time.`,
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
       explanation: {
-        type: 'string',
-        description: 'Optional explanation or context for the plan update',
+        type: "string",
+        description: "Optional explanation or context for the plan update",
       },
       plan: {
-        type: 'array',
-        description: 'The list of steps',
+        type: "array",
+        description: "The list of steps",
         items: {
-          type: 'object',
+          type: "object",
           properties: {
             step: {
-              type: 'string',
-              description: 'Description of the step to be performed',
+              type: "string",
+              description: "Description of the step to be performed",
             },
             status: {
-              type: 'string',
-              description: 'One of: pending, in_progress, completed',
-              enum: ['pending', 'in_progress', 'completed'],
+              type: "string",
+              description: "One of: pending, in_progress, completed",
+              enum: ["pending", "in_progress", "completed"],
             },
           },
-          required: ['step', 'status'],
+          required: ["step", "status"],
           additionalProperties: false,
         },
       },
     },
-    required: ['plan'],
+    required: ["plan"],
     additionalProperties: false,
   },
-}
+};

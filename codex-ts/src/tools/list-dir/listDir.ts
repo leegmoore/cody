@@ -117,7 +117,9 @@ async function collectEntries(
   depth: number,
   entries: DirEntry[],
 ): Promise<void> {
-  const queue: QueueEntry[] = [{ path: rootPath, prefix, remainingDepth: depth }];
+  const queue: QueueEntry[] = [
+    { path: rootPath, prefix, remainingDepth: depth },
+  ];
 
   while (queue.length > 0) {
     const { path, prefix: currentPrefix, remainingDepth } = queue.shift()!;
@@ -142,7 +144,8 @@ async function collectEntries(
 
       const kind = toKind(stats);
       const relativePath = createRelativePath(currentPrefix, name);
-      const displayDepth = currentPrefix === "" ? 0 : currentPrefix.split("/").length;
+      const displayDepth =
+        currentPrefix === "" ? 0 : currentPrefix.split("/").length;
       const sortKey = truncate(normalizePath(relativePath), MAX_ENTRY_LENGTH);
       const displayName = truncate(name, MAX_ENTRY_LENGTH);
 

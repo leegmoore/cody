@@ -145,7 +145,9 @@ describe("approvals-bridge.ts", () => {
       vi.advanceTimersByTime(60000);
 
       await expect(promise).rejects.toThrow(ApprovalTimeoutError);
-      await expect(promise).rejects.toThrow("Approval timeout for tool: test_tool");
+      await expect(promise).rejects.toThrow(
+        "Approval timeout for tool: test_tool",
+      );
     });
 
     it("AB9: times out after custom timeout", async () => {
@@ -404,7 +406,9 @@ describe("approvals-bridge.ts", () => {
       const bridge = new ApprovalBridge({ onApprovalRequest: onRequest });
 
       const longString = "x".repeat(1000);
-      const promise = bridge.requestApproval(createRequest({ args: longString }));
+      const promise = bridge.requestApproval(
+        createRequest({ args: longString }),
+      );
 
       expect(onRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -521,7 +525,9 @@ describe("approvals-bridge.ts", () => {
       const bridge = new ApprovalBridge({ onApprovalRequest: onRequest });
 
       const longArray = Array(20).fill("item");
-      const promise = bridge.requestApproval(createRequest({ args: longArray }));
+      const promise = bridge.requestApproval(
+        createRequest({ args: longArray }),
+      );
 
       expect(onRequest).toHaveBeenCalledWith(
         expect.objectContaining({

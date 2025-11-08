@@ -12,13 +12,13 @@ import type {
   CheckResult,
   OptMeta,
   ArgMatcher,
-} from './types.js';
+} from "./types.js";
 import {
   ArgType,
   ExecPolicyError,
   UnknownOptionError,
   ArgumentMismatchError,
-} from './types.js';
+} from "./types.js";
 
 interface PositionalArg {
   index: number;
@@ -30,7 +30,7 @@ interface PositionalArg {
  */
 export function checkProgramSpec(
   spec: ProgramSpec,
-  execCall: ExecCall
+  execCall: ExecCall,
 ): CheckResult {
   try {
     const validExec = matchProgramSpec(spec, execCall);
@@ -38,25 +38,25 @@ export function checkProgramSpec(
     // If spec is forbidden, return forbidden result
     if (spec.forbidden) {
       return {
-        result: 'forbidden',
+        result: "forbidden",
         reason: spec.forbidden,
-        cause: { type: 'Exec', exec: validExec },
+        cause: { type: "Exec", exec: validExec },
       };
     }
 
     // Check if any args are writeable files
     const hasWriteableFiles = validExec.args.some(
-      (arg) => arg.type === ArgType.WriteableFile
+      (arg) => arg.type === ArgType.WriteableFile,
     );
 
     if (hasWriteableFiles) {
-      return { result: 'match', match: validExec };
+      return { result: "match", match: validExec };
     } else {
-      return { result: 'safe', match: validExec };
+      return { result: "safe", match: validExec };
     }
   } catch (err) {
     if (err instanceof ExecPolicyError) {
-      return { result: 'unverified', error: err.message };
+      return { result: "unverified", error: err.message };
     }
     throw err;
   }
@@ -65,12 +65,9 @@ export function checkProgramSpec(
 /**
  * Match an exec call against a program spec
  */
-function matchProgramSpec(
-  spec: ProgramSpec,
-  execCall: ExecCall
-): ValidExec {
+function matchProgramSpec(spec: ProgramSpec, execCall: ExecCall): ValidExec {
   const allowedOptions = new Map(
-    (spec.options || []).map((opt) => [opt.name, opt])
+    (spec.options || []).map((opt) => [opt.name, opt]),
   );
 
   let expectingOptionValue: { name: string; argType: ArgType } | null = null;
@@ -85,9 +82,9 @@ function matchProgramSpec(
       // Expecting a value for the previous option
       const { name, argType } = expectingOptionValue;
 
-      if (arg.startsWith('-')) {
+      if (arg.startsWith("-")) {
         throw new ExecPolicyError(
-          `Option '${name}' followed by another option '${arg}' instead of a value`
+          `Option '${name}' followed by another option '${arg}' instead of a value`,
         );
       }
 
@@ -96,22 +93,22 @@ function matchProgramSpec(
       continue;
     }
 
-    if (arg === '--') {
+    if (arg === "--") {
       throw new ExecPolicyError(
-        `Double dash (--) is not supported yet for ${spec.program}`
+        `Double dash (--) is not supported yet for ${spec.program}`,
       );
     }
 
-    if (arg.startsWith('-')) {
+    if (arg.startsWith("-")) {
       const opt = allowedOptions.get(arg);
 
       if (!opt) {
         throw new UnknownOptionError(spec.program, arg);
       }
 
-      if (opt.meta.type === 'Flag') {
+      if (opt.meta.type === "Flag") {
         matchedFlags.push({ name: arg });
-      } else if (opt.meta.type === 'Value') {
+      } else if (opt.meta.type === "Value") {
         expectingOptionValue = { name: arg, argType: opt.meta.argType };
       }
       continue;
@@ -124,7 +121,7 @@ function matchProgramSpec(
   // Check if we're still expecting an option value
   if (expectingOptionValue) {
     throw new ExecPolicyError(
-      `Option '${expectingOptionValue.name}' requires a value`
+      `Option '${expectingOptionValue.name}' requires a value`,
     );
   }
 
@@ -145,7 +142,7 @@ function matchProgramSpec(
  */
 function matchArgs(
   positionalArgs: PositionalArg[],
-  patterns: ArgMatcher[]
+  patterns: ArgMatcher[],
 ): MatchedArg[] {
   const matched: MatchedArg[] = [];
   let argIdx = 0;
@@ -154,17 +151,17 @@ function matchArgs(
   while (patternIdx < patterns.length) {
     const pattern = patterns[patternIdx];
 
-    if (pattern.type === 'Literal') {
+    if (pattern.type === "Literal") {
       if (argIdx >= positionalArgs.length) {
         throw new ArgumentMismatchError(
-          `Expected literal '${pattern.value}' but ran out of arguments`
+          `Expected literal '${pattern.value}' but ran out of arguments`,
         );
       }
 
       const arg = positionalArgs[argIdx];
       if (arg.value !== pattern.value) {
         throw new ArgumentMismatchError(
-          `Expected literal '${pattern.value}' but got '${arg.value}'`
+          `Expected literal '${pattern.value}' but got '${arg.value}'`,
         );
       }
 
@@ -175,10 +172,10 @@ function matchArgs(
       });
       argIdx++;
       patternIdx++;
-    } else if (pattern.type === 'Single') {
+    } else if (pattern.type === "Single") {
       if (argIdx >= positionalArgs.length) {
         throw new ArgumentMismatchError(
-          `Expected argument of type ${pattern.argType} but ran out of arguments`
+          `Expected argument of type ${pattern.argType} but ran out of arguments`,
         );
       }
 
@@ -190,7 +187,7 @@ function matchArgs(
       });
       argIdx++;
       patternIdx++;
-    } else if (pattern.type === 'ZeroOrMore') {
+    } else if (pattern.type === "ZeroOrMore") {
       // Consume all remaining args if this is the last pattern
       if (patternIdx === patterns.length - 1) {
         while (argIdx < positionalArgs.length) {
@@ -204,10 +201,10 @@ function matchArgs(
         }
       }
       patternIdx++;
-    } else if (pattern.type === 'OneOrMore') {
+    } else if (pattern.type === "OneOrMore") {
       if (argIdx >= positionalArgs.length) {
         throw new ArgumentMismatchError(
-          `Expected at least one argument of type ${pattern.argType}`
+          `Expected at least one argument of type ${pattern.argType}`,
         );
       }
 
@@ -238,7 +235,10 @@ function matchArgs(
   // Check if we have unconsumed arguments
   if (argIdx < positionalArgs.length) {
     throw new ArgumentMismatchError(
-      `Extra arguments found: ${positionalArgs.slice(argIdx).map((a) => a.value).join(', ')}`
+      `Extra arguments found: ${positionalArgs
+        .slice(argIdx)
+        .map((a) => a.value)
+        .join(", ")}`,
     );
   }
 

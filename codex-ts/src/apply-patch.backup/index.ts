@@ -8,8 +8,8 @@
  * - Update File: Modify an existing file with chunks of changes
  */
 
-export * from './types.js';
-export * from './parser.js';
-export * from './seek-sequence.js';
-export * from './apply.js';
-export * from './bash-parser.js';
+export * from "./types.js";
+export * from "./parser.js";
+export * from "./seek-sequence.js";
+export * from "./apply.js";
+export * from "./bash-parser.js";

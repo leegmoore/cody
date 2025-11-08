@@ -13,7 +13,7 @@
  * so other tool types (local_shell, web_search, custom) are filtered out.
  */
 
-import type { ToolSpec } from './client-common.js'
+import type { ToolSpec } from "./client-common.js";
 
 /**
  * Convert tools to Responses API format.
@@ -30,31 +30,31 @@ import type { ToolSpec } from './client-common.js'
 export function createToolsJsonForResponsesApi(tools: ToolSpec[]): unknown[] {
   return tools.map((tool) => {
     switch (tool.type) {
-      case 'function':
+      case "function":
         return {
-          type: 'function',
+          type: "function",
           name: tool.name,
           description: tool.description,
           strict: tool.strict,
           parameters: tool.parameters,
-        }
-      case 'local_shell':
+        };
+      case "local_shell":
         return {
-          type: 'local_shell',
-        }
-      case 'web_search':
+          type: "local_shell",
+        };
+      case "web_search":
         return {
-          type: 'web_search',
-        }
-      case 'custom':
+          type: "web_search",
+        };
+      case "custom":
         return {
-          type: 'custom',
+          type: "custom",
           name: tool.name,
           description: tool.description,
           format: tool.format,
-        }
+        };
     }
-  })
+  });
 }
 
 /**
@@ -69,23 +69,25 @@ export function createToolsJsonForResponsesApi(tools: ToolSpec[]): unknown[] {
  * @param tools - Array of ToolSpec to convert
  * @returns Array of tools in Chat Completions API format (function tools only)
  */
-export function createToolsJsonForChatCompletionsApi(tools: ToolSpec[]): unknown[] {
+export function createToolsJsonForChatCompletionsApi(
+  tools: ToolSpec[],
+): unknown[] {
   return tools
-    .filter((tool) => tool.type === 'function')
+    .filter((tool) => tool.type === "function")
     .map((tool) => {
       // TypeScript knows tool.type === 'function' here
-      if (tool.type === 'function') {
+      if (tool.type === "function") {
         return {
-          type: 'function',
+          type: "function",
           function: {
             name: tool.name,
             description: tool.description,
             strict: tool.strict,
             parameters: tool.parameters,
           },
-        }
+        };
       }
       // This should never be reached due to filter, but TypeScript needs it
-      throw new Error('Unreachable: non-function tool after filter')
-    })
+      throw new Error("Unreachable: non-function tool after filter");
+    });
 }

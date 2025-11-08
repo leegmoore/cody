@@ -80,7 +80,10 @@ type ExtractHeredocErrorType =
 export class ExtractHeredocError extends Error {
   readonly type: ExtractHeredocErrorType;
 
-  constructor(type: ExtractHeredocErrorType, options: { cause?: unknown } = {}) {
+  constructor(
+    type: ExtractHeredocErrorType,
+    options: { cause?: unknown } = {},
+  ) {
     super(extractHeredocErrorMessage(type));
     this.type = type;
     this.name = "ExtractHeredocError";
@@ -139,12 +142,16 @@ export class ApplyPatchError extends Error {
     );
   }
 
-  static fromParseError(error: InvalidPatchError | InvalidHunkError): ApplyPatchError {
+  static fromParseError(
+    error: InvalidPatchError | InvalidHunkError,
+  ): ApplyPatchError {
     const message =
       error instanceof InvalidPatchError
         ? `Invalid patch: ${error.detail}`
         : `Invalid patch hunk on line ${error.lineNumber}: ${error.detail}`;
-    return new ApplyPatchError("parse-error", message, error.detail, { cause: error });
+    return new ApplyPatchError("parse-error", message, error.detail, {
+      cause: error,
+    });
   }
 
   static ioError(context: string, cause: unknown): ApplyPatchError {
@@ -152,7 +159,10 @@ export class ApplyPatchError extends Error {
     return new ApplyPatchError("io-error", message, context, { cause });
   }
 
-  static computeReplacements(detail: string, options: { cause?: unknown } = {}): ApplyPatchError {
+  static computeReplacements(
+    detail: string,
+    options: { cause?: unknown } = {},
+  ): ApplyPatchError {
     return new ApplyPatchError("compute-replacements", detail, detail, options);
   }
 }
@@ -203,7 +213,9 @@ async function loadBashResources(): Promise<BashResources> {
         const query = new Query(language, APPLY_PATCH_QUERY);
         return { parser, query };
       } catch (error) {
-        throw new ExtractHeredocError("failed-to-load-bash-grammar", { cause: error });
+        throw new ExtractHeredocError("failed-to-load-bash-grammar", {
+          cause: error,
+        });
       }
     })();
   }
@@ -232,7 +244,9 @@ async function extractApplyPatchFromBash(
     if (error instanceof ExtractHeredocError) {
       throw error;
     }
-    throw new ExtractHeredocError("failed-to-load-bash-grammar", { cause: error });
+    throw new ExtractHeredocError("failed-to-load-bash-grammar", {
+      cause: error,
+    });
   }
 
   const { parser, query } = resources;
@@ -240,7 +254,9 @@ async function extractApplyPatchFromBash(
   try {
     tree = parser.parse(script);
   } catch (error) {
-    throw new ExtractHeredocError("failed-to-parse-patch-into-ast", { cause: error });
+    throw new ExtractHeredocError("failed-to-parse-patch-into-ast", {
+      cause: error,
+    });
   }
 
   if (!tree) {
@@ -273,8 +289,12 @@ async function extractApplyPatchFromBash(
   throw new ExtractHeredocError("command-did-not-start-with-apply-patch");
 }
 
-function isPatchParseError(error: unknown): error is InvalidPatchError | InvalidHunkError {
-  return error instanceof InvalidPatchError || error instanceof InvalidHunkError;
+function isPatchParseError(
+  error: unknown,
+): error is InvalidPatchError | InvalidHunkError {
+  return (
+    error instanceof InvalidPatchError || error instanceof InvalidHunkError
+  );
 }
 
 function isImplicitPatchInvocation(body: string): boolean {
@@ -360,7 +380,8 @@ export async function applyPatch(
       stderr: "",
     };
   } catch (error) {
-    const message = error instanceof ApplyPatchFailure ? error.message : formatIoError(error);
+    const message =
+      error instanceof ApplyPatchFailure ? error.message : formatIoError(error);
     return {
       success: false,
       stdout: "",
@@ -468,7 +489,10 @@ export async function maybeParseApplyPatchVerified(
   return { type: "not-apply-patch" };
 }
 
-async function buildApplyPatchAction(args: ApplyPatchArgs, cwd: string): Promise<ApplyPatchAction> {
+async function buildApplyPatchAction(
+  args: ApplyPatchArgs,
+  cwd: string,
+): Promise<ApplyPatchAction> {
   const baseCwd = resolveCwd(cwd);
   const effectiveCwd = resolveEffectiveCwd(baseCwd, args.workdir);
   const changes = new Map<string, ApplyPatchFileChange>();
@@ -486,7 +510,10 @@ async function buildApplyPatchAction(args: ApplyPatchArgs, cwd: string): Promise
         try {
           content = await readFile(target.absolute, "utf8");
         } catch (error) {
-          throw ApplyPatchError.ioError(`Failed to read ${target.display}`, error);
+          throw ApplyPatchError.ioError(
+            `Failed to read ${target.display}`,
+            error,
+          );
         }
         changes.set(target.absolute, { type: "delete", content });
         break;
@@ -502,14 +529,19 @@ async function buildApplyPatchAction(args: ApplyPatchArgs, cwd: string): Promise
           );
         } catch (error) {
           if (error instanceof ApplyPatchFailure) {
-            throw ApplyPatchError.computeReplacements(error.message, { cause: error });
+            throw ApplyPatchError.computeReplacements(error.message, {
+              cause: error,
+            });
           }
           throw error;
         }
 
         let movePath: string | null = null;
         if (hunk.movePath !== null) {
-          const destination = resolvePatchPathOrThrow(effectiveCwd, hunk.movePath);
+          const destination = resolvePatchPathOrThrow(
+            effectiveCwd,
+            hunk.movePath,
+          );
           movePath = destination.absolute;
         }
 
@@ -528,7 +560,9 @@ async function buildApplyPatchAction(args: ApplyPatchArgs, cwd: string): Promise
       }
       default: {
         const exhaustiveCheck: never = hunk;
-        throw new Error(`Unhandled hunk type ${(exhaustiveCheck as { type: string }).type}`);
+        throw new Error(
+          `Unhandled hunk type ${(exhaustiveCheck as { type: string }).type}`,
+        );
       }
     }
   }
@@ -548,12 +582,17 @@ function resolveEffectiveCwd(baseCwd: string, workdir: string | null): string {
   return normalize(candidate);
 }
 
-function resolvePatchPathOrThrow(baseCwd: string, rawPath: string): ResolvedPath {
+function resolvePatchPathOrThrow(
+  baseCwd: string,
+  rawPath: string,
+): ResolvedPath {
   try {
     return resolvePatchPath(baseCwd, rawPath);
   } catch (error) {
     if (error instanceof ApplyPatchFailure) {
-      throw ApplyPatchError.computeReplacements(error.message, { cause: error });
+      throw ApplyPatchError.computeReplacements(error.message, {
+        cause: error,
+      });
     }
     throw error;
   }
@@ -564,11 +603,8 @@ export async function unifiedDiffFromChunks(
   chunks: UpdateFileChunk[],
   context: number = 1,
 ): Promise<ApplyPatchFileUpdate> {
-  const { originalLines, updatedLines, newContents } = await deriveContentsFromChunks(
-    path,
-    path,
-    chunks,
-  );
+  const { originalLines, updatedLines, newContents } =
+    await deriveContentsFromChunks(path, path, chunks);
   const unifiedDiff = buildUnifiedDiff(originalLines, updatedLines, context);
   return {
     unifiedDiff,
@@ -576,7 +612,10 @@ export async function unifiedDiffFromChunks(
   };
 }
 
-async function applyHunksToFiles(hunks: Hunk[], cwd: string): Promise<AffectedPaths> {
+async function applyHunksToFiles(
+  hunks: Hunk[],
+  cwd: string,
+): Promise<AffectedPaths> {
   if (hunks.length === 0) {
     throw new ApplyPatchFailure("No files were modified.");
   }
@@ -586,7 +625,11 @@ async function applyHunksToFiles(hunks: Hunk[], cwd: string): Promise<AffectedPa
   for (const hunk of hunks) {
     if (hunk.type === "add") {
       const pathInfo = resolvePatchPath(cwd, hunk.path);
-      await ensureParentDirectory(cwd, pathInfo, `Failed to create parent directories for ${pathInfo.display}`);
+      await ensureParentDirectory(
+        cwd,
+        pathInfo,
+        `Failed to create parent directories for ${pathInfo.display}`,
+      );
       await writeFileWithContext(pathInfo, hunk.contents);
       affected.added.push(pathInfo.display);
       continue;
@@ -594,14 +637,20 @@ async function applyHunksToFiles(hunks: Hunk[], cwd: string): Promise<AffectedPa
 
     if (hunk.type === "delete") {
       const pathInfo = resolvePatchPath(cwd, hunk.path);
-      await removeFileWithContext(pathInfo, `Failed to delete file ${pathInfo.display}`);
+      await removeFileWithContext(
+        pathInfo,
+        `Failed to delete file ${pathInfo.display}`,
+      );
       affected.deleted.push(pathInfo.display);
       continue;
     }
 
     if (hunk.type === "update") {
       const source = resolvePatchPath(cwd, hunk.path);
-      const newContents = await deriveNewContentsFromChunks(source, hunk.chunks);
+      const newContents = await deriveNewContentsFromChunks(
+        source,
+        hunk.chunks,
+      );
       if (hunk.movePath) {
         const destination = resolvePatchPath(cwd, hunk.movePath);
         await ensureParentDirectory(
@@ -610,7 +659,10 @@ async function applyHunksToFiles(hunks: Hunk[], cwd: string): Promise<AffectedPa
           `Failed to create parent directories for ${destination.display}`,
         );
         await writeFileWithContext(destination, newContents);
-        await removeFileWithContext(source, `Failed to remove original ${source.display}`);
+        await removeFileWithContext(
+          source,
+          `Failed to remove original ${source.display}`,
+        );
         affected.modified.push(destination.display);
       } else {
         await writeFileWithContext(source, newContents);
@@ -669,7 +721,10 @@ async function deriveContentsFromChunks(
 
   const patchedLines = applyReplacements([...originalLines], replacements);
   const normalizedLines = [...patchedLines];
-  if (normalizedLines.length === 0 || normalizedLines[normalizedLines.length - 1] !== "") {
+  if (
+    normalizedLines.length === 0 ||
+    normalizedLines[normalizedLines.length - 1] !== ""
+  ) {
     normalizedLines.push("");
   }
 
@@ -721,14 +776,28 @@ function computeReplacements(
     let pattern = [...chunk.oldLines];
     let newSegment = [...chunk.newLines];
 
-    let found = seekSequence(originalLines, pattern, lineIndex, chunk.isEndOfFile);
+    let found = seekSequence(
+      originalLines,
+      pattern,
+      lineIndex,
+      chunk.isEndOfFile,
+    );
 
-    if (found === null && pattern.length > 0 && pattern[pattern.length - 1] === "") {
+    if (
+      found === null &&
+      pattern.length > 0 &&
+      pattern[pattern.length - 1] === ""
+    ) {
       pattern = pattern.slice(0, -1);
       if (newSegment.length > 0 && newSegment[newSegment.length - 1] === "") {
         newSegment = newSegment.slice(0, -1);
       }
-      found = seekSequence(originalLines, pattern, lineIndex, chunk.isEndOfFile);
+      found = seekSequence(
+        originalLines,
+        pattern,
+        lineIndex,
+        chunk.isEndOfFile,
+      );
     }
 
     if (found === null) {
@@ -749,10 +818,17 @@ function computeReplacements(
   return replacements;
 }
 
-function applyReplacements(lines: string[], replacements: Replacement[]): string[] {
+function applyReplacements(
+  lines: string[],
+  replacements: Replacement[],
+): string[] {
   for (let index = replacements.length - 1; index >= 0; index -= 1) {
     const replacement = replacements[index];
-    lines.splice(replacement.start, replacement.deleteCount, ...replacement.newLines);
+    lines.splice(
+      replacement.start,
+      replacement.deleteCount,
+      ...replacement.newLines,
+    );
   }
   return lines;
 }
@@ -774,7 +850,10 @@ async function ensureParentDirectory(
   }
 }
 
-async function writeFileWithContext(pathInfo: ResolvedPath, contents: string): Promise<void> {
+async function writeFileWithContext(
+  pathInfo: ResolvedPath,
+  contents: string,
+): Promise<void> {
   try {
     await writeFile(pathInfo.absolute, contents, "utf8");
   } catch (error) {
@@ -784,7 +863,10 @@ async function writeFileWithContext(pathInfo: ResolvedPath, contents: string): P
   }
 }
 
-async function removeFileWithContext(pathInfo: ResolvedPath, errorPrefix: string): Promise<void> {
+async function removeFileWithContext(
+  pathInfo: ResolvedPath,
+  errorPrefix: string,
+): Promise<void> {
   try {
     await unlink(pathInfo.absolute);
   } catch (error) {
@@ -807,7 +889,12 @@ function resolvePatchPath(cwd: string, rawPath: string): ResolvedPath {
   }
 
   const display = normalizeDisplayPath(rawPath);
-  if (display === "" || display === "." || display === ".." || display.startsWith("../")) {
+  if (
+    display === "" ||
+    display === "." ||
+    display === ".." ||
+    display.startsWith("../")
+  ) {
     throw new ApplyPatchFailure("path must be relative");
   }
 
@@ -824,7 +911,9 @@ function normalizeDisplayPath(relativePath: string): string {
 function ensureWithinCwd(cwd: string, target: string): void {
   const normalizedCwd = normalize(cwd);
   const normalizedTarget = normalize(target);
-  const prefix = normalizedCwd.endsWith(sep) ? normalizedCwd : `${normalizedCwd}${sep}`;
+  const prefix = normalizedCwd.endsWith(sep)
+    ? normalizedCwd
+    : `${normalizedCwd}${sep}`;
   if (!normalizedTarget.startsWith(prefix)) {
     throw new ApplyPatchFailure("path must be relative");
   }
@@ -876,10 +965,15 @@ function buildUnifiedDiff(
   return lines.join("\n");
 }
 
-function diffLines(originalLines: string[], updatedLines: string[]): DiffOperation[] {
+function diffLines(
+  originalLines: string[],
+  updatedLines: string[],
+): DiffOperation[] {
   const m = originalLines.length;
   const n = updatedLines.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  const dp: number[][] = Array.from({ length: m + 1 }, () =>
+    Array(n + 1).fill(0),
+  );
 
   for (let i = m - 1; i >= 0; i -= 1) {
     for (let j = n - 1; j >= 0; j -= 1) {

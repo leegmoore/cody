@@ -11,19 +11,19 @@
  */
 export enum PlanType {
   /** Free tier - default plan */
-  Free = 'free',
+  Free = "free",
   /** Plus subscription tier */
-  Plus = 'plus',
+  Plus = "plus",
   /** Pro subscription tier */
-  Pro = 'pro',
+  Pro = "pro",
   /** Team subscription tier */
-  Team = 'team',
+  Team = "team",
   /** Business subscription tier */
-  Business = 'business',
+  Business = "business",
   /** Enterprise subscription tier */
-  Enterprise = 'enterprise',
+  Enterprise = "enterprise",
   /** Education subscription tier */
-  Edu = 'edu',
+  Edu = "edu",
   /** Unknown or unrecognized plan type */
-  Unknown = 'unknown',
+  Unknown = "unknown",
 }

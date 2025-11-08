@@ -2,7 +2,7 @@
  * Formatting utilities for tool outputs
  */
 
-import type { ExecToolCallOutput } from '../exec/types.js';
+import type { ExecToolCallOutput } from "../exec/types.js";
 
 /**
  * Metadata included with exec output
@@ -45,7 +45,9 @@ export function formatExecOutputStr(execOutput: ExecToolCallOutput): string {
  * @param execOutput - Execution output
  * @returns JSON string formatted for model
  */
-export function formatExecOutputForModel(execOutput: ExecToolCallOutput): string {
+export function formatExecOutputForModel(
+  execOutput: ExecToolCallOutput,
+): string {
   const { exitCode, durationMs } = execOutput;
 
   // Round to 1 decimal place
@@ -77,21 +79,21 @@ export function truncateForPreview(
   text: string,
   maxBytes: number = 2048,
   maxLines: number = 64,
-  truncationNotice: string = '[... truncated ...]',
+  truncationNotice: string = "[... truncated ...]",
 ): string {
   let result = text;
 
   // Truncate by lines
-  const lines = result.split('\n');
+  const lines = result.split("\n");
   if (lines.length > maxLines) {
-    result = lines.slice(0, maxLines).join('\n') + '\n' + truncationNotice;
+    result = lines.slice(0, maxLines).join("\n") + "\n" + truncationNotice;
   }
 
   // Truncate by bytes
   const encoder = new TextEncoder();
   const bytes = encoder.encode(result);
   if (bytes.length > maxBytes) {
-    const suffix = '...\n' + truncationNotice;
+    const suffix = "...\n" + truncationNotice;
     const suffixBytes = encoder.encode(suffix).length;
 
     // Binary search for the right length

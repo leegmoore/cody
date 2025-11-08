@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 /**
  * Opaque subscription token returned by subscribe().
@@ -13,15 +13,15 @@ export class Token {
 export class ReadinessError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ReadinessError';
+    this.name = "ReadinessError";
   }
 
   static flagAlreadyReady(): ReadinessError {
-    return new ReadinessError('Flag is already ready. Impossible to subscribe');
+    return new ReadinessError("Flag is already ready. Impossible to subscribe");
   }
 
   static tokenLockFailed(): ReadinessError {
-    return new ReadinessError('Failed to acquire readiness token lock');
+    return new ReadinessError("Failed to acquire readiness token lock");
   }
 }
 
@@ -65,7 +65,7 @@ export class ReadinessFlag {
     // If no tokens are subscribed, auto-mark as ready
     if (this.tokens.size === 0 && !this.lockHeld) {
       this.ready = true;
-      this.emitter.emit('ready');
+      this.emitter.emit("ready");
       return true;
     }
 
@@ -122,7 +122,7 @@ export class ReadinessFlag {
       this.tokens.delete(token.id);
       this.ready = true;
       this.tokens.clear(); // No further tokens needed once ready
-      this.emitter.emit('ready');
+      this.emitter.emit("ready");
       return true;
     } finally {
       this.lockHeld = false;
@@ -144,11 +144,11 @@ export class ReadinessFlag {
         resolve();
       };
 
-      this.emitter.once('ready', onReady);
+      this.emitter.once("ready", onReady);
 
       // Double-check after registering listener
       if (this.isReady()) {
-        this.emitter.off('ready', onReady);
+        this.emitter.off("ready", onReady);
         resolve();
       }
     });

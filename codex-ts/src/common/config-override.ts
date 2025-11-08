@@ -12,7 +12,7 @@
  *   - `-c shell_environment_policy.inherit=all`
  */
 
-import * as toml from '@iarna/toml';
+import * as toml from "@iarna/toml";
 
 /**
  * Parse a TOML value from a string.
@@ -37,8 +37,8 @@ export function parseTomlValue(raw: string): unknown {
   const wrapped = `_x_ = ${raw}`;
   try {
     const parsed = toml.parse(wrapped) as Record<string, unknown>;
-    if (!('_x_' in parsed)) {
-      throw new Error('missing sentinel key');
+    if (!("_x_" in parsed)) {
+      throw new Error("missing sentinel key");
     }
     return parsed._x_;
   } catch (error) {
@@ -84,7 +84,7 @@ export class CliConfigOverrides {
   parseOverrides(): Array<[string, unknown]> {
     return this.rawOverrides.map((s) => {
       // Split on the first '=' only, so values can contain '='
-      const eqIndex = s.indexOf('=');
+      const eqIndex = s.indexOf("=");
       if (eqIndex === -1) {
         throw new Error(`Invalid override (missing '='): ${s}`);
       }
@@ -103,7 +103,7 @@ export class CliConfigOverrides {
         value = parseTomlValue(valueStr);
       } catch {
         // Strip leading/trailing quotes if present
-        const trimmed = valueStr.trim().replace(/^["']|["']$/g, '');
+        const trimmed = valueStr.trim().replace(/^["']|["']$/g, "");
         value = trimmed;
       }
 
@@ -146,9 +146,9 @@ export class CliConfigOverrides {
 function applySingleOverride(
   root: Record<string, unknown>,
   path: string,
-  value: unknown
+  value: unknown,
 ): void {
-  const parts = path.split('.');
+  const parts = path.split(".");
   let current: any = root;
 
   for (let i = 0; i < parts.length; i++) {
@@ -157,7 +157,11 @@ function applySingleOverride(
 
     if (isLast) {
       // Set the final value
-      if (typeof current === 'object' && current !== null && !Array.isArray(current)) {
+      if (
+        typeof current === "object" &&
+        current !== null &&
+        !Array.isArray(current)
+      ) {
         current[part] = value;
       } else {
         // Current is not an object, replace it
@@ -170,8 +174,16 @@ function applySingleOverride(
     }
 
     // Traverse or create intermediate object
-    if (typeof current === 'object' && current !== null && !Array.isArray(current)) {
-      if (!(part in current) || typeof current[part] !== 'object' || Array.isArray(current[part])) {
+    if (
+      typeof current === "object" &&
+      current !== null &&
+      !Array.isArray(current)
+    ) {
+      if (
+        !(part in current) ||
+        typeof current[part] !== "object" ||
+        Array.isArray(current[part])
+      ) {
         current[part] = {};
       }
       current = current[part];

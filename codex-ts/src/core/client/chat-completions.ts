@@ -17,8 +17,8 @@
  * TODO(Phase 4.5+): Add delta aggregation stream adapter
  */
 
-import type { ResponseItem, ContentItem } from '../../protocol/models.js'
-import type { Prompt } from './client-common.js'
+import type { ResponseItem, ContentItem } from "../../protocol/models.js";
+import type { Prompt } from "./client-common.js";
 
 // ============================================================================
 // Chat Completions API Types
@@ -27,28 +27,28 @@ import type { Prompt } from './client-common.js'
 /**
  * Chat message role.
  */
-export type ChatMessageRole = 'system' | 'user' | 'assistant' | 'tool'
+export type ChatMessageRole = "system" | "user" | "assistant" | "tool";
 
 /**
  * Tool call in a chat message.
  */
 export interface ChatMessageToolCall {
   /** Unique identifier for the tool call */
-  id: string
+  id: string;
   /** Type of tool call */
-  type: 'function' | 'local_shell_call' | 'custom'
+  type: "function" | "local_shell_call" | "custom";
   /** Function details (for type: 'function') */
   function?: {
-    name: string
-    arguments: string
-  }
+    name: string;
+    arguments: string;
+  };
   /** Local shell action (for type: 'local_shell_call') */
-  action?: unknown
+  action?: unknown;
   /** Custom tool details (for type: 'custom') */
   custom?: {
-    name: string
-    input: string
-  }
+    name: string;
+    input: string;
+  };
 }
 
 /**
@@ -56,15 +56,15 @@ export interface ChatMessageToolCall {
  */
 export interface ChatMessage {
   /** Role of the message sender */
-  role: ChatMessageRole
+  role: ChatMessageRole;
   /** Message content (text or structured content) */
-  content: string | unknown[] | null
+  content: string | unknown[] | null;
   /** Tool call ID (for role: 'tool') */
-  tool_call_id?: string
+  tool_call_id?: string;
   /** Tool calls made by the assistant */
-  tool_calls?: ChatMessageToolCall[]
+  tool_calls?: ChatMessageToolCall[];
   /** Reasoning content (for models that support it) */
-  reasoning?: string
+  reasoning?: string;
 }
 
 /**
@@ -72,17 +72,17 @@ export interface ChatMessage {
  */
 export interface ChatCompletionRequest {
   /** Model to use */
-  model: string
+  model: string;
   /** Array of messages */
-  messages: ChatMessage[]
+  messages: ChatMessage[];
   /** Whether to stream the response */
-  stream: boolean
+  stream: boolean;
   /** Available tools */
-  tools?: unknown[]
+  tools?: unknown[];
   /** Maximum tokens to generate */
-  max_tokens?: number
+  max_tokens?: number;
   /** Temperature for sampling */
-  temperature?: number
+  temperature?: number;
 }
 
 /**
@@ -90,19 +90,19 @@ export interface ChatCompletionRequest {
  */
 export interface ChatCompletionDelta {
   /** Role delta */
-  role?: ChatMessageRole
+  role?: ChatMessageRole;
   /** Content delta */
-  content?: string
+  content?: string;
   /** Tool calls delta */
   tool_calls?: Array<{
-    index: number
-    id?: string
-    type?: string
+    index: number;
+    id?: string;
+    type?: string;
     function?: {
-      name?: string
-      arguments?: string
-    }
-  }>
+      name?: string;
+      arguments?: string;
+    };
+  }>;
 }
 
 /**
@@ -110,11 +110,11 @@ export interface ChatCompletionDelta {
  */
 export interface ChatCompletionChoice {
   /** Choice index */
-  index: number
+  index: number;
   /** Delta for this chunk */
-  delta: ChatCompletionDelta
+  delta: ChatCompletionDelta;
   /** Finish reason (if any) */
-  finish_reason: string | null
+  finish_reason: string | null;
 }
 
 /**
@@ -122,15 +122,15 @@ export interface ChatCompletionChoice {
  */
 export interface ChatCompletionChunk {
   /** Unique identifier */
-  id: string
+  id: string;
   /** Object type */
-  object: string
+  object: string;
   /** Creation timestamp */
-  created: number
+  created: number;
   /** Model used */
-  model: string
+  model: string;
   /** Choices array */
-  choices: ChatCompletionChoice[]
+  choices: ChatCompletionChoice[];
 }
 
 // ============================================================================
@@ -147,158 +147,162 @@ export interface ChatCompletionChunk {
  * @param systemInstructions - System instructions to prepend
  * @returns Array of chat messages
  */
-export function buildChatMessages(prompt: Prompt, systemInstructions: string): ChatMessage[] {
-  const messages: ChatMessage[] = []
+export function buildChatMessages(
+  prompt: Prompt,
+  systemInstructions: string,
+): ChatMessage[] {
+  const messages: ChatMessage[] = [];
 
   // Always start with system message
   messages.push({
-    role: 'system',
+    role: "system",
     content: systemInstructions,
-  })
+  });
 
   // Track last assistant text to avoid duplicates
-  let lastAssistantText: string | undefined
+  let lastAssistantText: string | undefined;
 
   for (const item of prompt.input) {
     switch (item.type) {
-      case 'message': {
+      case "message": {
         // Build message content
-        let text = ''
-        const contentItems: unknown[] = []
-        let sawImage = false
+        let text = "";
+        const contentItems: unknown[] = [];
+        let sawImage = false;
 
         for (const c of item.content) {
           switch (c.type) {
-            case 'input_text':
-            case 'output_text':
-              text += c.text
-              contentItems.push({ type: 'text', text: c.text })
-              break
-            case 'input_image':
-              sawImage = true
+            case "input_text":
+            case "output_text":
+              text += c.text;
+              contentItems.push({ type: "text", text: c.text });
+              break;
+            case "input_image":
+              sawImage = true;
               contentItems.push({
-                type: 'image_url',
+                type: "image_url",
                 image_url: { url: c.image_url },
-              })
-              break
+              });
+              break;
           }
         }
 
         // Skip duplicate assistant messages
-        if (item.role === 'assistant') {
+        if (item.role === "assistant") {
           if (lastAssistantText === text) {
-            continue
+            continue;
           }
-          lastAssistantText = text
+          lastAssistantText = text;
         }
 
         // For assistant, always use plain string
         // For user with images, use content items array
-        const content = item.role === 'assistant' ? text : sawImage ? contentItems : text
+        const content =
+          item.role === "assistant" ? text : sawImage ? contentItems : text;
 
         messages.push({
           role: item.role as ChatMessageRole,
           content,
-        })
-        break
+        });
+        break;
       }
 
-      case 'function_call': {
+      case "function_call": {
         messages.push({
-          role: 'assistant',
+          role: "assistant",
           content: null,
           tool_calls: [
             {
               id: item.call_id,
-              type: 'function',
+              type: "function",
               function: {
                 name: item.name,
                 arguments: item.arguments,
               },
             },
           ],
-        })
-        break
+        });
+        break;
       }
 
-      case 'local_shell_call': {
+      case "local_shell_call": {
         messages.push({
-          role: 'assistant',
+          role: "assistant",
           content: null,
           tool_calls: [
             {
-              id: item.id ?? '',
-              type: 'local_shell_call',
+              id: item.id ?? "",
+              type: "local_shell_call",
               action: item.action,
             },
           ],
-        })
-        break
+        });
+        break;
       }
 
-      case 'function_call_output': {
+      case "function_call_output": {
         // Prefer structured content items when available
-        let content: string | unknown[]
+        let content: string | unknown[];
         if (item.output.content_items) {
           content = item.output.content_items.map((it) => {
             switch (it.type) {
-              case 'input_text':
-                return { type: 'text', text: it.text }
-              case 'input_image':
+              case "input_text":
+                return { type: "text", text: it.text };
+              case "input_image":
                 return {
-                  type: 'image_url',
+                  type: "image_url",
                   image_url: { url: it.image_url },
-                }
+                };
             }
-          })
+          });
         } else {
-          content = item.output.content
+          content = item.output.content;
         }
 
         messages.push({
-          role: 'tool',
+          role: "tool",
           tool_call_id: item.call_id,
           content,
-        })
-        break
+        });
+        break;
       }
 
-      case 'custom_tool_call': {
+      case "custom_tool_call": {
         messages.push({
-          role: 'assistant',
+          role: "assistant",
           content: null,
           tool_calls: [
             {
               id: item.id,
-              type: 'custom',
+              type: "custom",
               custom: {
                 name: item.name,
                 input: item.input,
               },
             },
           ],
-        })
-        break
+        });
+        break;
       }
 
-      case 'custom_tool_call_output': {
+      case "custom_tool_call_output": {
         messages.push({
-          role: 'tool',
+          role: "tool",
           tool_call_id: item.call_id,
           content: item.output,
-        })
-        break
+        });
+        break;
       }
 
-      case 'ghost_snapshot':
-      case 'reasoning':
-      case 'web_search_call':
+      case "ghost_snapshot":
+      case "reasoning":
+      case "web_search_call":
         // Skip these - not sent to the model
-        continue
+        continue;
     }
   }
 
-  return messages
+  return messages;
 }
 
 /**
@@ -316,12 +320,12 @@ export function createChatCompletionRequest(
   systemInstructions: string,
   tools?: unknown[],
 ): ChatCompletionRequest {
-  const messages = buildChatMessages(prompt, systemInstructions)
+  const messages = buildChatMessages(prompt, systemInstructions);
 
   return {
     model: modelSlug,
     messages,
     stream: true,
     tools,
-  }
+  };
 }

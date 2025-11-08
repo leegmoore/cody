@@ -14,7 +14,7 @@
  * - Max 1000 entries
  */
 
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
 /**
  * Compiled script entry
@@ -90,7 +90,7 @@ export class CompilationCache {
    * Generate SHA-256 hash of source code
    */
   private hash(sourceCode: string): string {
-    return createHash('sha256').update(sourceCode, 'utf8').digest('hex');
+    return createHash("sha256").update(sourceCode, "utf8").digest("hex");
   }
 
   /**
@@ -132,11 +132,7 @@ export class CompilationCache {
    * @param compiledCode - Compiled/wrapped code
    * @param hasReturn - Whether script has return statement
    */
-  set(
-    sourceCode: string,
-    compiledCode: string,
-    hasReturn: boolean,
-  ): void {
+  set(sourceCode: string, compiledCode: string, hasReturn: boolean): void {
     if (!this.config.enabled) {
       return;
     }
@@ -211,12 +207,14 @@ export class CompilationCache {
     }));
 
     const totalHits = entries.reduce((sum, e) => sum + e.hits, 0);
-    const avgSourceLength = entries.length > 0
-      ? entries.reduce((sum, e) => sum + e.sourceLength, 0) / entries.length
-      : 0;
-    const avgCompiledLength = entries.length > 0
-      ? entries.reduce((sum, e) => sum + e.compiledLength, 0) / entries.length
-      : 0;
+    const avgSourceLength =
+      entries.length > 0
+        ? entries.reduce((sum, e) => sum + e.sourceLength, 0) / entries.length
+        : 0;
+    const avgCompiledLength =
+      entries.length > 0
+        ? entries.reduce((sum, e) => sum + e.compiledLength, 0) / entries.length
+        : 0;
 
     return {
       size: this.cache.size,
@@ -271,10 +269,14 @@ export class CompilationCache {
       return 0;
     }
 
-    const totalAttempts = Array.from(this.cache.values())
-      .reduce((sum, entry) => sum + entry.hits + 1, 0); // +1 for initial set
-    const totalHits = Array.from(this.cache.values())
-      .reduce((sum, entry) => sum + entry.hits, 0);
+    const totalAttempts = Array.from(this.cache.values()).reduce(
+      (sum, entry) => sum + entry.hits + 1,
+      0,
+    ); // +1 for initial set
+    const totalHits = Array.from(this.cache.values()).reduce(
+      (sum, entry) => sum + entry.hits,
+      0,
+    );
 
     return totalHits / totalAttempts;
   }

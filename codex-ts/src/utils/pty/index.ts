@@ -14,13 +14,13 @@
  */
 export interface PtySize {
   /** Number of rows (lines) */
-  rows: number
+  rows: number;
   /** Number of columns (characters per line) */
-  cols: number
+  cols: number;
   /** Pixel width (optional, may be 0) */
-  pixelWidth: number
+  pixelWidth: number;
   /** Pixel height (optional, may be 0) */
-  pixelHeight: number
+  pixelHeight: number;
 }
 
 /**
@@ -37,25 +37,25 @@ export interface ExecCommandSession {
    * Get a sender for writing input to the PTY process.
    * @returns Channel for sending input bytes
    */
-  writerSender(): WriterSender
+  writerSender(): WriterSender;
 
   /**
    * Subscribe to output from the PTY process.
    * @returns Receiver for output bytes
    */
-  outputReceiver(): OutputReceiver
+  outputReceiver(): OutputReceiver;
 
   /**
    * Check if the process has exited.
    * @returns true if the process has exited
    */
-  hasExited(): boolean
+  hasExited(): boolean;
 
   /**
    * Get the exit code of the process.
    * @returns Exit code if available, undefined if still running
    */
-  exitCode(): number | undefined
+  exitCode(): number | undefined;
 }
 
 /**
@@ -63,7 +63,7 @@ export interface ExecCommandSession {
  */
 export interface WriterSender {
   /** Send bytes to the PTY stdin */
-  send(bytes: Buffer): Promise<void>
+  send(bytes: Buffer): Promise<void>;
 }
 
 /**
@@ -71,7 +71,7 @@ export interface WriterSender {
  */
 export interface OutputReceiver {
   /** Receive next chunk of output bytes */
-  recv(): Promise<Buffer | null>
+  recv(): Promise<Buffer | null>;
 }
 
 /**
@@ -79,7 +79,7 @@ export interface OutputReceiver {
  */
 export interface ExitReceiver {
   /** Wait for and receive the exit code */
-  recv(): Promise<number>
+  recv(): Promise<number>;
 }
 
 /**
@@ -87,11 +87,11 @@ export interface ExitReceiver {
  */
 export interface SpawnedPty {
   /** Session for managing the process */
-  session: ExecCommandSession
+  session: ExecCommandSession;
   /** Receiver for output bytes */
-  outputRx: OutputReceiver
+  outputRx: OutputReceiver;
   /** Receiver for exit code */
-  exitRx: ExitReceiver
+  exitRx: ExitReceiver;
 }
 
 /**
@@ -137,4 +137,4 @@ export interface SpawnedPty {
  * }
  * ```
  */
-export const spawnPtyProcess: undefined = undefined
+export const spawnPtyProcess: undefined = undefined;

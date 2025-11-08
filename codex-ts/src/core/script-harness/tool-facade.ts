@@ -32,7 +32,10 @@ export interface ToolDefinition {
   requiresApproval?: (args: unknown) => boolean;
 
   /** Execute the tool */
-  execute: (args: unknown, options?: { signal?: AbortSignal }) => Promise<unknown>;
+  execute: (
+    args: unknown,
+    options?: { signal?: AbortSignal },
+  ) => Promise<unknown>;
 
   /** Validate arguments (optional - if not provided, all args accepted) */
   validateArgs?: (args: unknown) => { valid: boolean; errors?: string[] };
@@ -139,7 +142,10 @@ export interface SpawnInterface {
 /**
  * ScriptTools interface (what scripts see)
  */
-export type ScriptTools = Record<string, (...args: any[]) => Promise<unknown>> & {
+export type ScriptTools = Record<
+  string,
+  (...args: any[]) => Promise<unknown>
+> & {
   spawn?: SpawnInterface;
 };
 
@@ -214,7 +220,11 @@ export function createToolsProxy(
           const taskPromise = (async () => {
             try {
               // Check if approval needed (in spawn mode, approvals are immediate or rejected)
-              if (tool.requiresApproval && tool.requiresApproval(args) && approvalBridge) {
+              if (
+                tool.requiresApproval &&
+                tool.requiresApproval(args) &&
+                approvalBridge
+              ) {
                 const toolCallId = `spawn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
                 const approved = await approvalBridge.requestApproval({
                   toolName,
@@ -251,153 +261,150 @@ export function createToolsProxy(
       }
     : undefined;
 
-  const proxy = new Proxy(
-    target,
-    {
-      get(target, prop: string | symbol) {
-        // Only handle string properties (tool names)
-        if (typeof prop !== "string") {
-          return undefined;
-        }
+  const proxy = new Proxy(target, {
+    get(target, prop: string | symbol) {
+      // Only handle string properties (tool names)
+      if (typeof prop !== "string") {
+        return undefined;
+      }
 
-        // Special property for stats (for testing/debugging)
-        if (prop === "__stats") {
-          return { ...stats };
-        }
+      // Special property for stats (for testing/debugging)
+      if (prop === "__stats") {
+        return { ...stats };
+      }
 
-        // Special property for spawn interface
-        if (prop === "spawn") {
-          return spawnInterface;
-        }
+      // Special property for spawn interface
+      if (prop === "spawn") {
+        return spawnInterface;
+      }
 
-        // Validate tool is allowed
-        if (!allowedTools.has(prop)) {
-          throw new ToolNotFoundError(
-            prop,
-            Array.from(allowedTools).slice(0, 10), // Limit to 10 for error message
+      // Validate tool is allowed
+      if (!allowedTools.has(prop)) {
+        throw new ToolNotFoundError(
+          prop,
+          Array.from(allowedTools).slice(0, 10), // Limit to 10 for error message
+        );
+      }
+
+      // Get tool from registry
+      const tool = registry.get(prop);
+      if (!tool) {
+        throw new ToolNotFoundError(prop, Array.from(allowedTools));
+      }
+
+      // Return async function that routes through validation/approval
+      return async (args: unknown) => {
+        const toolName = prop;
+
+        // In disabled mode, throw immediately
+        if (config.mode === "disabled") {
+          throw new ToolExecutionError(
+            toolName,
+            "Script tool harness is disabled",
           );
         }
 
-        // Get tool from registry
-        const tool = registry.get(prop);
-        if (!tool) {
-          throw new ToolNotFoundError(prop, Array.from(allowedTools));
+        // Validate arguments
+        if (tool.validateArgs) {
+          const validation = tool.validateArgs(args);
+          if (!validation.valid) {
+            throw new ToolValidationError(
+              toolName,
+              validation.errors ?? ["Invalid arguments"],
+            );
+          }
         }
 
-        // Return async function that routes through validation/approval
-        return async (args: unknown) => {
-          const toolName = prop;
+        // Check total tool budget
+        if (stats.totalCalls >= config.maxToolInvocations) {
+          throw new ToolBudgetExceededError(
+            config.maxToolInvocations,
+            toolName,
+          );
+        }
 
-          // In disabled mode, throw immediately
-          if (config.mode === "disabled") {
-            throw new ToolExecutionError(
-              toolName,
-              "Script tool harness is disabled",
-            );
-          }
+        // Check concurrency limit
+        if (stats.activeCalls >= config.maxConcurrentToolCalls) {
+          throw new ConcurrencyLimitError(
+            config.maxConcurrentToolCalls,
+            toolName,
+          );
+        }
 
-          // Validate arguments
-          if (tool.validateArgs) {
-            const validation = tool.validateArgs(args);
-            if (!validation.valid) {
-              throw new ToolValidationError(
+        // Update stats
+        stats.totalCalls++;
+        stats.activeCalls++;
+        stats.callsByTool[toolName] = (stats.callsByTool[toolName] ?? 0) + 1;
+
+        // Create AbortController for this call
+        const abort = new AbortController();
+
+        // Create promise for tool execution
+        const toolPromise = (async () => {
+          try {
+            // Check if approval needed
+            if (
+              tool.requiresApproval &&
+              tool.requiresApproval(args) &&
+              approvalBridge
+            ) {
+              const toolCallId = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+              const approved = await approvalBridge.requestApproval({
                 toolName,
-                validation.errors ?? ["Invalid arguments"],
-              );
-            }
-          }
+                args,
+                scriptId: config.scriptId,
+                toolCallId,
+              });
 
-          // Check total tool budget
-          if (stats.totalCalls >= config.maxToolInvocations) {
-            throw new ToolBudgetExceededError(
-              config.maxToolInvocations,
-              toolName,
-            );
-          }
-
-          // Check concurrency limit
-          if (stats.activeCalls >= config.maxConcurrentToolCalls) {
-            throw new ConcurrencyLimitError(
-              config.maxConcurrentToolCalls,
-              toolName,
-            );
-          }
-
-          // Update stats
-          stats.totalCalls++;
-          stats.activeCalls++;
-          stats.callsByTool[toolName] = (stats.callsByTool[toolName] ?? 0) + 1;
-
-          // Create AbortController for this call
-          const abort = new AbortController();
-
-          // Create promise for tool execution
-          const toolPromise = (async () => {
-            try {
-              // Check if approval needed
-              if (
-                tool.requiresApproval &&
-                tool.requiresApproval(args) &&
-                approvalBridge
-              ) {
-                const toolCallId = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-
-                const approved = await approvalBridge.requestApproval({
-                  toolName,
-                  args,
-                  scriptId: config.scriptId,
-                  toolCallId,
-                });
-
-                if (!approved) {
-                  throw new ApprovalDeniedError(toolName);
-                }
+              if (!approved) {
+                throw new ApprovalDeniedError(toolName);
               }
-
-              // In dry-run mode, don't actually execute
-              if (config.mode === "dry-run") {
-                return {
-                  __dryRun: true,
-                  toolName,
-                  args,
-                  message: "Dry-run mode: tool not executed",
-                };
-              }
-
-              // Execute tool with AbortSignal
-              const result = await tool.execute(args, { signal: abort.signal });
-
-              // Return frozen result (immutable in script)
-              return Object.freeze(result);
-            } finally {
-              // Update stats on completion
-              stats.activeCalls--;
             }
-          })();
 
-          // Register promise with tracker
-          const promiseId = tracker.register(toolName, toolPromise, abort);
+            // In dry-run mode, don't actually execute
+            if (config.mode === "dry-run") {
+              return {
+                __dryRun: true,
+                toolName,
+                args,
+                message: "Dry-run mode: tool not executed",
+              };
+            }
 
-          // Return the promise
-          return toolPromise;
-        };
-      },
+            // Execute tool with AbortSignal
+            const result = await tool.execute(args, { signal: abort.signal });
 
-      // Prevent setting properties
-      set() {
-        return false;
-      },
+            // Return frozen result (immutable in script)
+            return Object.freeze(result);
+          } finally {
+            // Update stats on completion
+            stats.activeCalls--;
+          }
+        })();
 
-      // Prevent deleting properties
-      deleteProperty() {
-        return false;
-      },
+        // Register promise with tracker
+        const promiseId = tracker.register(toolName, toolPromise, abort);
 
-      // Enumerate only allowed tools
-      // Note: We can't use ownKeys with a frozen empty target
-      // The proxy itself is immutable via set/deleteProperty traps
+        // Return the promise
+        return toolPromise;
+      };
     },
-  );
+
+    // Prevent setting properties
+    set() {
+      return false;
+    },
+
+    // Prevent deleting properties
+    deleteProperty() {
+      return false;
+    },
+
+    // Enumerate only allowed tools
+    // Note: We can't use ownKeys with a frozen empty target
+    // The proxy itself is immutable via set/deleteProperty traps
+  });
 
   // Return the proxy (immutable via traps, no need to freeze)
   return proxy as ScriptTools;

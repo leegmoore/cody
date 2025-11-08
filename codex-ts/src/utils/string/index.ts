@@ -20,7 +20,7 @@ function getUtf8ByteLength(str: string): number {
  */
 export function takeBytesAtCharBoundary(s: string, maxb: number): string {
   if (maxb === 0) {
-    return '';
+    return "";
   }
 
   // Fast path: if the entire string fits, return it
@@ -58,7 +58,7 @@ export function takeBytesAtCharBoundary(s: string, maxb: number): string {
  */
 export function takeLastBytesAtCharBoundary(s: string, maxb: number): string {
   if (maxb === 0) {
-    return '';
+    return "";
   }
 
   // Fast path: if the entire string fits, return it
@@ -83,5 +83,5 @@ export function takeLastBytesAtCharBoundary(s: string, maxb: number): string {
     start = i;
   }
 
-  return chars.slice(start).join('');
+  return chars.slice(start).join("");
 }

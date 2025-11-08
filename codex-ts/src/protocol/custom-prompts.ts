@@ -13,7 +13,7 @@
  * - Command token after '/': `"{PROMPTS_CMD_PREFIX}:name"`
  * - Full slash prefix: `"/{PROMPTS_CMD_PREFIX}:"`
  */
-export const PROMPTS_CMD_PREFIX = 'prompts';
+export const PROMPTS_CMD_PREFIX = "prompts";
 
 /**
  * Represents a custom prompt defined by the user.

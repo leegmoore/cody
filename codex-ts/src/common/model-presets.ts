@@ -1,4 +1,4 @@
-import { ReasoningEffort } from '../protocol/types.js';
+import { ReasoningEffort } from "../protocol/types.js";
 
 /**
  * A reasoning effort option that can be surfaced for a model.
@@ -46,49 +46,53 @@ export interface ModelPreset {
 export function builtinModelPresets(_authMode?: string): ModelPreset[] {
   return [
     {
-      id: 'gpt-5-codex',
-      model: 'gpt-5-codex',
-      displayName: 'gpt-5-codex',
-      description: 'Optimized for coding tasks with many tools.',
+      id: "gpt-5-codex",
+      model: "gpt-5-codex",
+      displayName: "gpt-5-codex",
+      description: "Optimized for coding tasks with many tools.",
       defaultReasoningEffort: ReasoningEffort.Medium,
       supportedReasoningEfforts: [
         {
           effort: ReasoningEffort.Low,
-          description: 'Fastest responses with limited reasoning',
+          description: "Fastest responses with limited reasoning",
         },
         {
           effort: ReasoningEffort.Medium,
-          description: 'Dynamically adjusts reasoning based on the task',
+          description: "Dynamically adjusts reasoning based on the task",
         },
         {
           effort: ReasoningEffort.High,
-          description: 'Maximizes reasoning depth for complex or ambiguous problems',
+          description:
+            "Maximizes reasoning depth for complex or ambiguous problems",
         },
       ],
       isDefault: true,
     },
     {
-      id: 'gpt-5',
-      model: 'gpt-5',
-      displayName: 'gpt-5',
-      description: 'Broad world knowledge with strong general reasoning.',
+      id: "gpt-5",
+      model: "gpt-5",
+      displayName: "gpt-5",
+      description: "Broad world knowledge with strong general reasoning.",
       defaultReasoningEffort: ReasoningEffort.Medium,
       supportedReasoningEfforts: [
         {
           effort: ReasoningEffort.Minimal,
-          description: 'Fastest responses with little reasoning',
+          description: "Fastest responses with little reasoning",
         },
         {
           effort: ReasoningEffort.Low,
-          description: 'Balances speed with some reasoning; useful for straightforward queries and short explanations',
+          description:
+            "Balances speed with some reasoning; useful for straightforward queries and short explanations",
         },
         {
           effort: ReasoningEffort.Medium,
-          description: 'Provides a solid balance of reasoning depth and latency for general-purpose tasks',
+          description:
+            "Provides a solid balance of reasoning depth and latency for general-purpose tasks",
         },
         {
           effort: ReasoningEffort.High,
-          description: 'Maximizes reasoning depth for complex or ambiguous problems',
+          description:
+            "Maximizes reasoning depth for complex or ambiguous problems",
         },
       ],
       isDefault: false,

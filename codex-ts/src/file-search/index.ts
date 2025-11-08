@@ -5,5 +5,5 @@
  * for fuzzy matching.
  */
 
-export * from './types.js';
-export * from './search.js';
+export * from "./types.js";
+export * from "./search.js";

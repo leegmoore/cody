@@ -13,16 +13,16 @@
  */
 export type UserInput =
   | {
-      type: 'text';
+      type: "text";
       text: string;
     }
   | {
-      type: 'image';
+      type: "image";
       /** Pre-encoded data URI image (e.g., "data:image/png;base64,...") */
       image_url: string;
     }
   | {
-      type: 'local_image';
+      type: "local_image";
       /**
        * Local image path provided by the user. This will be converted to an
        * Image variant (base64 data URL) during request serialization.
@@ -37,7 +37,7 @@ export type UserInput =
  * @returns A text UserInput variant
  */
 export function createTextInput(text: string): UserInput {
-  return { type: 'text', text };
+  return { type: "text", text };
 }
 
 /**
@@ -47,7 +47,7 @@ export function createTextInput(text: string): UserInput {
  * @returns An image UserInput variant
  */
 export function createImageInput(imageUrl: string): UserInput {
-  return { type: 'image', image_url: imageUrl };
+  return { type: "image", image_url: imageUrl };
 }
 
 /**
@@ -57,5 +57,5 @@ export function createImageInput(imageUrl: string): UserInput {
  * @returns A local_image UserInput variant
  */
 export function createLocalImageInput(path: string): UserInput {
-  return { type: 'local_image', path };
+  return { type: "local_image", path };
 }

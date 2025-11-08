@@ -19,4 +19,4 @@ export {
   type ReadMcpResourceResult,
   type ResourceContent,
   MCP_RESOURCE_TOOL_SPECS,
-} from './mcpResource.js'
+} from "./mcpResource.js";

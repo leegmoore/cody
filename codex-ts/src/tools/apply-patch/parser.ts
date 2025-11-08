@@ -20,7 +20,12 @@ export interface UpdateFileChunk {
 export type Hunk =
   | { type: "add"; path: string; contents: string }
   | { type: "delete"; path: string }
-  | { type: "update"; path: string; movePath: string | null; chunks: UpdateFileChunk[] };
+  | {
+      type: "update";
+      path: string;
+      movePath: string | null;
+      chunks: UpdateFileChunk[];
+    };
 
 export interface ApplyPatchArgs {
   patch: string;
@@ -78,7 +83,9 @@ export function parsePatchText(patch: string, mode: ParseMode): ApplyPatchArgs {
 
   if (relevantLines.length < 2) {
     // This should only happen when strict validation failed and lenient mode returned fewer lines.
-    throw new InvalidPatchError("The last line of the patch must be '*** End Patch'");
+    throw new InvalidPatchError(
+      "The last line of the patch must be '*** End Patch'",
+    );
   }
 
   const hunks: Hunk[] = [];
@@ -152,7 +159,10 @@ export function parseOneHunk(
 
     let movePath: string | null = null;
     const potentialMove = remaining[0];
-    if (typeof potentialMove === "string" && potentialMove.startsWith(MOVE_TO_MARKER)) {
+    if (
+      typeof potentialMove === "string" &&
+      potentialMove.startsWith(MOVE_TO_MARKER)
+    ) {
       movePath = potentialMove.slice(MOVE_TO_MARKER.length);
       remaining = remaining.slice(1);
       parsedLines += 1;
@@ -210,7 +220,10 @@ export function parseUpdateFileChunk(
   allowMissingContext: boolean,
 ): [UpdateFileChunk, number] {
   if (lines.length === 0) {
-    throw new InvalidHunkError("Update hunk does not contain any lines", lineNumber);
+    throw new InvalidHunkError(
+      "Update hunk does not contain any lines",
+      lineNumber,
+    );
   }
 
   const firstLine = lines[0];
@@ -230,7 +243,10 @@ export function parseUpdateFileChunk(
   }
 
   if (startIndex >= lines.length) {
-    throw new InvalidHunkError("Update hunk does not contain any lines", lineNumber + 1);
+    throw new InvalidHunkError(
+      "Update hunk does not contain any lines",
+      lineNumber + 1,
+    );
   }
 
   const chunk: UpdateFileChunk = {
@@ -244,7 +260,10 @@ export function parseUpdateFileChunk(
   for (const line of lines.slice(startIndex)) {
     if (line === EOF_MARKER) {
       if (parsedLines === 0) {
-        throw new InvalidHunkError("Update hunk does not contain any lines", lineNumber + 1);
+        throw new InvalidHunkError(
+          "Update hunk does not contain any lines",
+          lineNumber + 1,
+        );
       }
       chunk.isEndOfFile = true;
       parsedLines += 1;
@@ -280,7 +299,10 @@ export function parseUpdateFileChunk(
   }
 
   if (parsedLines === 0) {
-    throw new InvalidHunkError("Update hunk does not contain any lines", lineNumber + 1);
+    throw new InvalidHunkError(
+      "Update hunk does not contain any lines",
+      lineNumber + 1,
+    );
   }
 
   return [chunk, parsedLines + startIndex];
@@ -299,10 +321,14 @@ function checkPatchBoundariesStrict(lines: readonly string[]): void {
   }
 
   if (first !== undefined && first !== BEGIN_PATCH_MARKER) {
-    throw new InvalidPatchError("The first line of the patch must be '*** Begin Patch'");
+    throw new InvalidPatchError(
+      "The first line of the patch must be '*** Begin Patch'",
+    );
   }
 
-  throw new InvalidPatchError("The last line of the patch must be '*** End Patch'");
+  throw new InvalidPatchError(
+    "The last line of the patch must be '*** End Patch'",
+  );
 }
 
 function checkPatchBoundariesLenient(

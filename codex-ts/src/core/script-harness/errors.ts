@@ -268,9 +268,7 @@ export class ToolValidationError extends ScriptHarnessError {
  * Lists pending tool calls
  */
 export class DetachedPromiseError extends ScriptHarnessError {
-  constructor(
-    public readonly orphanedPromises: string[],
-  ) {
+  constructor(public readonly orphanedPromises: string[]) {
     super(
       `Orphaned promises detected: ${orphanedPromises.join(", ")}`,
       "DetachedPromiseError",
@@ -291,10 +289,17 @@ export class HarnessInternalError extends ScriptHarnessError {
     message: string,
     public readonly originalError?: unknown,
   ) {
-    super(`Internal harness error: ${message}`, "HarnessInternalError", "executing", {
-      originalError:
-        originalError instanceof Error ? originalError.message : String(originalError),
-    });
+    super(
+      `Internal harness error: ${message}`,
+      "HarnessInternalError",
+      "executing",
+      {
+        originalError:
+          originalError instanceof Error
+            ? originalError.message
+            : String(originalError),
+      },
+    );
   }
 }
 
@@ -400,9 +405,7 @@ export class ConcurrencyLimitError extends ScriptHarnessError {
  * Retryable: No (security violation)
  */
 export class BannedIdentifierError extends ScriptHarnessError {
-  constructor(
-    public readonly identifiers: string[],
-  ) {
+  constructor(public readonly identifiers: string[]) {
     super(
       `Banned identifiers detected in script: ${identifiers.join(", ")}`,
       "BannedIdentifierError",

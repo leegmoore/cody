@@ -1,5 +1,5 @@
-import { LRUCache } from 'lru-cache';
-import { createHash } from 'crypto';
+import { LRUCache } from "lru-cache";
+import { createHash } from "crypto";
 
 /**
  * Result type for fallible operations.
@@ -24,7 +24,7 @@ export class LruCache<K extends {}, V extends {}> {
    */
   constructor(capacity: number) {
     if (capacity <= 0) {
-      throw new Error('Capacity must be greater than 0');
+      throw new Error("Capacity must be greater than 0");
     }
     this.cache = new LRUCache<K, V>({ max: capacity });
   }
@@ -35,7 +35,9 @@ export class LruCache<K extends {}, V extends {}> {
    * @param capacity - Maximum number of entries
    * @returns Cache instance or undefined if capacity is 0
    */
-  static tryWithCapacity<K extends {}, V extends {}>(capacity: number): LruCache<K, V> | undefined {
+  static tryWithCapacity<K extends {}, V extends {}>(
+    capacity: number,
+  ): LruCache<K, V> | undefined {
     if (capacity > 0) {
       return new LruCache<K, V>(capacity);
     }
@@ -67,10 +69,7 @@ export class LruCache<K extends {}, V extends {}> {
    * @param factory - Function that returns a Result
    * @returns Result containing the cached or newly computed value
    */
-  getOrTryInsertWith<E>(
-    key: K,
-    factory: () => Result<V, E>
-  ): Result<V, E> {
+  getOrTryInsertWith<E>(key: K, factory: () => Result<V, E>): Result<V, E> {
     const existing = this.cache.get(key);
     if (existing !== undefined) {
       return { ok: true, value: existing };
@@ -152,7 +151,7 @@ export class LruCache<K extends {}, V extends {}> {
  * ```
  */
 export function sha1Digest(bytes: Uint8Array): Uint8Array {
-  const hash = createHash('sha1');
+  const hash = createHash("sha1");
   hash.update(bytes);
   return new Uint8Array(hash.digest());
 }

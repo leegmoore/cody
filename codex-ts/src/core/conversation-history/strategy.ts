@@ -7,17 +7,17 @@
  * - Future: OneShotHistoryStrategy (epic + log file pattern)
  */
 
-import type { ResponseItem } from '../../protocol/models'
-import type { TurnItem } from '../../protocol/items'
+import type { ResponseItem } from "../../protocol/models";
+import type { TurnItem } from "../../protocol/items";
 
 /**
  * Token budget for history retrieval.
  */
 export interface TokenBudget {
   /** Maximum tokens allowed for history */
-  maxTokens: number
+  maxTokens: number;
   /** Reserved tokens for system prompts, tools, etc. */
-  reservedTokens?: number
+  reservedTokens?: number;
 }
 
 /**
@@ -25,11 +25,11 @@ export interface TokenBudget {
  */
 export interface HistoryStats {
   /** Total number of turns */
-  turnCount: number
+  turnCount: number;
   /** Total number of items across all turns */
-  itemCount: number
+  itemCount: number;
   /** Estimated token count (if available) */
-  tokenCount?: number
+  tokenCount?: number;
 }
 
 /**
@@ -37,13 +37,13 @@ export interface HistoryStats {
  */
 export enum FidelityLevel {
   /** Full detail - original turn content */
-  Full = 'full',
+  Full = "full",
   /** High compression - key points preserved */
-  High = 'high',
+  High = "high",
   /** Medium compression - summary level */
-  Medium = 'medium',
+  Medium = "medium",
   /** Low compression - minimal context */
-  Low = 'low',
+  Low = "low",
 }
 
 /**
@@ -51,11 +51,11 @@ export enum FidelityLevel {
  */
 export interface TurnContent {
   /** Turn identifier */
-  turnId: string
+  turnId: string;
   /** Fidelity level of this content */
-  fidelity: FidelityLevel
+  fidelity: FidelityLevel;
   /** Turn items at this fidelity */
-  items: TurnItem[]
+  items: TurnItem[];
 }
 
 /**
@@ -70,7 +70,7 @@ export interface HistoryStrategy {
    *
    * @param items - Response items to record
    */
-  recordItems(items: ResponseItem[]): Promise<void>
+  recordItems(items: ResponseItem[]): Promise<void>;
 
   /**
    * Get conversation history within a token budget.
@@ -81,7 +81,7 @@ export interface HistoryStrategy {
    * @param budget - Token budget for history
    * @returns Array of response items to include in prompt
    */
-  getHistory(budget: TokenBudget): Promise<ResponseItem[]>
+  getHistory(budget: TokenBudget): Promise<ResponseItem[]>;
 
   /**
    * Get a specific turn at a requested fidelity level.
@@ -92,17 +92,20 @@ export interface HistoryStrategy {
    * @param level - Desired fidelity level
    * @returns Turn content at requested fidelity, or undefined if not found
    */
-  getTurn?(turnId: string, level: FidelityLevel): Promise<TurnContent | undefined>
+  getTurn?(
+    turnId: string,
+    level: FidelityLevel,
+  ): Promise<TurnContent | undefined>;
 
   /**
    * Get statistics about the conversation history.
    *
    * @returns Current history statistics
    */
-  getStats(): HistoryStats
+  getStats(): HistoryStats;
 
   /**
    * Clear all conversation history.
    */
-  clear(): Promise<void>
+  clear(): Promise<void>;
 }

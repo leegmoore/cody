@@ -11,8 +11,8 @@
  * ```
  */
 export function isOpenAiCompatibleBaseUrl(baseUrl: string): boolean {
-  const trimmed = baseUrl.replace(/\/+$/, ''); // Remove trailing slashes
-  return trimmed.endsWith('/v1');
+  const trimmed = baseUrl.replace(/\/+$/, ""); // Remove trailing slashes
+  return trimmed.endsWith("/v1");
 }
 
 /**
@@ -31,10 +31,10 @@ export function isOpenAiCompatibleBaseUrl(baseUrl: string): boolean {
  * ```
  */
 export function baseUrlToHostRoot(baseUrl: string): string {
-  const trimmed = baseUrl.replace(/\/+$/, ''); // Remove trailing slashes
+  const trimmed = baseUrl.replace(/\/+$/, ""); // Remove trailing slashes
 
-  if (trimmed.endsWith('/v1')) {
-    return trimmed.slice(0, -3).replace(/\/+$/, ''); // Remove /v1 and any trailing slashes
+  if (trimmed.endsWith("/v1")) {
+    return trimmed.slice(0, -3).replace(/\/+$/, ""); // Remove /v1 and any trailing slashes
   }
 
   return trimmed;

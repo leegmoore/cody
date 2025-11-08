@@ -8,40 +8,40 @@
  * @module core/config
  */
 
-import { AskForApproval, SandboxPolicy } from '../protocol/protocol'
+import { AskForApproval, SandboxPolicy } from "../protocol/protocol";
 import {
   ReasoningEffort,
   ReasoningSummary,
   Verbosity,
   ForcedLoginMethod,
-} from '../protocol/config-types'
+} from "../protocol/config-types";
 
 /**
  * Maximum number of bytes of the documentation that will be embedded.
  * Larger files are silently truncated to this size.
  */
-export const PROJECT_DOC_MAX_BYTES = 32 * 1024 // 32 KiB
+export const PROJECT_DOC_MAX_BYTES = 32 * 1024; // 32 KiB
 
 /**
  * Default model for OpenAI (platform-dependent in Rust, but we'll use a single default)
  */
-export const OPENAI_DEFAULT_MODEL = 'gpt-5-codex'
-export const OPENAI_DEFAULT_REVIEW_MODEL = 'gpt-5-codex'
-export const GPT_5_CODEX_MEDIUM_MODEL = 'gpt-5-codex'
+export const OPENAI_DEFAULT_MODEL = "gpt-5-codex";
+export const OPENAI_DEFAULT_REVIEW_MODEL = "gpt-5-codex";
+export const GPT_5_CODEX_MEDIUM_MODEL = "gpt-5-codex";
 
 /**
  * Configuration TOML filename
  */
-export const CONFIG_TOML_FILE = 'config.toml'
+export const CONFIG_TOML_FILE = "config.toml";
 
 /**
  * History persistence mode
  */
 export enum HistoryPersistence {
   /** Save all history entries to disk */
-  SaveAll = 'save-all',
+  SaveAll = "save-all",
   /** Do not write history to disk */
-  None = 'none',
+  None = "none",
 }
 
 /**
@@ -49,9 +49,9 @@ export enum HistoryPersistence {
  */
 export interface History {
   /** If None, history entries will not be written to disk */
-  persistence: HistoryPersistence
+  persistence: HistoryPersistence;
   /** Optional maximum size of the history file in bytes */
-  maxBytes?: number
+  maxBytes?: number;
 }
 
 export namespace History {
@@ -59,7 +59,7 @@ export namespace History {
     return {
       persistence: HistoryPersistence.SaveAll,
       maxBytes: undefined,
-    }
+    };
   }
 }
 
@@ -67,11 +67,11 @@ export namespace History {
  * URI-based file opener options
  */
 export enum UriBasedFileOpener {
-  VsCode = 'vscode',
-  VsCodeInsiders = 'vscode-insiders',
-  Windsurf = 'windsurf',
-  Cursor = 'cursor',
-  None = 'none',
+  VsCode = "vscode",
+  VsCodeInsiders = "vscode-insiders",
+  Windsurf = "windsurf",
+  Cursor = "cursor",
+  None = "none",
 }
 
 export namespace UriBasedFileOpener {
@@ -81,15 +81,15 @@ export namespace UriBasedFileOpener {
   export function getScheme(opener: UriBasedFileOpener): string | undefined {
     switch (opener) {
       case UriBasedFileOpener.VsCode:
-        return 'vscode'
+        return "vscode";
       case UriBasedFileOpener.VsCodeInsiders:
-        return 'vscode-insiders'
+        return "vscode-insiders";
       case UriBasedFileOpener.Windsurf:
-        return 'windsurf'
+        return "windsurf";
       case UriBasedFileOpener.Cursor:
-        return 'cursor'
+        return "cursor";
       case UriBasedFileOpener.None:
-        return undefined
+        return undefined;
     }
   }
 }
@@ -101,7 +101,7 @@ export namespace UriBasedFileOpener {
  */
 export interface McpServerConfig {
   // Simplified for now - full implementation in Phase 4
-  enabled: boolean
+  enabled: boolean;
 }
 
 /**
@@ -113,97 +113,97 @@ export interface McpServerConfig {
  */
 export interface Config {
   /** Optional override of model selection */
-  model: string
+  model: string;
 
   /** Model used specifically for review sessions */
-  reviewModel: string
+  reviewModel: string;
 
   /** Size of the context window for the model, in tokens */
-  modelContextWindow?: number
+  modelContextWindow?: number;
 
   /** Maximum number of output tokens */
-  modelMaxOutputTokens?: number
+  modelMaxOutputTokens?: number;
 
   /** Token usage threshold triggering auto-compaction of conversation history */
-  modelAutoCompactTokenLimit?: number
+  modelAutoCompactTokenLimit?: number;
 
   /** Key into the model_providers map that specifies which provider to use */
-  modelProviderId: string
+  modelProviderId: string;
 
   /** Approval policy for executing commands */
-  approvalPolicy: AskForApproval
+  approvalPolicy: AskForApproval;
 
   /** Sandbox policy */
-  sandboxPolicy: SandboxPolicy
+  sandboxPolicy: SandboxPolicy;
 
   /** True if the user passed in an override or set a value in config.toml */
-  didUserSetCustomApprovalPolicyOrSandboxMode: boolean
+  didUserSetCustomApprovalPolicyOrSandboxMode: boolean;
 
   /** When true, AgentReasoning events will be suppressed from output */
-  hideAgentReasoning: boolean
+  hideAgentReasoning: boolean;
 
   /** When true, AgentReasoningRawContentEvent events will be shown in the UI/output */
-  showRawAgentReasoning: boolean
+  showRawAgentReasoning: boolean;
 
   /** User-provided instructions from AGENTS.md */
-  userInstructions?: string
+  userInstructions?: string;
 
   /** Base instructions override */
-  baseInstructions?: string
+  baseInstructions?: string;
 
   /** Developer instructions override injected as a separate message */
-  developerInstructions?: string
+  developerInstructions?: string;
 
   /** Compact prompt override */
-  compactPrompt?: string
+  compactPrompt?: string;
 
   /** Optional external notifier command */
-  notify?: string[]
+  notify?: string[];
 
   /** The directory that should be treated as the current working directory */
-  cwd: string
+  cwd: string;
 
   /** Definition for MCP servers that Codex can reach out to for tool calls */
-  mcpServers: Map<string, McpServerConfig>
+  mcpServers: Map<string, McpServerConfig>;
 
   /** Maximum number of bytes to include from an AGENTS.md project doc file */
-  projectDocMaxBytes: number
+  projectDocMaxBytes: number;
 
   /** Additional filenames to try when looking for project-level docs */
-  projectDocFallbackFilenames: string[]
+  projectDocFallbackFilenames: string[];
 
   /** Directory containing all Codex state (defaults to ~/.codex) */
-  codexHome: string
+  codexHome: string;
 
   /** Settings that govern if and what will be written to ~/.codex/history.jsonl */
-  history: History
+  history: History;
 
   /** Optional URI-based file opener */
-  fileOpener: UriBasedFileOpener
+  fileOpener: UriBasedFileOpener;
 
   /** Value to use for reasoning.effort when making a request using the Responses API */
-  modelReasoningEffort?: ReasoningEffort
+  modelReasoningEffort?: ReasoningEffort;
 
   /** If not "none", the value to use for reasoning.summary when making a request */
-  modelReasoningSummary: ReasoningSummary
+  modelReasoningSummary: ReasoningSummary;
 
   /** Optional verbosity control for GPT-5 models */
-  modelVerbosity?: Verbosity
+  modelVerbosity?: Verbosity;
 
   /** Base URL for requests to ChatGPT */
-  chatgptBaseUrl: string
+  chatgptBaseUrl: string;
 
   /** When set, restricts ChatGPT login to a specific workspace identifier */
-  forcedChatgptWorkspaceId?: string
+  forcedChatgptWorkspaceId?: string;
 
   /** When set, restricts the login mechanism users may use */
-  forcedLoginMethod?: ForcedLoginMethod
+  forcedLoginMethod?: ForcedLoginMethod;
 
   /** Include the apply_patch tool */
-  includeApplyPatchTool: boolean
+  includeApplyPatchTool: boolean;
 
   /** Enable web search tool */
-  toolsWebSearchRequest: boolean
+  toolsWebSearchRequest: boolean;
 }
 
 export namespace Config {
@@ -216,34 +216,34 @@ export namespace Config {
    */
   export function createDefault(codexHome: string, cwd: string): Config {
     if (!codexHome) {
-      throw new Error('codex_home is required')
+      throw new Error("codex_home is required");
     }
     if (!cwd) {
-      throw new Error('cwd is required')
+      throw new Error("cwd is required");
     }
 
-    const config: Config = {} as Config
+    const config: Config = {} as Config;
 
-    config.model = OPENAI_DEFAULT_MODEL
-    config.reviewModel = OPENAI_DEFAULT_REVIEW_MODEL
-    config.modelProviderId = 'openai'
-    config.approvalPolicy = 'on-failure' // AskForApproval
-    config.sandboxPolicy = SandboxPolicy.newReadOnlyPolicy()
-    config.didUserSetCustomApprovalPolicyOrSandboxMode = false
-    config.hideAgentReasoning = false
-    config.showRawAgentReasoning = false
-    config.cwd = cwd
-    config.mcpServers = new Map()
-    config.projectDocMaxBytes = PROJECT_DOC_MAX_BYTES
-    config.projectDocFallbackFilenames = []
-    config.codexHome = codexHome
-    config.history = History.defaultHistory()
-    config.fileOpener = UriBasedFileOpener.None
-    config.modelReasoningSummary = ReasoningSummary.Auto
-    config.chatgptBaseUrl = 'https://chatgpt.com/backend-api/'
-    config.includeApplyPatchTool = false
-    config.toolsWebSearchRequest = false
+    config.model = OPENAI_DEFAULT_MODEL;
+    config.reviewModel = OPENAI_DEFAULT_REVIEW_MODEL;
+    config.modelProviderId = "openai";
+    config.approvalPolicy = "on-failure"; // AskForApproval
+    config.sandboxPolicy = SandboxPolicy.newReadOnlyPolicy();
+    config.didUserSetCustomApprovalPolicyOrSandboxMode = false;
+    config.hideAgentReasoning = false;
+    config.showRawAgentReasoning = false;
+    config.cwd = cwd;
+    config.mcpServers = new Map();
+    config.projectDocMaxBytes = PROJECT_DOC_MAX_BYTES;
+    config.projectDocFallbackFilenames = [];
+    config.codexHome = codexHome;
+    config.history = History.defaultHistory();
+    config.fileOpener = UriBasedFileOpener.None;
+    config.modelReasoningSummary = ReasoningSummary.Auto;
+    config.chatgptBaseUrl = "https://chatgpt.com/backend-api/";
+    config.includeApplyPatchTool = false;
+    config.toolsWebSearchRequest = false;
 
-    return config
+    return config;
   }
 }

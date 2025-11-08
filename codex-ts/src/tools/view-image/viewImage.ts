@@ -4,13 +4,13 @@
  * Ported from: codex-rs/core/src/tools/handlers/view_image.rs
  */
 
-import { promises as fs } from 'node:fs'
-import { isAbsolute, resolve } from 'node:path'
-import { ToolResult } from '../types.js'
+import { promises as fs } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
+import { ToolResult } from "../types.js";
 
 export interface ViewImageParams {
-  path: string
-  workdir?: string
+  path: string;
+  workdir?: string;
 }
 
 /**
@@ -28,29 +28,29 @@ export interface ViewImageParams {
  */
 export async function viewImage(params: ViewImageParams): Promise<ToolResult> {
   // Resolve the path
-  let workingDir = params.workdir ?? process.cwd()
+  let workingDir = params.workdir ?? process.cwd();
   if (!isAbsolute(workingDir)) {
-    workingDir = resolve(process.cwd(), workingDir)
+    workingDir = resolve(process.cwd(), workingDir);
   }
 
-  let imagePath = params.path
+  let imagePath = params.path;
   if (!isAbsolute(imagePath)) {
-    imagePath = resolve(workingDir, imagePath)
+    imagePath = resolve(workingDir, imagePath);
   }
 
   // Check if file exists
-  let metadata
+  let metadata;
   try {
-    metadata = await fs.stat(imagePath)
+    metadata = await fs.stat(imagePath);
   } catch (error) {
     throw new Error(
       `unable to locate image at \`${imagePath}\`: ${(error as Error).message}`,
-    )
+    );
   }
 
   // Check if it's a file
   if (!metadata.isFile()) {
-    throw new Error(`image path \`${imagePath}\` is not a file`)
+    throw new Error(`image path \`${imagePath}\` is not a file`);
   }
 
   // Note: In full implementation, the image would be read and converted to base64
@@ -60,5 +60,5 @@ export async function viewImage(params: ViewImageParams): Promise<ToolResult> {
   return {
     content: `attached local image path: ${imagePath}`,
     success: true,
-  }
+  };
 }

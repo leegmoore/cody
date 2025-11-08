@@ -1,4 +1,8 @@
-import { v7 as uuidv7, parse as uuidParse, stringify as uuidStringify } from 'uuid';
+import {
+  v7 as uuidv7,
+  parse as uuidParse,
+  stringify as uuidStringify,
+} from "uuid";
 
 /**
  * Unique identifier for a conversation, using UUIDv7.

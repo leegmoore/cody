@@ -13,7 +13,7 @@
  * - Thread-safe (single-threaded JS, but async-safe)
  */
 
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
 /**
  * Cached script entry
@@ -90,7 +90,7 @@ export class ScriptCache {
    * Generate SHA-256 hash of source code
    */
   private hash(sourceCode: string): string {
-    return createHash('sha256').update(sourceCode, 'utf8').digest('hex');
+    return createHash("sha256").update(sourceCode, "utf8").digest("hex");
   }
 
   /**
@@ -99,7 +99,7 @@ export class ScriptCache {
    * @param sourceCode - Script source code
    * @returns Cached result or undefined
    */
-  get(sourceCode: string): CachedScript['parsed'] | undefined {
+  get(sourceCode: string): CachedScript["parsed"] | undefined {
     if (!this.config.enabled) {
       return undefined;
     }
@@ -131,10 +131,7 @@ export class ScriptCache {
    * @param sourceCode - Script source code
    * @param parsed - Parsed script result
    */
-  set(
-    sourceCode: string,
-    parsed: CachedScript['parsed'],
-  ): void {
+  set(sourceCode: string, parsed: CachedScript["parsed"]): void {
     if (!this.config.enabled) {
       return;
     }

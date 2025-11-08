@@ -8,12 +8,12 @@
  * - Running git commands safely
  */
 
-import { spawn } from 'node:child_process'
-import { writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join, relative, normalize, isAbsolute, sep } from 'node:path'
-import { symlinkSync, existsSync } from 'node:fs'
-import { platform } from 'node:os'
+import { spawn } from "node:child_process";
+import { writeFile, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, relative, normalize, isAbsolute, sep } from "node:path";
+import { symlinkSync, existsSync } from "node:fs";
+import { platform } from "node:os";
 
 /**
  * Errors returned while managing git operations.
@@ -24,40 +24,44 @@ export class GitToolingError extends Error {
     public readonly code?: string,
     public readonly details?: any,
   ) {
-    super(message)
-    this.name = 'GitToolingError'
+    super(message);
+    this.name = "GitToolingError";
   }
 
-  static gitCommand(command: string, exitCode: number, stderr: string): GitToolingError {
+  static gitCommand(
+    command: string,
+    exitCode: number,
+    stderr: string,
+  ): GitToolingError {
     return new GitToolingError(
       `git command \`${command}\` failed with status ${exitCode}: ${stderr}`,
-      'GIT_COMMAND_FAILED',
+      "GIT_COMMAND_FAILED",
       { command, exitCode, stderr },
-    )
+    );
   }
 
   static notAGitRepository(path: string): GitToolingError {
     return new GitToolingError(
       `${path} is not a git repository`,
-      'NOT_A_GIT_REPOSITORY',
+      "NOT_A_GIT_REPOSITORY",
       { path },
-    )
+    );
   }
 
   static nonRelativePath(path: string): GitToolingError {
     return new GitToolingError(
       `path ${path} must be relative to the repository root`,
-      'NON_RELATIVE_PATH',
+      "NON_RELATIVE_PATH",
       { path },
-    )
+    );
   }
 
   static pathEscapesRepository(path: string): GitToolingError {
     return new GitToolingError(
       `path ${path} escapes the repository root`,
-      'PATH_ESCAPES_REPOSITORY',
+      "PATH_ESCAPES_REPOSITORY",
       { path },
-    )
+    );
   }
 }
 
@@ -65,9 +69,9 @@ export class GitToolingError extends Error {
  * Result of running a git command.
  */
 interface GitResult {
-  exitCode: number
-  stdout: string
-  stderr: string
+  exitCode: number;
+  stdout: string;
+  stderr: string;
 }
 
 /**
@@ -79,34 +83,39 @@ async function runGit(
   env?: Record<string, string>,
 ): Promise<GitResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', args, {
+    const child = spawn("git", args, {
       cwd,
       env: { ...process.env, ...env },
-    })
+    });
 
-    let stdout = ''
-    let stderr = ''
+    let stdout = "";
+    let stderr = "";
 
-    child.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
 
-    child.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
 
-    child.on('error', (error) => {
-      reject(new GitToolingError(`Failed to spawn git: ${error.message}`, 'SPAWN_FAILED'))
-    })
+    child.on("error", (error) => {
+      reject(
+        new GitToolingError(
+          `Failed to spawn git: ${error.message}`,
+          "SPAWN_FAILED",
+        ),
+      );
+    });
 
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       resolve({
         exitCode: code || 0,
         stdout,
         stderr,
-      })
-    })
-  })
+      });
+    });
+  });
 }
 
 /**
@@ -117,11 +126,15 @@ async function runGitForStdout(
   args: string[],
   env?: Record<string, string>,
 ): Promise<string> {
-  const result = await runGit(cwd, args, env)
+  const result = await runGit(cwd, args, env);
   if (result.exitCode !== 0) {
-    throw GitToolingError.gitCommand(`git ${args.join(' ')}`, result.exitCode, result.stderr)
+    throw GitToolingError.gitCommand(
+      `git ${args.join(" ")}`,
+      result.exitCode,
+      result.stderr,
+    );
   }
-  return result.stdout.trim()
+  return result.stdout.trim();
 }
 
 /**
@@ -132,9 +145,13 @@ async function runGitForStatus(
   args: string[],
   env?: Record<string, string>,
 ): Promise<void> {
-  const result = await runGit(cwd, args, env)
+  const result = await runGit(cwd, args, env);
   if (result.exitCode !== 0) {
-    throw GitToolingError.gitCommand(`git ${args.join(' ')}`, result.exitCode, result.stderr)
+    throw GitToolingError.gitCommand(
+      `git ${args.join(" ")}`,
+      result.exitCode,
+      result.stderr,
+    );
   }
 }
 
@@ -143,17 +160,23 @@ async function runGitForStatus(
  */
 export async function ensureGitRepository(path: string): Promise<void> {
   try {
-    const output = await runGitForStdout(path, ['rev-parse', '--is-inside-work-tree'])
-    if (output !== 'true') {
-      throw GitToolingError.notAGitRepository(path)
+    const output = await runGitForStdout(path, [
+      "rev-parse",
+      "--is-inside-work-tree",
+    ]);
+    if (output !== "true") {
+      throw GitToolingError.notAGitRepository(path);
     }
   } catch (error: any) {
-    if (error instanceof GitToolingError && error.code === 'GIT_COMMAND_FAILED') {
+    if (
+      error instanceof GitToolingError &&
+      error.code === "GIT_COMMAND_FAILED"
+    ) {
       if (error.details?.exitCode === 128) {
-        throw GitToolingError.notAGitRepository(path)
+        throw GitToolingError.notAGitRepository(path);
       }
     }
-    throw error
+    throw error;
   }
 }
 
@@ -162,12 +185,12 @@ export async function ensureGitRepository(path: string): Promise<void> {
  */
 export async function resolveHead(path: string): Promise<string | undefined> {
   try {
-    return await runGitForStdout(path, ['rev-parse', '--verify', 'HEAD'])
+    return await runGitForStdout(path, ["rev-parse", "--verify", "HEAD"]);
   } catch (error: any) {
     if (error instanceof GitToolingError && error.details?.exitCode === 128) {
-      return undefined
+      return undefined;
     }
-    throw error
+    throw error;
   }
 }
 
@@ -175,8 +198,8 @@ export async function resolveHead(path: string): Promise<string | undefined> {
  * Resolve the repository root path.
  */
 export async function resolveRepositoryRoot(path: string): Promise<string> {
-  const root = await runGitForStdout(path, ['rev-parse', '--show-toplevel'])
-  return root
+  const root = await runGitForStdout(path, ["rev-parse", "--show-toplevel"]);
+  return root;
 }
 
 /**
@@ -184,26 +207,26 @@ export async function resolveRepositoryRoot(path: string): Promise<string> {
  */
 export function normalizeRelativePath(path: string): string {
   if (isAbsolute(path)) {
-    throw GitToolingError.nonRelativePath(path)
+    throw GitToolingError.nonRelativePath(path);
   }
 
-  const normalized = normalize(path)
-  const parts = normalized.split(sep)
+  const normalized = normalize(path);
+  const parts = normalized.split(sep);
 
   // Check for parent directory escapes
-  let depth = 0
+  let depth = 0;
   for (const part of parts) {
-    if (part === '..') {
-      depth--
+    if (part === "..") {
+      depth--;
       if (depth < 0) {
-        throw GitToolingError.pathEscapesRepository(path)
+        throw GitToolingError.pathEscapesRepository(path);
       }
-    } else if (part !== '.' && part !== '') {
-      depth++
+    } else if (part !== "." && part !== "") {
+      depth++;
     }
   }
 
-  return normalized
+  return normalized;
 }
 
 /**
@@ -211,13 +234,13 @@ export function normalizeRelativePath(path: string): string {
  */
 export interface GhostCommit {
   /** Commit ID for the snapshot */
-  id: string
+  id: string;
   /** Parent commit ID, if the repository had a HEAD at creation time */
-  parent?: string
+  parent?: string;
   /** Untracked or ignored files that already existed when the snapshot was captured */
-  preexisting_untracked_files: string[]
+  preexisting_untracked_files: string[];
   /** Untracked or ignored directories that already existed when the snapshot was captured */
-  preexisting_untracked_dirs: string[]
+  preexisting_untracked_dirs: string[];
 }
 
 /**
@@ -225,11 +248,11 @@ export interface GhostCommit {
  */
 export interface CreateGhostCommitOptions {
   /** Repository path */
-  repoPath: string
+  repoPath: string;
   /** Commit message (defaults to "codex snapshot") */
-  message?: string
+  message?: string;
   /** Paths to force include (ignored files) */
-  forceInclude?: string[]
+  forceInclude?: string[];
 }
 
 /**
@@ -240,62 +263,62 @@ export interface CreateGhostCommitOptions {
 export async function createGhostCommit(
   options: CreateGhostCommitOptions,
 ): Promise<GhostCommit> {
-  await ensureGitRepository(options.repoPath)
+  await ensureGitRepository(options.repoPath);
 
-  const repoRoot = await resolveRepositoryRoot(options.repoPath)
-  const parent = await resolveHead(repoRoot)
-  const message = options.message || 'codex snapshot'
+  const repoRoot = await resolveRepositoryRoot(options.repoPath);
+  const parent = await resolveHead(repoRoot);
+  const message = options.message || "codex snapshot";
 
   // Create temporary index
-  const tempDir = await mkdtemp(join(tmpdir(), 'codex-git-index-'))
-  const indexPath = join(tempDir, 'index')
+  const tempDir = await mkdtemp(join(tmpdir(), "codex-git-index-"));
+  const indexPath = join(tempDir, "index");
 
   try {
-    const env = { GIT_INDEX_FILE: indexPath }
+    const env = { GIT_INDEX_FILE: indexPath };
 
     // Pre-populate index with HEAD if it exists
     if (parent) {
-      await runGitForStatus(repoRoot, ['read-tree', parent], env)
+      await runGitForStatus(repoRoot, ["read-tree", parent], env);
     }
 
     // Add all changes
-    await runGitForStatus(repoRoot, ['add', '--all'], env)
+    await runGitForStatus(repoRoot, ["add", "--all"], env);
 
     // Force add specified paths
     if (options.forceInclude && options.forceInclude.length > 0) {
-      const normalized = options.forceInclude.map(normalizeRelativePath)
-      await runGitForStatus(repoRoot, ['add', '--force', ...normalized], env)
+      const normalized = options.forceInclude.map(normalizeRelativePath);
+      await runGitForStatus(repoRoot, ["add", "--force", ...normalized], env);
     }
 
     // Write tree
-    const treeId = await runGitForStdout(repoRoot, ['write-tree'], env)
+    const treeId = await runGitForStdout(repoRoot, ["write-tree"], env);
 
     // Create commit
     const commitEnv = {
       ...env,
-      GIT_AUTHOR_NAME: 'Codex',
-      GIT_AUTHOR_EMAIL: 'codex@openai.com',
-      GIT_COMMITTER_NAME: 'Codex',
-      GIT_COMMITTER_EMAIL: 'codex@openai.com',
-    }
+      GIT_AUTHOR_NAME: "Codex",
+      GIT_AUTHOR_EMAIL: "codex@openai.com",
+      GIT_COMMITTER_NAME: "Codex",
+      GIT_COMMITTER_EMAIL: "codex@openai.com",
+    };
 
-    const commitArgs = ['commit-tree', treeId]
+    const commitArgs = ["commit-tree", treeId];
     if (parent) {
-      commitArgs.push('-p', parent)
+      commitArgs.push("-p", parent);
     }
-    commitArgs.push('-m', message)
+    commitArgs.push("-m", message);
 
-    const commitId = await runGitForStdout(repoRoot, commitArgs, commitEnv)
+    const commitId = await runGitForStdout(repoRoot, commitArgs, commitEnv);
 
     return {
       id: commitId,
       parent,
       preexisting_untracked_files: [],
       preexisting_untracked_dirs: [],
-    }
+    };
   } finally {
     // Clean up temp directory
-    await rm(tempDir, { recursive: true, force: true })
+    await rm(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -304,13 +327,13 @@ export async function createGhostCommit(
  */
 export interface ApplyGitRequest {
   /** Working directory */
-  cwd: string
+  cwd: string;
   /** Unified diff content */
-  diff: string
+  diff: string;
   /** Whether to revert the patch (git apply -R) */
-  revert?: boolean
+  revert?: boolean;
   /** Dry-run mode (git apply --check) */
-  preflight?: boolean
+  preflight?: boolean;
 }
 
 /**
@@ -318,51 +341,53 @@ export interface ApplyGitRequest {
  */
 export interface ApplyGitResult {
   /** Exit code from git apply */
-  exitCode: number
+  exitCode: number;
   /** Paths that were successfully applied */
-  appliedPaths: string[]
+  appliedPaths: string[];
   /** Paths that were skipped */
-  skippedPaths: string[]
+  skippedPaths: string[];
   /** Paths with conflicts */
-  conflictedPaths: string[]
+  conflictedPaths: string[];
   /** stdout from git apply */
-  stdout: string
+  stdout: string;
   /** stderr from git apply */
-  stderr: string
+  stderr: string;
   /** Command that was run (for logging) */
-  cmdForLog: string
+  cmdForLog: string;
 }
 
 /**
  * Apply a unified diff to the target repository using git apply.
  */
-export async function applyGitPatch(req: ApplyGitRequest): Promise<ApplyGitResult> {
-  const repoRoot = await resolveRepositoryRoot(req.cwd)
+export async function applyGitPatch(
+  req: ApplyGitRequest,
+): Promise<ApplyGitResult> {
+  const repoRoot = await resolveRepositoryRoot(req.cwd);
 
   // Write patch to temporary file
-  const tempDir = await mkdtemp(join(tmpdir(), 'codex-git-patch-'))
-  const patchPath = join(tempDir, 'patch.diff')
+  const tempDir = await mkdtemp(join(tmpdir(), "codex-git-patch-"));
+  const patchPath = join(tempDir, "patch.diff");
 
   try {
-    await writeFile(patchPath, req.diff)
+    await writeFile(patchPath, req.diff);
 
     // Build git apply args
-    const args = ['apply', '--3way']
+    const args = ["apply", "--3way"];
     if (req.revert) {
-      args.push('-R')
+      args.push("-R");
     }
     if (req.preflight) {
-      args.push('--check')
+      args.push("--check");
     }
-    args.push(patchPath)
+    args.push(patchPath);
 
-    const cmdForLog = `git ${args.join(' ')}`
-    const result = await runGit(repoRoot, args)
+    const cmdForLog = `git ${args.join(" ")}`;
+    const result = await runGit(repoRoot, args);
 
     const { appliedPaths, skippedPaths, conflictedPaths } = parseGitApplyOutput(
       result.stdout,
       result.stderr,
-    )
+    );
 
     return {
       exitCode: result.exitCode,
@@ -372,9 +397,9 @@ export async function applyGitPatch(req: ApplyGitRequest): Promise<ApplyGitResul
       stdout: result.stdout,
       stderr: result.stderr,
       cmdForLog,
-    }
+    };
   } finally {
-    await rm(tempDir, { recursive: true, force: true })
+    await rm(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -385,56 +410,61 @@ function parseGitApplyOutput(
   stdout: string,
   stderr: string,
 ): {
-  appliedPaths: string[]
-  skippedPaths: string[]
-  conflictedPaths: string[]
+  appliedPaths: string[];
+  skippedPaths: string[];
+  conflictedPaths: string[];
 } {
-  const appliedPaths: string[] = []
-  const skippedPaths: string[] = []
-  const conflictedPaths: string[] = []
+  const appliedPaths: string[] = [];
+  const skippedPaths: string[] = [];
+  const conflictedPaths: string[] = [];
 
-  const combined = stdout + '\n' + stderr
+  const combined = stdout + "\n" + stderr;
 
   // Match patterns like "Applying: path/to/file" or "Applied patch to 'path/to/file'"
-  const applyPattern = /(?:Applying|Applied patch to)[:\s]+'?([^'\n]+)'?/g
-  let match
+  const applyPattern = /(?:Applying|Applied patch to)[:\s]+'?([^'\n]+)'?/g;
+  let match;
   while ((match = applyPattern.exec(combined)) !== null) {
-    appliedPaths.push(match[1])
+    appliedPaths.push(match[1]);
   }
 
   // Match conflict patterns
-  const conflictPattern = /CONFLICT.*?:\s+([^\n]+)/g
+  const conflictPattern = /CONFLICT.*?:\s+([^\n]+)/g;
   while ((match = conflictPattern.exec(combined)) !== null) {
-    conflictedPaths.push(match[1])
+    conflictedPaths.push(match[1]);
   }
 
   // Match skipped patterns
-  const skipPattern = /Skipped patch[:\s]+'?([^'\n]+)'?/g
+  const skipPattern = /Skipped patch[:\s]+'?([^'\n]+)'?/g;
   while ((match = skipPattern.exec(combined)) !== null) {
-    skippedPaths.push(match[1])
+    skippedPaths.push(match[1]);
   }
 
-  return { appliedPaths, skippedPaths, conflictedPaths }
+  return { appliedPaths, skippedPaths, conflictedPaths };
 }
 
 /**
  * Create a symlink (cross-platform).
  */
-export function createSymlink(source: string, linkTarget: string, destination: string): void {
+export function createSymlink(
+  source: string,
+  linkTarget: string,
+  destination: string,
+): void {
   // On Windows, we need to know if the source is a directory
-  const isWindows = platform() === 'win32'
+  const isWindows = platform() === "win32";
 
   if (isWindows) {
     // Check if source is a directory
-    const isDir = existsSync(source) && require('fs').statSync(source).isDirectory()
+    const isDir =
+      existsSync(source) && require("fs").statSync(source).isDirectory();
     if (isDir) {
-      symlinkSync(linkTarget, destination, 'dir')
+      symlinkSync(linkTarget, destination, "dir");
     } else {
-      symlinkSync(linkTarget, destination, 'file')
+      symlinkSync(linkTarget, destination, "file");
     }
   } else {
     // Unix: symlink doesn't need to know the type
-    symlinkSync(linkTarget, destination)
+    symlinkSync(linkTarget, destination);
   }
 }
 
@@ -445,13 +475,16 @@ export async function restoreGhostCommit(
   repoPath: string,
   ghostCommit: GhostCommit,
 ): Promise<void> {
-  await restoreToCommit(repoPath, ghostCommit.id)
+  await restoreToCommit(repoPath, ghostCommit.id);
 }
 
 /**
  * Restore the working tree to a specific commit.
  */
-export async function restoreToCommit(repoPath: string, commitId: string): Promise<void> {
-  const repoRoot = await resolveRepositoryRoot(repoPath)
-  await runGitForStatus(repoRoot, ['checkout', commitId, '--', '.'])
+export async function restoreToCommit(
+  repoPath: string,
+  commitId: string,
+): Promise<void> {
+  const repoRoot = await resolveRepositoryRoot(repoPath);
+  await runGitForStatus(repoRoot, ["checkout", commitId, "--", "."]);
 }

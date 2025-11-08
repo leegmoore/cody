@@ -69,11 +69,11 @@ export interface SerializedResult {
  * @returns Serialized result
  */
 export function serializeExecutionResult(
-  result: ExecutionResult
+  result: ExecutionResult,
 ): SerializedResult {
   // Serialize individual script outputs
   const outputs: SerializedOutput[] = result.scripts.map((script) =>
-    serializeScriptResult(script)
+    serializeScriptResult(script),
   );
 
   return {

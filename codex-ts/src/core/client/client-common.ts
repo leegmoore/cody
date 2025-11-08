@@ -7,9 +7,13 @@
  * Ported from: codex-rs/core/src/client_common.rs
  */
 
-import type { ResponseItem } from '../../protocol/models.js'
-import type { TokenUsage, RateLimitSnapshot } from '../../protocol/protocol.js'
-import type { ReasoningEffort, ReasoningSummary, Verbosity } from '../../protocol/config-types.js'
+import type { ResponseItem } from "../../protocol/models.js";
+import type { TokenUsage, RateLimitSnapshot } from "../../protocol/protocol.js";
+import type {
+  ReasoningEffort,
+  ReasoningSummary,
+  Verbosity,
+} from "../../protocol/config-types.js";
 
 /**
  * JSON Schema type for tool parameters.
@@ -17,11 +21,11 @@ import type { ReasoningEffort, ReasoningSummary, Verbosity } from '../../protoco
  * Simplified for Phase 4.1 - full JsonSchema enum will come in later phases if needed.
  */
 export interface JsonSchema {
-  type: string
-  properties?: Record<string, unknown>
-  required?: string[]
-  description?: string
-  [key: string]: unknown
+  type: string;
+  properties?: Record<string, unknown>;
+  required?: string[];
+  description?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -29,13 +33,13 @@ export interface JsonSchema {
  */
 export interface ResponsesApiTool {
   /** Tool name */
-  name: string
+  name: string;
   /** Tool description */
-  description: string
+  description: string;
   /** Whether strict schema validation is enabled */
-  strict: boolean
+  strict: boolean;
   /** JSON schema for tool parameters */
-  parameters: JsonSchema
+  parameters: JsonSchema;
 }
 
 /**
@@ -43,11 +47,11 @@ export interface ResponsesApiTool {
  */
 export interface FreeformToolFormat {
   /** Format type (e.g., "bash_command") */
-  type: string
+  type: string;
   /** Syntax highlighting hint */
-  syntax: string
+  syntax: string;
   /** Tool definition template */
-  definition: string
+  definition: string;
 }
 
 /**
@@ -55,11 +59,11 @@ export interface FreeformToolFormat {
  */
 export interface FreeformTool {
   /** Tool name */
-  name: string
+  name: string;
   /** Tool description */
-  description: string
+  description: string;
   /** Format specification */
-  format: FreeformToolFormat
+  format: FreeformToolFormat;
 }
 
 /**
@@ -69,91 +73,91 @@ export interface FreeformTool {
  * and custom freeform tools.
  */
 export type ToolSpec =
-  | ({ type: 'function' } & ResponsesApiTool)
-  | { type: 'local_shell' }
-  | { type: 'web_search' }
-  | ({ type: 'custom' } & FreeformTool)
+  | ({ type: "function" } & ResponsesApiTool)
+  | { type: "local_shell" }
+  | { type: "web_search" }
+  | ({ type: "custom" } & FreeformTool);
 
 /**
  * API request payload for a single model turn.
  */
 export interface Prompt {
   /** Conversation context input items */
-  input: ResponseItem[]
+  input: ResponseItem[];
 
   /** Tools available to the model */
-  tools: ToolSpec[]
+  tools: ToolSpec[];
 
   /** Whether parallel tool calls are permitted */
-  parallelToolCalls: boolean
+  parallelToolCalls: boolean;
 
   /** Optional override for the built-in base instructions */
-  baseInstructionsOverride?: string
+  baseInstructionsOverride?: string;
 
   /** Optional output schema for structured responses */
-  outputSchema?: unknown
+  outputSchema?: unknown;
 }
 
 /**
  * Events emitted during response streaming.
  */
 export type ResponseEvent =
-  | { type: 'created' }
-  | { type: 'output_item_done'; item: ResponseItem }
-  | { type: 'output_item_added'; item: ResponseItem }
+  | { type: "created" }
+  | { type: "output_item_done"; item: ResponseItem }
+  | { type: "output_item_added"; item: ResponseItem }
   | {
-      type: 'completed'
-      responseId: string
-      tokenUsage?: TokenUsage
+      type: "completed";
+      responseId: string;
+      tokenUsage?: TokenUsage;
     }
-  | { type: 'output_text_delta'; delta: string }
-  | { type: 'reasoning_summary_delta'; delta: string }
-  | { type: 'reasoning_content_delta'; delta: string }
-  | { type: 'reasoning_summary_part_added' }
-  | { type: 'rate_limits'; snapshot: RateLimitSnapshot }
+  | { type: "output_text_delta"; delta: string }
+  | { type: "reasoning_summary_delta"; delta: string }
+  | { type: "reasoning_content_delta"; delta: string }
+  | { type: "reasoning_summary_part_added" }
+  | { type: "rate_limits"; snapshot: RateLimitSnapshot };
 
 /**
  * Reasoning configuration for the Responses API.
  */
 export interface Reasoning {
   /** Reasoning effort level */
-  effort?: ReasoningEffort
+  effort?: ReasoningEffort;
   /** Reasoning summary mode */
-  summary?: ReasoningSummary
+  summary?: ReasoningSummary;
 }
 
 /**
  * Text format type for structured outputs.
  */
-export type TextFormatType = 'json_schema'
+export type TextFormatType = "json_schema";
 
 /**
  * Text format specification for structured outputs.
  */
 export interface TextFormat {
   /** Format type */
-  type: TextFormatType
+  type: TextFormatType;
   /** Whether strict validation is enabled */
-  strict: boolean
+  strict: boolean;
   /** JSON schema for the output */
-  schema: unknown
+  schema: unknown;
   /** Schema name */
-  name: string
+  name: string;
 }
 
 /**
  * OpenAI verbosity levels.
  */
-export type OpenAiVerbosity = 'low' | 'medium' | 'high'
+export type OpenAiVerbosity = "low" | "medium" | "high";
 
 /**
  * Text controls for the Responses API.
  */
 export interface TextControls {
   /** Verbosity level */
-  verbosity?: OpenAiVerbosity
+  verbosity?: OpenAiVerbosity;
   /** Output format specification */
-  format?: TextFormat
+  format?: TextFormat;
 }
 
 /**
@@ -161,29 +165,29 @@ export interface TextControls {
  */
 export interface ResponsesApiRequest {
   /** Model identifier */
-  model: string
+  model: string;
   /** System instructions */
-  instructions: string
+  instructions: string;
   /** Input items */
-  input: ResponseItem[]
+  input: ResponseItem[];
   /** Available tools */
-  tools: unknown[]
+  tools: unknown[];
   /** Tool choice mode */
-  toolChoice: string
+  toolChoice: string;
   /** Whether parallel tool calls are enabled */
-  parallelToolCalls: boolean
+  parallelToolCalls: boolean;
   /** Reasoning configuration */
-  reasoning?: Reasoning
+  reasoning?: Reasoning;
   /** Whether to store the conversation */
-  store: boolean
+  store: boolean;
   /** Whether to stream the response */
-  stream: boolean
+  stream: boolean;
   /** Fields to include in the response */
-  include: string[]
+  include: string[];
   /** Optional prompt cache key */
-  promptCacheKey?: string
+  promptCacheKey?: string;
   /** Optional text controls */
-  text?: TextControls
+  text?: TextControls;
 }
 
 /**
@@ -193,11 +197,11 @@ export interface ResponsesApiRequest {
  */
 export interface ModelFamily {
   /** Base system instructions */
-  baseInstructions: string
+  baseInstructions: string;
   /** Whether model needs special apply_patch instructions */
-  needsSpecialApplyPatchInstructions: boolean
+  needsSpecialApplyPatchInstructions: boolean;
   /** Whether model supports reasoning summaries */
-  supportsReasoningSummaries: boolean
+  supportsReasoningSummaries: boolean;
 }
 
 /**
@@ -205,7 +209,7 @@ export interface ModelFamily {
  */
 function verbosityToOpenAi(verbosity: Verbosity): OpenAiVerbosity {
   // All Verbosity values map directly to OpenAiVerbosity
-  return verbosity as OpenAiVerbosity
+  return verbosity as OpenAiVerbosity;
 }
 
 /**
@@ -219,13 +223,13 @@ export function createReasoningParamForRequest(
   summary: ReasoningSummary,
 ): Reasoning | undefined {
   if (!modelFamily.supportsReasoningSummaries) {
-    return undefined
+    return undefined;
   }
 
   return {
     effort,
     summary,
-  }
+  };
 }
 
 /**
@@ -238,18 +242,18 @@ export function createTextParamForRequest(
   outputSchema: unknown | undefined,
 ): TextControls | undefined {
   if (verbosity === undefined && outputSchema === undefined) {
-    return undefined
+    return undefined;
   }
 
   return {
     verbosity: verbosity ? verbosityToOpenAi(verbosity) : undefined,
     format: outputSchema
       ? {
-          type: 'json_schema',
+          type: "json_schema",
           strict: true,
           schema: outputSchema,
-          name: 'codex_output_schema',
+          name: "codex_output_schema",
         }
       : undefined,
-  }
+  };
 }

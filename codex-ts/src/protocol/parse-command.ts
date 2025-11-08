@@ -14,7 +14,7 @@
  */
 export type ParsedCommand =
   | {
-      type: 'read';
+      type: "read";
       /** The original command string */
       cmd: string;
       /** Human-readable name for the command */
@@ -28,14 +28,14 @@ export type ParsedCommand =
       path: string;
     }
   | {
-      type: 'list_files';
+      type: "list_files";
       /** The original command string */
       cmd: string;
       /** Optional path being listed */
       path?: string;
     }
   | {
-      type: 'search';
+      type: "search";
       /** The original command string */
       cmd: string;
       /** Optional search query */
@@ -44,7 +44,7 @@ export type ParsedCommand =
       path?: string;
     }
   | {
-      type: 'unknown';
+      type: "unknown";
       /** The original command string */
       cmd: string;
     };
@@ -60,9 +60,9 @@ export type ParsedCommand =
 export function createReadCommand(
   cmd: string,
   name: string,
-  path: string
+  path: string,
 ): ParsedCommand {
-  return { type: 'read', cmd, name, path };
+  return { type: "read", cmd, name, path };
 }
 
 /**
@@ -74,9 +74,9 @@ export function createReadCommand(
  */
 export function createListFilesCommand(
   cmd: string,
-  path?: string
+  path?: string,
 ): ParsedCommand {
-  return { type: 'list_files', cmd, path };
+  return { type: "list_files", cmd, path };
 }
 
 /**
@@ -90,9 +90,9 @@ export function createListFilesCommand(
 export function createSearchCommand(
   cmd: string,
   query?: string,
-  path?: string
+  path?: string,
 ): ParsedCommand {
-  return { type: 'search', cmd, query, path };
+  return { type: "search", cmd, query, path };
 }
 
 /**
@@ -102,5 +102,5 @@ export function createSearchCommand(
  * @returns An unknown ParsedCommand variant
  */
 export function createUnknownCommand(cmd: string): ParsedCommand {
-  return { type: 'unknown', cmd };
+  return { type: "unknown", cmd };
 }

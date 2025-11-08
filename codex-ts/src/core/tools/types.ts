@@ -11,11 +11,11 @@
  */
 export enum SandboxablePreference {
   /** Automatically choose based on tool */
-  Auto = 'auto',
+  Auto = "auto",
   /** Require sandbox for this tool */
-  Require = 'require',
+  Require = "require",
   /** Forbid sandbox for this tool */
-  Forbid = 'forbid',
+  Forbid = "forbid",
 }
 
 /**
@@ -23,4 +23,5 @@ export enum SandboxablePreference {
  */
 export const TELEMETRY_PREVIEW_MAX_BYTES = 2 * 1024; // 2 KiB
 export const TELEMETRY_PREVIEW_MAX_LINES = 64; // lines
-export const TELEMETRY_PREVIEW_TRUNCATION_NOTICE = '[... telemetry preview truncated ...]';
+export const TELEMETRY_PREVIEW_TRUNCATION_NOTICE =
+  "[... telemetry preview truncated ...]";

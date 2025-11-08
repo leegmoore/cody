@@ -15,13 +15,13 @@
  */
 export enum ReasoningEffort {
   /** Minimal reasoning effort */
-  Minimal = 'minimal',
+  Minimal = "minimal",
   /** Low reasoning effort */
-  Low = 'low',
+  Low = "low",
   /** Medium reasoning effort (default) */
-  Medium = 'medium',
+  Medium = "medium",
   /** High reasoning effort */
-  High = 'high',
+  High = "high",
 }
 
 /**
@@ -32,13 +32,13 @@ export enum ReasoningEffort {
  */
 export enum ReasoningSummary {
   /** Automatic summary format (default) */
-  Auto = 'auto',
+  Auto = "auto",
   /** Concise reasoning summary */
-  Concise = 'concise',
+  Concise = "concise",
   /** Detailed reasoning summary */
-  Detailed = 'detailed',
+  Detailed = "detailed",
   /** Disable reasoning summaries */
-  None = 'none',
+  None = "none",
 }
 
 /**
@@ -48,11 +48,11 @@ export enum ReasoningSummary {
  */
 export enum Verbosity {
   /** Low verbosity - shorter outputs */
-  Low = 'low',
+  Low = "low",
   /** Medium verbosity (default) - balanced outputs */
-  Medium = 'medium',
+  Medium = "medium",
   /** High verbosity - more detailed outputs */
-  High = 'high',
+  High = "high",
 }
 
 /**
@@ -62,11 +62,11 @@ export enum Verbosity {
  */
 export enum SandboxMode {
   /** Read-only access to filesystem (default, safest) */
-  ReadOnly = 'read-only',
+  ReadOnly = "read-only",
   /** Write access limited to workspace directory */
-  WorkspaceWrite = 'workspace-write',
+  WorkspaceWrite = "workspace-write",
   /** Full filesystem access (dangerous, use with caution) */
-  DangerFullAccess = 'danger-full-access',
+  DangerFullAccess = "danger-full-access",
 }
 
 /**
@@ -76,7 +76,7 @@ export enum SandboxMode {
  */
 export enum ForcedLoginMethod {
   /** Use ChatGPT authentication */
-  Chatgpt = 'chatgpt',
+  Chatgpt = "chatgpt",
   /** Use API key authentication */
-  Api = 'api',
+  Api = "api",
 }

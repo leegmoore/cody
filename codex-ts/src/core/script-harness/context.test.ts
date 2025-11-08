@@ -127,42 +127,66 @@ describe("context.ts", () => {
 
   describe("Context freezing", () => {
     it("C6: context object is frozen", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(Object.isFrozen(context)).toBe(true);
     });
 
     it("C7: nested sandbox object is frozen", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(Object.isFrozen(context.sandbox)).toBe(true);
     });
 
     it("C8: nested capabilities object is frozen", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(Object.isFrozen(context.capabilities)).toBe(true);
     });
 
     it("C9: tools array is frozen", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(Object.isFrozen(context.capabilities.tools)).toBe(true);
     });
 
     it("C10: nested approvals object is frozen", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(Object.isFrozen(context.approvals)).toBe(true);
     });
 
     it("C11: nested telemetry object is frozen", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(Object.isFrozen(context.telemetry)).toBe(true);
     });
 
     it("C12: isContextFrozen returns true for frozen context", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
       expect(isContextFrozen(context)).toBe(true);
     });
 
     it("C13: attempting to modify context throws in strict mode", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
 
       expect(() => {
         "use strict";
@@ -172,7 +196,10 @@ describe("context.ts", () => {
     });
 
     it("C14: attempting to modify nested objects throws in strict mode", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
 
       expect(() => {
         "use strict";
@@ -182,7 +209,10 @@ describe("context.ts", () => {
     });
 
     it("C15: attempting to modify tools array throws in strict mode", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
 
       expect(() => {
         "use strict";
@@ -231,7 +261,10 @@ describe("context.ts", () => {
     });
 
     it("C19: emitProgress throws on non-string message", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
 
       expect(() => {
         // @ts-expect-error - Testing runtime behavior
@@ -306,7 +339,10 @@ describe("context.ts", () => {
     });
 
     it("C23: emitProgress works without callback", () => {
-      const context = createScriptContext(createValidSeed(), createValidOptions());
+      const context = createScriptContext(
+        createValidSeed(),
+        createValidOptions(),
+      );
 
       // Should not throw
       expect(() => {
@@ -542,8 +578,14 @@ describe("context.ts", () => {
       const onProgress1 = vi.fn();
       const onProgress2 = vi.fn();
 
-      const ctx1 = createTestContext({ scriptId: "scr_1", onProgress: onProgress1 });
-      const ctx2 = createTestContext({ scriptId: "scr_2", onProgress: onProgress2 });
+      const ctx1 = createTestContext({
+        scriptId: "scr_1",
+        onProgress: onProgress1,
+      });
+      const ctx2 = createTestContext({
+        scriptId: "scr_2",
+        onProgress: onProgress2,
+      });
 
       ctx1.telemetry.emitProgress("From ctx1");
       ctx2.telemetry.emitProgress("From ctx2");

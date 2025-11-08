@@ -1,11 +1,11 @@
-import { Tiktoken, encoding_for_model, get_encoding } from 'tiktoken';
+import { Tiktoken, encoding_for_model, get_encoding } from "tiktoken";
 
 /**
  * Supported local encodings.
  */
 export enum EncodingKind {
-  O200kBase = 'o200k_base',
-  Cl100kBase = 'cl100k_base',
+  O200kBase = "o200k_base",
+  Cl100kBase = "cl100k_base",
 }
 
 /**
@@ -15,10 +15,10 @@ export class TokenizerError extends Error {
   constructor(
     message: string,
     public readonly kind?: EncodingKind,
-    public readonly cause?: Error
+    public readonly cause?: Error,
   ) {
     super(message);
-    this.name = 'TokenizerError';
+    this.name = "TokenizerError";
   }
 
   static loadEncoding(kind: EncodingKind, cause: Error): TokenizerError {
@@ -26,7 +26,7 @@ export class TokenizerError extends Error {
   }
 
   static decode(cause: Error): TokenizerError {
-    return new TokenizerError('failed to decode tokens', undefined, cause);
+    return new TokenizerError("failed to decode tokens", undefined, cause);
   }
 }
 
@@ -92,8 +92,8 @@ export class Tokenizer {
         throw TokenizerError.loadEncoding(
           EncodingKind.O200kBase,
           new Error(
-            `fallback after model lookup failure for ${model}: ${modelError}`
-          )
+            `fallback after model lookup failure for ${model}: ${modelError}`,
+          ),
         );
       }
     }
@@ -109,7 +109,7 @@ export class Tokenizer {
    */
   encode(text: string, withSpecialTokens: boolean): number[] {
     const raw = withSpecialTokens
-      ? this.inner.encode(text, 'all')
+      ? this.inner.encode(text, "all")
       : this.inner.encode(text);
     // tiktoken returns Uint32Array, but we want number[] (signed i32)
     return Array.from(raw);
@@ -139,7 +139,7 @@ export class Tokenizer {
       const raw = new Uint32Array(tokens);
       const bytes = this.inner.decode(raw);
       // tiktoken's decode returns Uint8Array of UTF-8 bytes, convert to string
-      const decoder = new TextDecoder('utf-8');
+      const decoder = new TextDecoder("utf-8");
       return decoder.decode(bytes);
     } catch (error) {
       throw TokenizerError.decode(error as Error);

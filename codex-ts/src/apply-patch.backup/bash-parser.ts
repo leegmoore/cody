@@ -9,9 +9,9 @@ import type {
   MaybeApplyPatch,
   ApplyPatchArgs,
   ExtractHeredocError,
-} from './types.js';
-import { APPLY_PATCH_COMMANDS } from './types.js';
-import { parsePatch } from './parser.js';
+} from "./types.js";
+import { APPLY_PATCH_COMMANDS } from "./types.js";
+import { parsePatch } from "./parser.js";
 
 /**
  * Maybe parse apply_patch from command arguments
@@ -20,23 +20,23 @@ export function maybeParseApplyPatch(argv: string[]): MaybeApplyPatch {
   // Direct invocation: apply_patch <patch>
   if (
     argv.length === 2 &&
-    APPLY_PATCH_COMMANDS.includes(argv[0] as 'apply_patch' | 'applypatch')
+    APPLY_PATCH_COMMANDS.includes(argv[0] as "apply_patch" | "applypatch")
   ) {
     try {
       const parsed = parsePatch(argv[1]);
-      return { type: 'Body', value: parsed };
+      return { type: "Body", value: parsed };
     } catch (err) {
-      return { type: 'PatchParseError', error: err as any };
+      return { type: "PatchParseError", error: err as any };
     }
   }
 
   // Bash heredoc form: bash -lc "script"
-  if (argv.length === 3 && argv[0] === 'bash' && argv[1] === '-lc') {
+  if (argv.length === 3 && argv[0] === "bash" && argv[1] === "-lc") {
     const script = argv[2];
     try {
       const extracted = extractApplyPatchFromBash(script);
-      if (extracted.type === 'Error') {
-        return { type: 'ShellParseError', error: extracted.error };
+      if (extracted.type === "Error") {
+        return { type: "ShellParseError", error: extracted.error };
       }
       const { body, workdir } = extracted;
       try {
@@ -44,19 +44,19 @@ export function maybeParseApplyPatch(argv: string[]): MaybeApplyPatch {
         if (workdir) {
           parsed.workdir = workdir;
         }
-        return { type: 'Body', value: parsed };
+        return { type: "Body", value: parsed };
       } catch (err) {
-        return { type: 'PatchParseError', error: err as any };
+        return { type: "PatchParseError", error: err as any };
       }
     } catch (err) {
       if (isExtractHeredocError(err)) {
-        return { type: 'ShellParseError', error: err };
+        return { type: "ShellParseError", error: err };
       }
-      return { type: 'NotApplyPatch' };
+      return { type: "NotApplyPatch" };
     }
   }
 
-  return { type: 'NotApplyPatch' };
+  return { type: "NotApplyPatch" };
 }
 
 /**
@@ -64,10 +64,10 @@ export function maybeParseApplyPatch(argv: string[]): MaybeApplyPatch {
  * TODO: Replace with proper tree-sitter parsing
  */
 function extractApplyPatchFromBash(
-  script: string
+  script: string,
 ):
-  | { type: 'Success'; body: string; workdir?: string }
-  | { type: 'Error'; error: ExtractHeredocError } {
+  | { type: "Success"; body: string; workdir?: string }
+  | { type: "Error"; error: ExtractHeredocError } {
   // Simple regex-based extraction for common patterns
   // Pattern 1: apply_patch <<'EOF'\n...\nEOF
   // Pattern 2: cd <path> && apply_patch <<'EOF'\n...\nEOF
@@ -85,27 +85,27 @@ function extractApplyPatchFromBash(
 
   if (heredocMatch) {
     return {
-      type: 'Success',
+      type: "Success",
       body: heredocMatch[1],
       workdir,
     };
   }
 
   return {
-    type: 'Error',
-    error: { type: 'CommandDidNotStartWithApplyPatch' },
+    type: "Error",
+    error: { type: "CommandDidNotStartWithApplyPatch" },
   };
 }
 
 function isExtractHeredocError(err: any): err is ExtractHeredocError {
   return (
-    typeof err === 'object' &&
+    typeof err === "object" &&
     err !== null &&
-    'type' in err &&
-    (err.type === 'CommandDidNotStartWithApplyPatch' ||
-      err.type === 'FailedToLoadBashGrammar' ||
-      err.type === 'HeredocNotUtf8' ||
-      err.type === 'FailedToParsePatchIntoAst' ||
-      err.type === 'FailedToFindHeredocBody')
+    "type" in err &&
+    (err.type === "CommandDidNotStartWithApplyPatch" ||
+      err.type === "FailedToLoadBashGrammar" ||
+      err.type === "HeredocNotUtf8" ||
+      err.type === "FailedToParsePatchIntoAst" ||
+      err.type === "FailedToFindHeredocBody")
   );
 }

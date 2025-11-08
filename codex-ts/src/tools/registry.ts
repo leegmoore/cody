@@ -5,12 +5,12 @@
  * and is used by the script harness to expose tools to sandboxed scripts.
  */
 
-import { applyPatch } from './apply-patch/index.js';
-import { readFile, type ReadFileParams } from './read-file/index.js';
-import { listDir, type ListDirParams } from './list-dir/index.js';
-import { grepFiles, type GrepFilesParams } from './grep-files/index.js';
-import { viewImage, type ViewImageParams } from './view-image/index.js';
-import { updatePlan, type UpdatePlanParams } from './plan/index.js';
+import { applyPatch } from "./apply-patch/index.js";
+import { readFile, type ReadFileParams } from "./read-file/index.js";
+import { listDir, type ListDirParams } from "./list-dir/index.js";
+import { grepFiles, type GrepFilesParams } from "./grep-files/index.js";
+import { viewImage, type ViewImageParams } from "./view-image/index.js";
+import { updatePlan, type UpdatePlanParams } from "./plan/index.js";
 import {
   listMcpResources,
   listMcpResourceTemplates,
@@ -18,19 +18,27 @@ import {
   type ListMcpResourcesParams,
   type ListMcpResourceTemplatesParams,
   type ReadMcpResourceParams,
-} from './mcp-resource/index.js';
-import { processExecToolCall, type ExecParams, type ExecToolCallOutput } from '../core/exec/index.js';
-import { run as fileSearchRun, type FileSearchOptions, type FileSearchResults } from '../file-search/index.js';
-import { ToolOptions } from './types.js';
-import { SandboxType } from '../core/sandboxing/index.js';
-import { type SandboxPolicy } from '../protocol/protocol.js';
+} from "./mcp-resource/index.js";
+import {
+  processExecToolCall,
+  type ExecParams,
+  type ExecToolCallOutput,
+} from "../core/exec/index.js";
+import {
+  run as fileSearchRun,
+  type FileSearchOptions,
+  type FileSearchResults,
+} from "../file-search/index.js";
+import { ToolOptions } from "./types.js";
+import { SandboxType } from "../core/sandboxing/index.js";
+import { type SandboxPolicy } from "../protocol/protocol.js";
 
 /**
  * Tool function signature
  */
 export type ToolFunction<TParams = any, TResult = any> = (
   params: TParams,
-  options?: ToolOptions
+  options?: ToolOptions,
 ) => Promise<TResult>;
 
 /**
@@ -68,8 +76,8 @@ export class ToolRegistry {
     // Apply Patch tool
     this.register({
       metadata: {
-        name: 'applyPatch',
-        description: 'Apply a unified diff patch to files',
+        name: "applyPatch",
+        description: "Apply a unified diff patch to files",
         requiresApproval: false,
       },
       execute: async (params: { patch: string; cwd?: string }) => {
@@ -81,8 +89,9 @@ export class ToolRegistry {
     // Read File tool
     this.register({
       metadata: {
-        name: 'readFile',
-        description: 'Read file contents with various modes (slice or indentation)',
+        name: "readFile",
+        description:
+          "Read file contents with various modes (slice or indentation)",
         requiresApproval: false,
       },
       execute: async (params: ReadFileParams) => {
@@ -93,8 +102,8 @@ export class ToolRegistry {
     // List Directory tool
     this.register({
       metadata: {
-        name: 'listDir',
-        description: 'List directory contents recursively',
+        name: "listDir",
+        description: "List directory contents recursively",
         requiresApproval: false,
       },
       execute: async (params: ListDirParams) => {
@@ -105,8 +114,8 @@ export class ToolRegistry {
     // Grep Files tool
     this.register({
       metadata: {
-        name: 'grepFiles',
-        description: 'Search for patterns in files using ripgrep',
+        name: "grepFiles",
+        description: "Search for patterns in files using ripgrep",
         requiresApproval: false,
       },
       execute: async (params: GrepFilesParams) => {
@@ -117,11 +126,16 @@ export class ToolRegistry {
     // Exec tool (requires approval)
     this.register({
       metadata: {
-        name: 'exec',
-        description: 'Execute a command in a sandboxed environment',
+        name: "exec",
+        description: "Execute a command in a sandboxed environment",
         requiresApproval: true,
       },
-      execute: async (params: { command: string[]; cwd?: string; env?: Record<string, string>; timeoutMs?: number }): Promise<ExecToolCallOutput> => {
+      execute: async (params: {
+        command: string[];
+        cwd?: string;
+        env?: Record<string, string>;
+        timeoutMs?: number;
+      }): Promise<ExecToolCallOutput> => {
         const execParams: ExecParams = {
           command: params.command,
           cwd: params.cwd || process.cwd(),
@@ -134,7 +148,7 @@ export class ToolRegistry {
           SandboxType.None, // Default to no sandboxing - can be configured
           policy,
           process.cwd(), // Sandbox CWD
-          undefined // No custom sandbox exe
+          undefined, // No custom sandbox exe
         );
       },
     });
@@ -142,11 +156,19 @@ export class ToolRegistry {
     // File Search tool
     this.register({
       metadata: {
-        name: 'fileSearch',
-        description: 'Fast fuzzy file search',
+        name: "fileSearch",
+        description: "Fast fuzzy file search",
         requiresApproval: false,
       },
-      execute: async (params: { pattern: string; limit?: number; searchDirectory?: string; exclude?: string[] }, options?: ToolOptions): Promise<FileSearchResults> => {
+      execute: async (
+        params: {
+          pattern: string;
+          limit?: number;
+          searchDirectory?: string;
+          exclude?: string[];
+        },
+        options?: ToolOptions,
+      ): Promise<FileSearchResults> => {
         const searchOptions: FileSearchOptions = {
           pattern: params.pattern,
           limit: params.limit,
@@ -161,8 +183,9 @@ export class ToolRegistry {
     // View Image tool
     this.register({
       metadata: {
-        name: 'viewImage',
-        description: 'Validate and prepare an image for viewing in the conversation',
+        name: "viewImage",
+        description:
+          "Validate and prepare an image for viewing in the conversation",
         requiresApproval: false,
       },
       execute: async (params: ViewImageParams) => {
@@ -173,8 +196,9 @@ export class ToolRegistry {
     // Plan (update_plan) tool
     this.register({
       metadata: {
-        name: 'updatePlan',
-        description: 'Update the task plan with structured steps. At most one step can be in_progress at a time.',
+        name: "updatePlan",
+        description:
+          "Update the task plan with structured steps. At most one step can be in_progress at a time.",
         requiresApproval: false,
       },
       execute: async (params: UpdatePlanParams) => {
@@ -185,8 +209,8 @@ export class ToolRegistry {
     // MCP Resource tools (3 operations)
     this.register({
       metadata: {
-        name: 'listMcpResources',
-        description: 'List available resources from MCP servers',
+        name: "listMcpResources",
+        description: "List available resources from MCP servers",
         requiresApproval: false,
       },
       execute: async (params: ListMcpResourcesParams) => {
@@ -196,8 +220,8 @@ export class ToolRegistry {
 
     this.register({
       metadata: {
-        name: 'listMcpResourceTemplates',
-        description: 'List available resource templates from MCP servers',
+        name: "listMcpResourceTemplates",
+        description: "List available resource templates from MCP servers",
         requiresApproval: false,
       },
       execute: async (params: ListMcpResourceTemplatesParams) => {
@@ -207,8 +231,8 @@ export class ToolRegistry {
 
     this.register({
       metadata: {
-        name: 'readMcpResource',
-        description: 'Read content from a specific MCP resource',
+        name: "readMcpResource",
+        description: "Read content from a specific MCP resource",
         requiresApproval: false,
       },
       execute: async (params: ReadMcpResourceParams) => {

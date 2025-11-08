@@ -62,8 +62,7 @@ export function buildToolResult(
   // Enforce size limit
   let wasTruncated = false;
   if (content.length > MAX_TOOL_RESULT_SIZE) {
-    const truncateNotice =
-      "\n\n[... output truncated due to size limit ...]";
+    const truncateNotice = "\n\n[... output truncated due to size limit ...]";
     const availableSize = MAX_TOOL_RESULT_SIZE - truncateNotice.length;
     content = content.slice(0, availableSize) + truncateNotice;
     wasTruncated = true;

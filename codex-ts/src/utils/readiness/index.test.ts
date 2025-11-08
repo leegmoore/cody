@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { ReadinessFlag, ReadinessError, Token } from './index.js';
+import { describe, it, expect } from "vitest";
+import { ReadinessFlag, ReadinessError, Token } from "./index.js";
 
-describe('ReadinessFlag', () => {
-  it('subscribe and mark ready roundtrip', async () => {
+describe("ReadinessFlag", () => {
+  it("subscribe and mark ready roundtrip", async () => {
     const flag = new ReadinessFlag();
     const token = await flag.subscribe();
 
@@ -11,7 +11,7 @@ describe('ReadinessFlag', () => {
     expect(flag.isReady()).toBe(true);
   });
 
-  it('subscribe after ready throws error', async () => {
+  it("subscribe after ready throws error", async () => {
     const flag = new ReadinessFlag();
     const token = await flag.subscribe();
     await flag.markReady(token);
@@ -19,7 +19,7 @@ describe('ReadinessFlag', () => {
     await expect(flag.subscribe()).rejects.toThrow(ReadinessError);
   });
 
-  it('mark ready rejects unknown token', async () => {
+  it("mark ready rejects unknown token", async () => {
     const flag = new ReadinessFlag();
     const result = await flag.markReady(new Token(42));
 
@@ -27,7 +27,7 @@ describe('ReadinessFlag', () => {
     expect(flag.isReady()).toBe(true); // No subscribers, so it becomes ready
   });
 
-  it('wait ready unblocks after mark ready', async () => {
+  it("wait ready unblocks after mark ready", async () => {
     const flag = new ReadinessFlag();
     const token = await flag.subscribe();
 
@@ -44,7 +44,7 @@ describe('ReadinessFlag', () => {
     expect(waiterCompleted).toBe(true);
   });
 
-  it('mark ready twice uses single token', async () => {
+  it("mark ready twice uses single token", async () => {
     const flag = new ReadinessFlag();
     const token = await flag.subscribe();
 
@@ -55,7 +55,7 @@ describe('ReadinessFlag', () => {
     expect(second).toBe(false);
   });
 
-  it('is ready without subscribers marks flag ready', async () => {
+  it("is ready without subscribers marks flag ready", async () => {
     const flag = new ReadinessFlag();
 
     expect(flag.isReady()).toBe(true);
@@ -64,7 +64,7 @@ describe('ReadinessFlag', () => {
     await expect(flag.subscribe()).rejects.toThrow(ReadinessError);
   });
 
-  it('multiple subscribers require all to mark ready', async () => {
+  it("multiple subscribers require all to mark ready", async () => {
     const flag = new ReadinessFlag();
     const token1 = await flag.subscribe();
     const token2 = await flag.subscribe();
@@ -75,7 +75,7 @@ describe('ReadinessFlag', () => {
     expect(flag.isReady()).toBe(true); // First one marks it ready
   });
 
-  it('wait ready returns immediately if already ready', async () => {
+  it("wait ready returns immediately if already ready", async () => {
     const flag = new ReadinessFlag();
     const token = await flag.subscribe();
     await flag.markReady(token);
