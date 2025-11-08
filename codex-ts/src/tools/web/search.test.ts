@@ -2,67 +2,70 @@
  * Tests for Web Search Tool
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { webSearch } from './search.js';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { webSearch } from "./search.js";
 
 // Mock fetch globally
 global.fetch = vi.fn();
 
-describe('webSearch', () => {
+describe("webSearch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.PERPLEXITY_API_KEY = 'test-key';
+    process.env.PERPLEXITY_API_KEY = "test-key";
   });
 
-  it('should throw error if API key is missing', async () => {
+  it("should throw error if API key is missing", async () => {
     delete process.env.PERPLEXITY_API_KEY;
 
-    await expect(webSearch({ query: 'test' })).rejects.toThrow(
-      'PERPLEXITY_API_KEY environment variable not set'
+    await expect(webSearch({ query: "test" })).rejects.toThrow(
+      "PERPLEXITY_API_KEY environment variable not set",
     );
   });
 
-  it('should handle single query', async () => {
+  it("should handle single query", async () => {
     const mockResponse = {
-      citations: ['https://example.com', 'https://test.com'],
-      choices: [{ message: { content: 'Test content' } }],
+      citations: ["https://example.com", "https://test.com"],
+      choices: [{ message: { content: "Test content" } }],
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     });
 
-    const result = await webSearch({ query: 'test query' });
+    const result = await webSearch({ query: "test query" });
 
     expect(result.results).toBeDefined();
     expect(Array.isArray(result.results)).toBe(true);
   });
 
-  it('should handle API errors', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+  it("should handle API errors", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
       status: 500,
-      text: async () => 'Internal Server Error',
+      text: async () => "Internal Server Error",
     });
 
-    await expect(webSearch({ query: 'test' })).rejects.toThrow(
-      'Perplexity API error'
+    await expect(webSearch({ query: "test" })).rejects.toThrow(
+      "Perplexity API error",
     );
   });
 
-  it('should limit results to maxResults', async () => {
+  it("should limit results to maxResults", async () => {
     const mockResponse = {
-      citations: Array.from({ length: 20 }, (_, i) => `https://example${i}.com`),
-      choices: [{ message: { content: 'Test content' } }],
+      citations: Array.from(
+        { length: 20 },
+        (_, i) => `https://example${i}.com`,
+      ),
+      choices: [{ message: { content: "Test content" } }],
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     });
 
-    const result = await webSearch({ query: 'test', maxResults: 5 });
+    const result = await webSearch({ query: "test", maxResults: 5 });
 
     expect(result.results.length).toBeLessThanOrEqual(5);
   });

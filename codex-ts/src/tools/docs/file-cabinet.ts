@@ -53,16 +53,18 @@ export interface WriteFileResult {
  * - 30 day TTL
  * - Associate with user session
  */
-export async function saveToFC(params: SaveToFCParams): Promise<SaveToFCResult> {
+export async function saveToFC(
+  params: SaveToFCParams,
+): Promise<SaveToFCResult> {
   const { fileKey } = params;
 
   // Validate parameters
-  if (!fileKey || typeof fileKey !== 'string') {
-    throw new Error('fileKey is required and must be a string');
+  if (!fileKey || typeof fileKey !== "string") {
+    throw new Error("fileKey is required and must be a string");
   }
 
   // Stub implementation
-  console.warn('[STUB] saveToFC called - not yet implemented');
+  console.warn("[STUB] saveToFC called - not yet implemented");
 
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
@@ -70,7 +72,7 @@ export async function saveToFC(params: SaveToFCParams): Promise<SaveToFCResult> 
     success: true,
     fileKey,
     expiresAt,
-    message: 'File saved to cabinet (stub - not persisted)',
+    message: "File saved to cabinet (stub - not persisted)",
   };
 }
 
@@ -82,7 +84,9 @@ export async function saveToFC(params: SaveToFCParams): Promise<SaveToFCResult> 
  * - Return associated content
  * - Handle expired entries
  */
-export async function fetchFromFC(params: FetchFromFCParams): Promise<FetchFromFCResult> {
+export async function fetchFromFC(
+  params: FetchFromFCParams,
+): Promise<FetchFromFCResult> {
   const { fileKeys } = params;
 
   // Handle single or multiple keys
@@ -90,23 +94,23 @@ export async function fetchFromFC(params: FetchFromFCParams): Promise<FetchFromF
 
   // Validate parameters
   if (keyList.length === 0) {
-    throw new Error('At least one fileKey is required');
+    throw new Error("At least one fileKey is required");
   }
 
   for (const key of keyList) {
-    if (!key || typeof key !== 'string') {
-      throw new Error('All fileKeys must be non-empty strings');
+    if (!key || typeof key !== "string") {
+      throw new Error("All fileKeys must be non-empty strings");
     }
   }
 
   // Stub implementation
-  console.warn('[STUB] fetchFromFC called - not yet implemented');
+  console.warn("[STUB] fetchFromFC called - not yet implemented");
 
   // Return mock data
-  const files: FetchedFile[] = keyList.map(key => ({
+  const files: FetchedFile[] = keyList.map((key) => ({
     fileKey: key,
-    url: 'https://example.com',
-    content: '(stub content - not yet implemented)',
+    url: "https://example.com",
+    content: "(stub content - not yet implemented)",
     savedAt: new Date(),
   }));
 
@@ -121,20 +125,22 @@ export async function fetchFromFC(params: FetchFromFCParams): Promise<FetchFromF
  * - Write to local filesystem
  * - Handle permissions and overwrite logic
  */
-export async function writeFile(params: WriteFileParams): Promise<WriteFileResult> {
+export async function writeFile(
+  params: WriteFileParams,
+): Promise<WriteFileResult> {
   const { fileKey, path } = params;
 
   // Validate parameters
-  if (!fileKey || typeof fileKey !== 'string') {
-    throw new Error('fileKey is required and must be a string');
+  if (!fileKey || typeof fileKey !== "string") {
+    throw new Error("fileKey is required and must be a string");
   }
 
-  if (!path || typeof path !== 'string') {
-    throw new Error('path is required and must be a string');
+  if (!path || typeof path !== "string") {
+    throw new Error("path is required and must be a string");
   }
 
   // Stub implementation
-  console.warn('[STUB] writeFile called - not yet implemented');
+  console.warn("[STUB] writeFile called - not yet implemented");
 
   return {
     success: true,

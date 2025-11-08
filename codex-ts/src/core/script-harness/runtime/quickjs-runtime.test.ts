@@ -2,15 +2,9 @@
  * Tests for QuickJS runtime adapter
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  QuickJSRuntime,
-  type QuickJSRuntimeConfig,
-} from "./quickjs-runtime.js";
-import type {
-  ScriptExecutionLimits,
-  ScriptExecutionResult,
-} from "./types.js";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { QuickJSRuntime } from "./quickjs-runtime.js";
+import type { ScriptExecutionLimits } from "./types.js";
 
 describe("quickjs-runtime.ts", () => {
   let runtime: QuickJSRuntime;
@@ -92,11 +86,7 @@ describe("quickjs-runtime.ts", () => {
         myValue: 42,
       };
 
-      const result = await runtime.execute(
-        "return myValue * 2",
-        globals,
-        {},
-      );
+      const result = await runtime.execute("return myValue * 2", globals, {});
 
       expect(result.ok).toBe(true);
       expect(result.returnValue).toBe(84);
@@ -160,45 +150,11 @@ describe("quickjs-runtime.ts", () => {
       expect(result.returnValue).toBe(42);
     });
 
-    it.skip("QR13: executes async functions (TODO: async function injection not supported)", async () => {
-      const globals = {
-        fetchData: async () => ({ value: 100 }),
-      };
+    // TODO: QR13 - Test async function execution once async function injection is supported
+    // The test should verify that async functions injected as globals can be awaited correctly
 
-      const result = await runtime.execute(
-        `
-        const data = await fetchData();
-        return data.value;
-      `,
-        globals,
-        {},
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.returnValue).toBe(100);
-    });
-
-    it.skip("QR14: handles Promise.all (TODO: async function injection not supported)", async () => {
-      const globals = {
-        getData: async (n: number) => n * 2,
-      };
-
-      const result = await runtime.execute(
-        `
-        const results = await Promise.all([
-          getData(1),
-          getData(2),
-          getData(3)
-        ]);
-        return results;
-      `,
-        globals,
-        {},
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.returnValue).toEqual([2, 4, 6]);
-    });
+    // TODO: QR14 - Test Promise.all with async globals once async function injection is supported
+    // The test should verify that Promise.all works correctly with async functions from globals
   });
 
   describe("Error handling", () => {
@@ -294,26 +250,8 @@ describe("quickjs-runtime.ts", () => {
   });
 
   describe("Metadata tracking", () => {
-    it.skip("QR23: tracks tool call count (TODO: requires async function injection)", async () => {
-      const globals = {
-        tool1: async () => "result1",
-        tool2: async () => "result2",
-      };
-
-      const result = await runtime.execute(
-        `
-        await tool1();
-        await tool2();
-        await tool1();
-        return "done";
-      `,
-        globals,
-        {},
-      );
-
-      // Note: This test assumes we track async calls, implementation may vary
-      expect(result.metadata.tool_calls_made).toBeGreaterThanOrEqual(0);
-    });
+    // TODO: QR23 - Test tool call count tracking once async function injection is supported
+    // The test should verify that async tool calls from globals are tracked in metadata
 
     it("QR24: provides execution metadata", async () => {
       const result = await runtime.execute("return 42", {}, {});
@@ -368,31 +306,10 @@ describe("quickjs-runtime.ts", () => {
   });
 
   describe("Cancellation", () => {
-    it.skip("QR27: respects AbortSignal (TODO: async abort during execution not supported due to blocking execution)", async () => {
-      // NOTE: This test cannot work as written because QuickJS execution blocks
-      // the event loop, preventing setTimeout from firing during execution.
-      // Use timeouts instead of abort signals for mid-execution cancellation,
-      // or abort the signal before calling execute() (see QR28).
-      const controller = new AbortController();
-
-      setTimeout(() => controller.abort(), 50);
-
-      const result = await runtime.execute(
-        `
-        const start = Date.now();
-        while (Date.now() - start < 1000) {
-          // Long running
-        }
-        return "done";
-      `,
-        {},
-        {},
-        controller.signal,
-      );
-
-      expect(result.ok).toBe(false);
-      expect(result.error?.code).toMatch(/Cancel|Abort/);
-    }, 10000);
+    // TODO: QR27 - Test async AbortSignal during execution once non-blocking execution is supported
+    // NOTE: This test cannot work currently because QuickJS execution blocks the event loop,
+    // preventing setTimeout from firing during execution. Use timeouts instead of abort signals
+    // for mid-execution cancellation, or abort the signal before calling execute() (see QR28).
 
     it("QR28: already aborted signal fails immediately", async () => {
       const controller = new AbortController();

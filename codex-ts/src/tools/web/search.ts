@@ -23,22 +23,34 @@ export interface WebSearchResult {
 }
 
 /**
+ * Perplexity API response type
+ */
+type PerplexityResponse = {
+  citations?: string[];
+  choices?: Array<{ message?: { content?: string } }>;
+};
+
+/**
  * Performs web search using Perplexity API
  */
-export async function webSearch(params: WebSearchParams): Promise<WebSearchResult> {
+export async function webSearch(
+  params: WebSearchParams,
+): Promise<WebSearchResult> {
   const { query, maxResults = 10, prefetch = 3 } = params;
 
   // Get API key from environment
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) {
-    throw new Error('PERPLEXITY_API_KEY environment variable not set');
+    throw new Error("PERPLEXITY_API_KEY environment variable not set");
   }
 
   // Handle single or multiple queries
   const queries = Array.isArray(query) ? query : [query];
 
   // Execute searches in parallel
-  const searchPromises = queries.map(q => executePerplexitySearch(q, maxResults, apiKey));
+  const searchPromises = queries.map((q) =>
+    executePerplexitySearch(q, maxResults, apiKey),
+  );
   const searchResults = await Promise.all(searchPromises);
 
   // Flatten and deduplicate results
@@ -46,8 +58,8 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchResul
   const uniqueResults = deduplicateResults(allResults);
 
   // Sort by relevance score (if available)
-  const sortedResults = uniqueResults.sort((a, b) =>
-    (b.relevanceScore || 0) - (a.relevanceScore || 0)
+  const sortedResults = uniqueResults.sort(
+    (a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0),
   );
 
   // Limit to maxResults
@@ -55,9 +67,9 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchResul
 
   // Background prefetch (non-blocking)
   if (prefetch > 0) {
-    const urlsToPrefetch = limitedResults.slice(0, prefetch).map(r => r.url);
-    prefetchUrls(urlsToPrefetch).catch(err => {
-      console.warn('Prefetch failed:', err.message);
+    const urlsToPrefetch = limitedResults.slice(0, prefetch).map((r) => r.url);
+    prefetchUrls(urlsToPrefetch).catch((err) => {
+      console.warn("Prefetch failed:", err.message);
     });
   }
 
@@ -70,26 +82,27 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchResul
 async function executePerplexitySearch(
   query: string,
   maxResults: number,
-  apiKey: string
+  apiKey: string,
 ): Promise<SearchResult[]> {
   // Perplexity API endpoint for search
-  const url = 'https://api.perplexity.ai/chat/completions';
+  const url = "https://api.perplexity.ai/chat/completions";
 
   const response = await fetch(url, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.1-sonar-small-128k-online',
+      model: "llama-3.1-sonar-small-128k-online",
       messages: [
         {
-          role: 'system',
-          content: 'You are a search engine. Return search results with titles, URLs, and snippets.',
+          role: "system",
+          content:
+            "You are a search engine. Return search results with titles, URLs, and snippets.",
         },
         {
-          role: 'user',
+          role: "user",
           content: query,
         },
       ],
@@ -104,7 +117,7 @@ async function executePerplexitySearch(
     throw new Error(`Perplexity API error (${response.status}): ${errorText}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as PerplexityResponse;
 
   // Parse results from Perplexity response
   const results = parsePerplexityResponse(data, query, maxResults);
@@ -116,9 +129,9 @@ async function executePerplexitySearch(
  * Parse Perplexity API response into SearchResult format
  */
 function parsePerplexityResponse(
-  data: any,
+  data: PerplexityResponse,
   query: string,
-  maxResults: number
+  maxResults: number,
 ): SearchResult[] {
   const results: SearchResult[] = [];
 
@@ -132,7 +145,7 @@ function parsePerplexityResponse(
       const title = extractTitleFromUrl(url);
 
       // Get snippet from response content
-      const content = data.choices?.[0]?.message?.content || '';
+      const content = data.choices?.[0]?.message?.content || "";
       const snippet = extractSnippetForUrl(content, url, query);
 
       results.push({
@@ -153,8 +166,8 @@ function parsePerplexityResponse(
 function extractTitleFromUrl(url: string): string {
   try {
     const urlObj = new URL(url);
-    const domain = urlObj.hostname.replace('www.', '');
-    const path = urlObj.pathname.split('/').filter(Boolean).join(' - ');
+    const domain = urlObj.hostname.replace("www.", "");
+    const path = urlObj.pathname.split("/").filter(Boolean).join(" - ");
     return path ? `${domain}: ${path}` : domain;
   } catch {
     return url;
@@ -164,23 +177,27 @@ function extractTitleFromUrl(url: string): string {
 /**
  * Extract snippet from content for a specific URL
  */
-function extractSnippetForUrl(content: string, _url: string, query: string): string {
+function extractSnippetForUrl(
+  content: string,
+  _url: string,
+  query: string,
+): string {
   // Find sentences containing the query or relevant to the URL
   const sentences = content.split(/[.!?]+/).filter(Boolean);
 
   // Prefer sentences mentioning the query
-  const relevantSentences = sentences.filter(s =>
-    s.toLowerCase().includes(query.toLowerCase())
+  const relevantSentences = sentences.filter((s) =>
+    s.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const snippet = (relevantSentences[0] || sentences[0] || '').trim();
+  const snippet = (relevantSentences[0] || sentences[0] || "").trim();
 
   // Truncate to ~200-300 chars
   if (snippet.length > 300) {
-    return snippet.substring(0, 297) + '...';
+    return snippet.substring(0, 297) + "...";
   }
 
-  return snippet || 'No description available.';
+  return snippet || "No description available.";
 }
 
 /**
@@ -208,9 +225,9 @@ function normalizeUrl(url: string): string {
   try {
     const urlObj = new URL(url);
     // Remove trailing slashes, fragments, and common tracking params
-    urlObj.hash = '';
-    urlObj.search = '';
-    return urlObj.toString().replace(/\/$/, '').toLowerCase();
+    urlObj.hash = "";
+    urlObj.search = "";
+    return urlObj.toString().replace(/\/$/, "").toLowerCase();
   } catch {
     return url.toLowerCase();
   }
@@ -221,7 +238,7 @@ function normalizeUrl(url: string): string {
  */
 async function prefetchUrls(urls: string[]): Promise<void> {
   // Import fetchUrl dynamically to avoid circular dependency
-  const { fetchUrl } = await import('./fetch.js');
+  const { fetchUrl } = await import("./fetch.js");
 
   // Fetch URLs in background
   await fetchUrl({ urls });

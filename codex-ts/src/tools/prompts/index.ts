@@ -39,25 +39,27 @@ export interface GetPromptsResult {
  * - Generate unique promptKeys
  * - Set appropriate TTL
  */
-export async function savePrompts(params: SavePromptsParams): Promise<SavePromptsResult> {
+export async function savePrompts(
+  params: SavePromptsParams,
+): Promise<SavePromptsResult> {
   const { prompts } = params;
 
   // Validate parameters
   if (!Array.isArray(prompts) || prompts.length === 0) {
-    throw new Error('prompts must be a non-empty array');
+    throw new Error("prompts must be a non-empty array");
   }
 
   for (const prompt of prompts) {
-    if (!prompt.name || typeof prompt.name !== 'string') {
-      throw new Error('Each prompt must have a name (string)');
+    if (!prompt.name || typeof prompt.name !== "string") {
+      throw new Error("Each prompt must have a name (string)");
     }
-    if (!prompt.content || typeof prompt.content !== 'string') {
-      throw new Error('Each prompt must have content (string)');
+    if (!prompt.content || typeof prompt.content !== "string") {
+      throw new Error("Each prompt must have content (string)");
     }
   }
 
   // Stub implementation
-  console.warn('[STUB] savePrompts called - not yet implemented');
+  console.warn("[STUB] savePrompts called - not yet implemented");
 
   // Generate mock prompt keys
   const promptKeys = prompts.map((_, idx) => `prompt_${Date.now()}_${idx}`);
@@ -73,7 +75,9 @@ export async function savePrompts(params: SavePromptsParams): Promise<SavePrompt
  * - Handle missing/expired keys
  * - Return prompt content
  */
-export async function getPrompts(params: GetPromptsParams): Promise<GetPromptsResult> {
+export async function getPrompts(
+  params: GetPromptsParams,
+): Promise<GetPromptsResult> {
   const { promptKeys } = params;
 
   // Handle single or multiple keys
@@ -81,23 +85,23 @@ export async function getPrompts(params: GetPromptsParams): Promise<GetPromptsRe
 
   // Validate parameters
   if (keyList.length === 0) {
-    throw new Error('At least one promptKey is required');
+    throw new Error("At least one promptKey is required");
   }
 
   for (const key of keyList) {
-    if (!key || typeof key !== 'string') {
-      throw new Error('All promptKeys must be non-empty strings');
+    if (!key || typeof key !== "string") {
+      throw new Error("All promptKeys must be non-empty strings");
     }
   }
 
   // Stub implementation
-  console.warn('[STUB] getPrompts called - not yet implemented');
+  console.warn("[STUB] getPrompts called - not yet implemented");
 
   // Return mock data
   const prompts: RetrievedPrompt[] = keyList.map((key, idx) => ({
     promptKey: key,
     name: `prompt_${idx}`,
-    content: '(stub content - not yet implemented)',
+    content: "(stub content - not yet implemented)",
     savedAt: new Date(),
   }));
 

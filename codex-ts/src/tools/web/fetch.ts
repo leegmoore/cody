@@ -5,8 +5,8 @@
  * Auto-assigns fileKeys and tracks fetches on announcement board.
  */
 
-import FirecrawlApp from 'firecrawl';
-import { v4 as uuidv4 } from 'uuid';
+import FirecrawlApp from "firecrawl";
+import { v4 as uuidv4 } from "uuid";
 
 export interface FetchUrlParams {
   urls: string | string[];
@@ -48,14 +48,16 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /**
  * Fetch URLs via Firecrawl with caching
  */
-export async function fetchUrl(params: FetchUrlParams): Promise<FetchUrlResult> {
+export async function fetchUrl(
+  params: FetchUrlParams,
+): Promise<FetchUrlResult> {
   const { urls, maxLength = 50 * 1024 } = params; // Default 50KB
 
   // Handle single or multiple URLs
   const urlList = Array.isArray(urls) ? urls : [urls];
 
   // Fetch URLs in parallel
-  const fetchPromises = urlList.map(url => fetchSingleUrl(url, maxLength));
+  const fetchPromises = urlList.map((url) => fetchSingleUrl(url, maxLength));
   const fetches = await Promise.all(fetchPromises);
 
   return { fetches };
@@ -64,7 +66,10 @@ export async function fetchUrl(params: FetchUrlParams): Promise<FetchUrlResult> 
 /**
  * Fetch a single URL
  */
-async function fetchSingleUrl(url: string, maxLength: number): Promise<FetchedDocument> {
+async function fetchSingleUrl(
+  url: string,
+  maxLength: number,
+): Promise<FetchedDocument> {
   const normalizedUrl = normalizeUrl(url);
 
   // Check cache first
@@ -85,23 +90,28 @@ async function fetchSingleUrl(url: string, maxLength: number): Promise<FetchedDo
   // Fetch from Firecrawl
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) {
-    throw new Error('FIRECRAWL_API_KEY environment variable not set');
+    throw new Error("FIRECRAWL_API_KEY environment variable not set");
   }
 
   const firecrawl = new FirecrawlApp({ apiKey });
 
   try {
     // Scrape the URL
-    const result = await firecrawl.scrape(url, {
-      formats: ['markdown'],
+    type FirecrawlResult = {
+      success: boolean;
+      markdown?: string;
+      metadata?: { title?: string };
+    };
+    const result = (await firecrawl.scrape(url, {
+      formats: ["markdown"],
       onlyMainContent: true,
-    }) as any;
+    })) as FirecrawlResult;
 
     if (!result.success) {
       throw new Error(`Firecrawl scrape failed for ${url}`);
     }
 
-    const content = result.markdown || '';
+    const content = result.markdown || "";
     const title = result.metadata?.title || extractTitleFromUrl(url);
     const tokens = estimateTokens(content);
 
@@ -166,8 +176,8 @@ function normalizeUrl(url: string): string {
   try {
     const urlObj = new URL(url);
     // Remove fragments and normalize
-    urlObj.hash = '';
-    return urlObj.toString().replace(/\/$/, '').toLowerCase();
+    urlObj.hash = "";
+    return urlObj.toString().replace(/\/$/, "").toLowerCase();
   } catch {
     return url.toLowerCase();
   }
@@ -178,7 +188,7 @@ function normalizeUrl(url: string): string {
  */
 function generateFileKey(_url: string): string {
   // Use UUID for unique file keys
-  return `file_${uuidv4().replace(/-/g, '').substring(0, 16)}`;
+  return `file_${uuidv4().replace(/-/g, "").substring(0, 16)}`;
 }
 
 /**
@@ -187,8 +197,8 @@ function generateFileKey(_url: string): string {
 function extractTitleFromUrl(url: string): string {
   try {
     const urlObj = new URL(url);
-    const domain = urlObj.hostname.replace('www.', '');
-    const path = urlObj.pathname.split('/').filter(Boolean).pop() || '';
+    const domain = urlObj.hostname.replace("www.", "");
+    const path = urlObj.pathname.split("/").filter(Boolean).pop() || "";
     return path ? `${domain}/${path}` : domain;
   } catch {
     return url;
@@ -211,7 +221,7 @@ function truncateContent(content: string, maxLength: number): string {
     return content;
   }
 
-  return content.substring(0, maxLength) + '\n\n[Content truncated...]';
+  return content.substring(0, maxLength) + "\n\n[Content truncated...]";
 }
 
 /**

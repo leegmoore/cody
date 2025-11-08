@@ -197,7 +197,7 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
 
           // Wrap code appropriately
           let wrappedCode: string;
-          let evalOptions: { type?: 'global' | 'module' } = {};
+          const evalOptions: { type?: "global" | "module" } = {};
 
           if (hasAwait) {
             // Async code - wrap in async IIFE (newline prevents comment consumption)
@@ -244,7 +244,7 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
           }
 
           // Check if result is a promise (only if we wrapped in async IIFE)
-          let returnValue: any;
+          let returnValue: unknown;
 
           if (hasAwait) {
             // We wrapped the code in async IIFE, so result is a promise
@@ -264,9 +264,13 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
               // Check promise state again
               const finalState = vm.getPromiseState(resultHandle.value);
               if (finalState.error) {
-                const errorObj = vm.dump(finalState.error);
-                finalState.error.dispose();
-                throw new Error(String(errorObj));
+                if (finalState.error instanceof Error) {
+                  throw finalState.error;
+                } else {
+                  const errorObj = vm.dump(finalState.error);
+                  finalState.error.dispose();
+                  throw new Error(String(errorObj));
+                }
               }
 
               if (finalState.type === "fulfilled" && finalState.value) {
@@ -274,7 +278,9 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
                 finalState.value.dispose();
               } else {
                 // Promise still pending or rejected without explicit error
-                throw new Error(`Promise in unexpected state: ${finalState.type}`);
+                throw new Error(
+                  `Promise in unexpected state: ${finalState.type}`,
+                );
               }
             } else if (promiseState.error) {
               const errorObj = vm.dump(promiseState.error);
@@ -317,17 +323,21 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
       const result = await executeWithTimeout();
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle execution errors
-      const errorCode = error.name || error.constructor?.name || "Error";
-      const errorMessage = error.message || String(error);
+      const err = error as Error;
+      const errorCode = err.name || err.constructor?.name || "Error";
+      const errorMessage = err.message || String(error);
 
       // Detect interrupt errors and classify them
       let finalCode = errorCode;
       let finalMessage = errorMessage;
 
       // Check if this was an interrupt due to timeout or cancellation
-      if (errorCode === "InternalError" && errorMessage.includes("interrupted")) {
+      if (
+        errorCode === "InternalError" &&
+        errorMessage.includes("interrupted")
+      ) {
         const elapsed = Date.now() - startTime;
         if (signal?.aborted) {
           finalCode = "ScriptCancelledError";
@@ -344,7 +354,7 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
           code: finalCode,
           message: finalMessage,
           phase: "executing",
-          stack: error.stack,
+          stack: err.stack,
         },
         metadata: {
           duration_ms: Date.now() - startTime,
