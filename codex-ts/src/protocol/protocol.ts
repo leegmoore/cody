@@ -430,11 +430,11 @@ export interface ReviewLineRange {
 /**
  * Turn abort reason.
  */
-export type TurnAbortReason =
-  | "user_requested"
-  | "max_turns_reached"
-  | "error"
-  | "context_overflow";
+/**
+ * Reason why a turn was aborted.
+ * Port of protocol.rs::TurnAbortReason
+ */
+export type TurnAbortReason = "interrupted" | "replaced" | "review_ended";
 
 // ============================================================================
 // Helper Functions
