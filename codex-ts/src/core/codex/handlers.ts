@@ -12,9 +12,8 @@ import type { ReviewDecision, EventMsg } from "../../protocol/protocol.js";
  * Handle Interrupt operation.
  * Port of handlers::interrupt
  */
-export async function interrupt(_session: Session): Promise<void> {
-  // TODO: session.interruptTask();
-  console.warn("interrupt: not yet implemented");
+export async function interrupt(session: Session): Promise<void> {
+  await session.interruptTask();
 }
 
 /**
@@ -22,11 +21,10 @@ export async function interrupt(_session: Session): Promise<void> {
  * Port of handlers::override_turn_context
  */
 export async function overrideTurnContext(
-  _session: Session,
-  _updates: SessionSettingsUpdate,
+  session: Session,
+  updates: SessionSettingsUpdate,
 ): Promise<void> {
-  // TODO: session.updateSettings(updates);
-  console.warn("overrideTurnContext: not yet implemented");
+  await session.updateSettings(updates);
 }
 
 /**
@@ -34,16 +32,14 @@ export async function overrideTurnContext(
  * Port of handlers::exec_approval
  */
 export async function execApproval(
-  _session: Session,
-  _id: string,
+  session: Session,
+  id: string,
   decision: ReviewDecision,
 ): Promise<void> {
   if (decision === "abort") {
-    // TODO: await session.interruptTask();
-    console.warn("execApproval(abort): not yet implemented");
+    await session.interruptTask();
   } else {
-    // TODO: await session.notifyApproval(id, decision);
-    console.warn("execApproval: not yet implemented");
+    await session.notifyApproval(id, decision);
   }
 }
 
@@ -52,16 +48,14 @@ export async function execApproval(
  * Port of handlers::patch_approval
  */
 export async function patchApproval(
-  _session: Session,
-  _id: string,
+  session: Session,
+  id: string,
   decision: ReviewDecision,
 ): Promise<void> {
   if (decision === "abort") {
-    // TODO: await session.interruptTask();
-    console.warn("patchApproval(abort): not yet implemented");
+    await session.interruptTask();
   } else {
-    // TODO: await session.notifyApproval(id, decision);
-    console.warn("patchApproval: not yet implemented");
+    await session.notifyApproval(id, decision);
   }
 }
 
