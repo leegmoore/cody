@@ -47,8 +47,8 @@ describe("Promise Tracker - Lifecycle Management", () => {
       const controller = new AbortController();
       const promise = Promise.resolve("result");
 
-      const _id1 = tracker.register("tool1", promise, controller);
-      const _id2 = tracker.register("tool2", promise, controller);
+      const id1 = tracker.register("tool1", promise, controller);
+      const id2 = tracker.register("tool2", promise, controller);
       const id3 = tracker.register("tool3", promise, controller);
 
       expect(id1).toBe("tool_0");
@@ -199,7 +199,7 @@ describe("Promise Tracker - Lifecycle Management", () => {
       tracker.register("slowTool", promise, controller);
 
       // Attach handler to prevent unhandled rejection
-      const _settlePromise = tracker.ensureAllSettled(250).catch((e) => e);
+      const settlePromise = tracker.ensureAllSettled(250).catch((e) => e);
 
       // Advance through grace period
       await vi.advanceTimersByTimeAsync(250);
@@ -222,7 +222,7 @@ describe("Promise Tracker - Lifecycle Management", () => {
 
       tracker.register("fastTool", promise, controller);
 
-      const _settlePromise = tracker.ensureAllSettled(250);
+      const settlePromise = tracker.ensureAllSettled(250);
 
       // Resolve promise before grace period expires
       await vi.advanceTimersByTimeAsync(100);
@@ -239,7 +239,7 @@ describe("Promise Tracker - Lifecycle Management", () => {
 
       tracker.register("orphaned", promise, controller);
 
-      const _settlePromise = tracker.ensureAllSettled(100).catch((e) => e);
+      const settlePromise = tracker.ensureAllSettled(100).catch((e) => e);
       await vi.advanceTimersByTimeAsync(100);
 
       expect(controller.signal.aborted).toBe(true);
@@ -261,8 +261,8 @@ describe("Promise Tracker - Lifecycle Management", () => {
         resolve2 = resolve;
       });
 
-      const _id1 = tracker.register("fast", promise1, controller1);
-      const _id2 = tracker.register("slow", promise2, controller2);
+      const id1 = tracker.register("fast", promise1, controller1);
+      const id2 = tracker.register("slow", promise2, controller2);
 
       // Simulate Promise.race by resolving one first
       resolve1!("winner");
@@ -519,7 +519,7 @@ describe("Promise Tracker - Lifecycle Management", () => {
       const controller = new AbortController();
       tracker.register("orphan", new Promise(() => {}), controller);
 
-      const _settlePromise = tracker.ensureAllSettled(100).catch((e) => e);
+      const settlePromise = tracker.ensureAllSettled(100).catch((e) => e);
       await vi.advanceTimersByTimeAsync(100);
 
       const result = await settlePromise;
