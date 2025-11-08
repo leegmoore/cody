@@ -144,7 +144,7 @@ export interface SpawnInterface {
  */
 export type ScriptTools = Record<
   string,
-  (...args: any[]) => Promise<unknown>
+  (...args: unknown[]) => Promise<unknown>
 > & {
   spawn?: SpawnInterface;
 };

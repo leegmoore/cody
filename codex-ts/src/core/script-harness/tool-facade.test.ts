@@ -54,7 +54,7 @@ describe("tool-facade.ts", () => {
   const createTool = (name: string, overrides?: Partial<ToolDefinition>) => {
     return {
       name,
-      execute: vi.fn(async (args: any) => ({
+      execute: vi.fn(async (args: unknown) => ({
         result: `${name} executed`,
         args,
       })),
@@ -282,7 +282,7 @@ describe("tool-facade.ts", () => {
   describe("Argument validation", () => {
     it("TF16: validates arguments with schema", async () => {
       const tool = createTool("test_tool", {
-        validateArgs: (args: any) => {
+        validateArgs: (args: unknown) => {
           if (!args || typeof args.required !== "string") {
             return { valid: false, errors: ["Missing required field"] };
           }
@@ -301,7 +301,7 @@ describe("tool-facade.ts", () => {
 
     it("TF17: accepts valid arguments", async () => {
       const tool = createTool("test_tool", {
-        validateArgs: (args: any) => {
+        validateArgs: (args: unknown) => {
           if (args && typeof args.value === "number") {
             return { valid: true };
           }
@@ -498,7 +498,7 @@ describe("tool-facade.ts", () => {
 
     it("TF27: conditional approval based on args", async () => {
       const tool = createTool("test_tool", {
-        requiresApproval: (args: any) => args.dangerous === true,
+        requiresApproval: (args: unknown) => (args as { dangerous?: boolean }).dangerous === true,
       });
       registry.register(tool);
 

@@ -133,7 +133,7 @@ describe("Hardening - Security", () => {
     });
 
     it("should handle circular references", () => {
-      const obj: any = { a: 1 };
+      const obj: { a: number; self?: unknown } = { a: 1 };
       obj.self = obj;
 
       const frozen = deepFreeze(obj);

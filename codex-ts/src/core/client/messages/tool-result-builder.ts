@@ -83,12 +83,12 @@ export function buildToolResult(
   if (mimeType) {
     // Note: Anthropic doesn't have a mime_type field in tool_result,
     // but we track it for potential future use
-    (toolResult as any).mime_type = mimeType;
+    (toolResult as Record<string, unknown>).mime_type = mimeType;
   }
 
   if (wasTruncated) {
     // Add metadata flag for tracking
-    (toolResult as any).was_truncated = true;
+    (toolResult as Record<string, unknown>).was_truncated = true;
   }
 
   return toolResult;

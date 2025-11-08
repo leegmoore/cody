@@ -149,7 +149,7 @@ function applySingleOverride(
   value: unknown,
 ): void {
   const parts = path.split(".");
-  let current: any = root;
+  let current: Record<string, unknown> = root;
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -186,7 +186,7 @@ function applySingleOverride(
       ) {
         current[part] = {};
       }
-      current = current[part];
+      current = current[part] as Record<string, unknown>;
     } else {
       // Current is not an object, replace the entire branch
       const newObj: Record<string, unknown> = {};

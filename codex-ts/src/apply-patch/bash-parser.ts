@@ -25,7 +25,7 @@ export function maybeParseApplyPatch(argv: string[]): MaybeApplyPatch {
       const parsed = parsePatch(argv[1]);
       return { type: "Body", value: parsed };
     } catch (err) {
-      return { type: "PatchParseError", error: err as any };
+      return { type: "PatchParseError", error: err instanceof Error ? err : new Error(String(err)) };
     }
   }
 
@@ -45,7 +45,7 @@ export function maybeParseApplyPatch(argv: string[]): MaybeApplyPatch {
         }
         return { type: "Body", value: parsed };
       } catch (err) {
-        return { type: "PatchParseError", error: err as any };
+        return { type: "PatchParseError", error: err instanceof Error ? err : new Error(String(err)) };
       }
     } catch (err) {
       if (isExtractHeredocError(err)) {
@@ -96,7 +96,7 @@ function extractApplyPatchFromBash(
   };
 }
 
-function isExtractHeredocError(err: any): err is ExtractHeredocError {
+function isExtractHeredocError(err: unknown): err is ExtractHeredocError {
   return (
     typeof err === "object" &&
     err !== null &&

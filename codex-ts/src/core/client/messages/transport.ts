@@ -114,7 +114,7 @@ export function createAnthropicTransport(
  */
 async function handleErrorResponse(response: Response): Promise<never> {
   const statusCode = response.status;
-  let errorData: any;
+  let errorData: unknown;
 
   try {
     errorData = await response.json();

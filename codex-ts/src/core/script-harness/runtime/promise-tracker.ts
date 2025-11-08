@@ -29,10 +29,10 @@ interface TrackedPromise {
   status: "pending" | "resolved" | "rejected" | "aborted";
 
   /** Result value (if resolved) */
-  result?: any;
+  result?: unknown;
 
   /** Error (if rejected) */
-  error?: any;
+  error?: unknown;
 
   /** Whether this is a detached promise (not auto-aborted on script completion) */
   detached?: boolean;
@@ -157,7 +157,7 @@ export class PromiseTracker {
    * @param id - Promise identifier
    * @param error - Error that occurred
    */
-  markFailed(id: string, error: any): void {
+  markFailed(id: string, error: unknown): void {
     const tracked = this.pending.get(id);
     if (tracked) {
       tracked.status = "rejected";
@@ -317,8 +317,8 @@ export class PromiseTracker {
    * Returns results from successfully completed tool calls,
    * useful when script fails mid-execution.
    */
-  getCompletedResults(): Array<{ id: string; toolName: string; result: any }> {
-    const results: Array<{ id: string; toolName: string; result: any }> = [];
+  getCompletedResults(): Array<{ id: string; toolName: string; result: unknown }> {
+    const results: Array<{ id: string; toolName: string; result: unknown }> = [];
 
     for (const [id, entry] of this.completed) {
       if (entry.status === "resolved" && entry.result !== undefined) {

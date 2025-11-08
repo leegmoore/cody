@@ -16,7 +16,7 @@ describe("CliProgressReporter", () => {
     writtenOutput = [];
     stderrWrite = process.stderr.write;
     // Mock stderr.write to capture output
-    process.stderr.write = vi.fn((chunk: any) => {
+    process.stderr.write = vi.fn((chunk: unknown) => {
       writtenOutput.push(String(chunk));
       return true;
     }) as any;

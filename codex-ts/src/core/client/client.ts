@@ -185,21 +185,23 @@ export class ModelClient {
     const apiKey = this.getApiKeyForMessages();
 
     // Build config
+    const providerExtras = this.provider as unknown as Record<string, unknown>;
     const config = {
       apiKey,
       baseUrl: this.provider.baseUrl,
-      anthropicVersion: (this.provider as any).anthropicVersion,
-      beta: (this.provider as any).beta,
+      anthropicVersion: providerExtras.anthropicVersion,
+      beta: providerExtras.beta,
     };
 
     // Build options from prompt metadata
+    const promptExtras = prompt as unknown as Record<string, unknown>;
     const options = {
-      temperature: (prompt as any).temperature,
-      topP: (prompt as any).topP,
-      topK: (prompt as any).topK,
-      stopSequences: (prompt as any).stopSequences,
-      traceId: (prompt as any).traceId,
-      toolChoice: (prompt as any).toolChoice,
+      temperature: promptExtras.temperature,
+      topP: promptExtras.topP,
+      topK: promptExtras.topK,
+      stopSequences: promptExtras.stopSequences,
+      traceId: promptExtras.traceId,
+      toolChoice: promptExtras.toolChoice,
     };
 
     // Return async generator as ResponseStream

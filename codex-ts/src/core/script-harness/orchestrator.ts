@@ -318,7 +318,7 @@ export class Orchestrator {
             },
           };
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         const scriptError: ScriptResult = {
           ok: false,
           sourceCode: block.code,

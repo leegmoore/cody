@@ -74,8 +74,8 @@ describe("Streaming Adapter - Stage 5", () => {
 
       const textDeltas = result.filter((e) => e.type === "output_text_delta");
       expect(textDeltas).toHaveLength(2);
-      expect((textDeltas[0] as any).delta).toBe("Hello");
-      expect((textDeltas[1] as any).delta).toBe(" world");
+      expect((textDeltas[0] as { type: "output_text_delta"; delta: string }).delta).toBe("Hello");
+      expect((textDeltas[1] as { type: "output_text_delta"; delta: string }).delta).toBe(" world");
     });
 
     // SE-03: Reasoning delta streaming works
@@ -103,7 +103,7 @@ describe("Streaming Adapter - Stage 5", () => {
         (e) => e.type === "reasoning_content_delta",
       );
       expect(reasoningDeltas).toHaveLength(1);
-      expect((reasoningDeltas[0] as any).delta).toBe("Analyzing...");
+      expect((reasoningDeltas[0] as { type: "reasoning_content_delta"; delta: string }).delta).toBe("Analyzing...");
     });
 
     // SE-04: Tool call emitted on block stop
@@ -141,7 +141,7 @@ describe("Streaming Adapter - Stage 5", () => {
 
       const toolItems = result.filter((e) => e.type === "output_item_added");
       expect(toolItems).toHaveLength(1);
-      const item = (toolItems[0] as any).item;
+      const item = (toolItems[0] as { type: "output_item_added"; item: { type: string; name?: string } }).item;
       expect(item.type).toBe("custom_tool_call");
       expect(item.name).toBe("get_weather");
     });
@@ -169,7 +169,7 @@ describe("Streaming Adapter - Stage 5", () => {
 
       const completed = result.find((e) => e.type === "completed");
       expect(completed).toBeDefined();
-      expect((completed as any).tokenUsage).toBeDefined();
+      expect((completed as { type: "completed"; tokenUsage?: unknown }).tokenUsage).toBeDefined();
     });
 
     // SE-07: Response completed event fired exactly once
@@ -252,7 +252,7 @@ describe("Streaming Adapter - Stage 5", () => {
 
       const toolItems = result.filter((e) => e.type === "output_item_added");
       expect(toolItems).toHaveLength(2);
-      const callIds = toolItems.map((e: any) => e.item.call_id);
+      const callIds = toolItems.map((e) => (e as { type: "output_item_added"; item: { call_id: string } }).item.call_id);
       expect(new Set(callIds).size).toBe(2); // Distinct IDs
     });
   });
@@ -291,7 +291,7 @@ describe("Streaming Adapter - Stage 5", () => {
 
       const completed = result.find((e) => e.type === "completed");
       expect(completed).toBeDefined();
-      expect((completed as any).responseId).toBe("msg_with_id");
+      expect((completed as { type: "completed"; responseId: string }).responseId).toBe("msg_with_id");
     });
 
     // SE-20: Adapter handles empty tool input object
@@ -321,7 +321,7 @@ describe("Streaming Adapter - Stage 5", () => {
 
       const toolItem = result.find((e) => e.type === "output_item_added");
       expect(toolItem).toBeDefined();
-      const item = (toolItem as any).item;
+      const item = (toolItem as { type: "output_item_added"; item: { input: string } }).item;
       expect(item.input).toBe("{}");
     });
 
@@ -512,7 +512,16 @@ async function collectEvents(
 /**
  * Helper: Create mock message_start data
  */
-function createMockMessage(id: string = "msg_test"): any {
+function createMockMessage(id: string = "msg_test"): {
+  type: string;
+  id: string;
+  role: string;
+  content: unknown[];
+  model: string;
+  stop_reason: null;
+  stop_sequence: null;
+  usage: { input_tokens: number; output_tokens: number };
+} {
   return {
     type: "message",
     id,
@@ -531,7 +540,7 @@ function createMockMessage(id: string = "msg_test"): any {
 /**
  * Helper: Convert fixture to SSE events
  */
-function convertFixtureToEvents(fixture: any[]): AnthropicSseEvent[] {
+function convertFixtureToEvents(fixture: Array<{ event: string; data: Record<string, unknown> }>): AnthropicSseEvent[] {
   return fixture.map((item) => {
     const event = item.event;
     const data = item.data;

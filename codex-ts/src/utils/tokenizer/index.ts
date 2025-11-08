@@ -81,7 +81,7 @@ export class Tokenizer {
    */
   static forModel(model: string): Tokenizer {
     try {
-      const inner = encoding_for_model(model as any);
+      const inner = encoding_for_model(model as unknown as Parameters<typeof encoding_for_model>[0]);
       return new Tokenizer(inner);
     } catch (modelError) {
       // Fallback to o200k_base

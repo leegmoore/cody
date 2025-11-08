@@ -86,7 +86,7 @@ function parseSseEvent(eventText: string): AnthropicSseEvent | null {
   }
 
   // Parse the JSON data
-  let parsedData: any;
+  let parsedData: unknown;
   try {
     parsedData = JSON.parse(data);
   } catch (err) {

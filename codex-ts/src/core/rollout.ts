@@ -59,7 +59,7 @@ export interface SessionMeta {
  */
 export interface RolloutItem {
   type: "session_meta" | "message" | "response" | "event";
-  data: any;
+  data: unknown;
 }
 
 /**

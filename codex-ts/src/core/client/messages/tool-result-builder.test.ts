@@ -51,7 +51,7 @@ describe("Tool Result Builder - Stage 9", () => {
       const parsed = JSON.parse(toolResult.content as string);
       expect(parsed.status).toBe("success");
       expect(parsed.data.temperature).toBe(72);
-      expect((toolResult as any).mime_type).toBe("application/json");
+      expect((toolResult as { mime_type?: string }).mime_type).toBe("application/json");
     });
 
     // TC-15: Tool result marshaler flags error status

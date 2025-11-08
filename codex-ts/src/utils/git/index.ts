@@ -22,7 +22,7 @@ export class GitToolingError extends Error {
   constructor(
     message: string,
     public readonly code?: string,
-    public readonly details?: any,
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "GitToolingError";
@@ -167,7 +167,7 @@ export async function ensureGitRepository(path: string): Promise<void> {
     if (output !== "true") {
       throw GitToolingError.notAGitRepository(path);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (
       error instanceof GitToolingError &&
       error.code === "GIT_COMMAND_FAILED"
@@ -186,7 +186,7 @@ export async function ensureGitRepository(path: string): Promise<void> {
 export async function resolveHead(path: string): Promise<string | undefined> {
   try {
     return await runGitForStdout(path, ["rev-parse", "--verify", "HEAD"]);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof GitToolingError && error.details?.exitCode === 128) {
       return undefined;
     }

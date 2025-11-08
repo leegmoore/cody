@@ -143,9 +143,9 @@ function convertMessages(items: ResponseItem[]): AnthropicMessage[] {
     if (item.type === "message") {
       // Convert content blocks
       const textContent = item.content
-        .map((block: any) => {
+        .map((block: { type: string; text?: string }) => {
           if (block.type === "input_text" || block.type === "output_text") {
-            return block.text;
+            return block.text || "";
           }
           // Skip images and other content types for now
           // They will be handled in later stages

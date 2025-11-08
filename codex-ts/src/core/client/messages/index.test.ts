@@ -39,7 +39,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -73,8 +73,8 @@ describe("Integration - Stage 8", () => {
       // Completed should have responseId and tokenUsage
       const completed = events.find((e) => e.type === "completed");
       expect(completed).toBeDefined();
-      expect((completed as any).responseId).toBeDefined();
-      expect((completed as any).tokenUsage).toBeDefined();
+      expect((completed as { type: "completed"; responseId?: string; tokenUsage?: unknown }).responseId).toBeDefined();
+      expect((completed as { type: "completed"; responseId?: string; tokenUsage?: unknown }).tokenUsage).toBeDefined();
     });
 
     // IT-02: Tool call round-trip end-to-end
@@ -85,7 +85,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -127,12 +127,12 @@ describe("Integration - Stage 8", () => {
       const toolCallEvents = events.filter(
         (e) =>
           e.type === "output_item_added" &&
-          (e as any).item?.type === "custom_tool_call",
+          (e as { type: "output_item_added"; item: { type?: string } }).item?.type === "custom_tool_call",
       );
       expect(toolCallEvents.length).toBeGreaterThan(0);
 
       // Tool call should have call_id and name
-      const toolCall = (toolCallEvents[0] as any).item;
+      const toolCall = (toolCallEvents[0] as { type: "output_item_added"; item: { call_id?: string; name?: string; input?: string } }).item;
       expect(toolCall.call_id).toBeDefined();
       expect(toolCall.name).toBeDefined();
       expect(toolCall.input).toBeDefined();
@@ -149,7 +149,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -193,12 +193,12 @@ describe("Integration - Stage 8", () => {
       const toolCalls = events.filter(
         (e) =>
           e.type === "output_item_added" &&
-          (e as any).item?.type === "custom_tool_call",
+          (e as { type: "output_item_added"; item: { type?: string } }).item?.type === "custom_tool_call",
       );
       expect(toolCalls.length).toBe(2);
 
       // Both should have distinct call_ids
-      const callIds = toolCalls.map((e: any) => e.item.call_id);
+      const callIds = toolCalls.map((e) => (e as { type: "output_item_added"; item: { call_id: string } }).item.call_id);
       expect(new Set(callIds).size).toBe(2);
     });
 
@@ -210,7 +210,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -259,7 +259,7 @@ describe("Integration - Stage 8", () => {
             "anthropic-ratelimit-tokens-remaining": "50000",
           },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -296,7 +296,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -337,7 +337,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -381,7 +381,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -416,7 +416,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -464,7 +464,7 @@ describe("Integration - Stage 8", () => {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
-      }) as any;
+      }) as unknown as typeof global.fetch;
 
       const prompt: Prompt = {
         input: [
@@ -498,7 +498,7 @@ describe("Integration - Stage 8", () => {
  * Helper: Create SSE stream from fixture data
  */
 function createSseStreamFromFixture(
-  fixture: any[],
+  fixture: Array<{ event: string; data: unknown }>,
 ): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
@@ -519,7 +519,7 @@ function createSseStreamFromFixture(
 /**
  * Helper: Create fixture with multiple tool calls
  */
-function createMultiToolFixture(): any[] {
+function createMultiToolFixture(): Array<{ event: string; data: Record<string, unknown> }> {
   return [
     {
       event: "message_start",

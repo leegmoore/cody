@@ -82,30 +82,32 @@ describe("CliConfigOverrides", () => {
 
   it("applies override to empty object", () => {
     const overrides = new CliConfigOverrides(["model=o3"]);
-    const target: any = {};
+    const target: Record<string, unknown> = {};
     overrides.applyOnValue(target);
     expect(target.model).toBe("o3");
   });
 
   it("applies nested override", () => {
     const overrides = new CliConfigOverrides(["foo.bar=42"]);
-    const target: any = {};
+    const target: Record<string, unknown> = {};
     overrides.applyOnValue(target);
-    expect(target.foo.bar).toBe(42);
+    expect((target.foo as Record<string, unknown>).bar).toBe(42);
   });
 
   it("replaces existing value", () => {
     const overrides = new CliConfigOverrides(["model=new-model"]);
-    const target: any = { model: "old-model" };
+    const target: Record<string, unknown> = { model: "old-model" };
     overrides.applyOnValue(target);
     expect(target.model).toBe("new-model");
   });
 
   it("creates intermediate objects", () => {
     const overrides = new CliConfigOverrides(["a.b.c.d=value"]);
-    const target: any = {};
+    const target: Record<string, unknown> = {};
     overrides.applyOnValue(target);
-    expect(target.a.b.c.d).toBe("value");
+    expect(
+      (((target.a as Record<string, unknown>).b as Record<string, unknown>).c as Record<string, unknown>).d
+    ).toBe("value");
   });
 
   it("handles value containing equals sign", () => {

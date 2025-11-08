@@ -108,7 +108,7 @@ export class OllamaClient {
       }
 
       return models
-        .map((m: any) => m.name)
+        .map((m: { name: string }) => m.name)
         .filter((name): name is string => typeof name === "string");
     } catch {
       return [];
