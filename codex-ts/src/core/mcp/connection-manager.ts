@@ -137,6 +137,30 @@ export class McpConnectionManager {
   }
 
   /**
+   * Call an MCP tool
+   * TODO(Phase 5): Implement real tool calling
+   */
+  async callTool(
+    _server: string,
+    _tool: string,
+    _args?: unknown,
+  ): Promise<unknown> {
+    throw new Error(
+      "McpConnectionManager.callTool() not implemented - deferred to Phase 5",
+    );
+  }
+
+  /**
+   * Parse MCP tool name into (server, tool) parts
+   * Format: "server__tool"
+   * TODO(Phase 5): Implement real parsing
+   */
+  parseToolName(_toolName: string): [string, string] | null {
+    // Stub implementation
+    return null;
+  }
+
+  /**
    * List resources from a specific MCP server
    *
    * Phase 5 TODO: Implement real MCP protocol call

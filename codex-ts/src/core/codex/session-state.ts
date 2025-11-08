@@ -9,7 +9,11 @@ import type {
   TokenUsageInfo,
   RateLimitSnapshot,
 } from "../../protocol/protocol.js";
-import type { SessionConfiguration, SessionState } from "./types.js";
+import type {
+  SessionConfiguration,
+  SessionState,
+  SessionSettingsUpdate,
+} from "./types.js";
 import { ConversationHistory } from "../conversation-history/index.js";
 
 /**
@@ -102,4 +106,39 @@ export function setTokenUsageFull(
   contextWindow: number,
 ): void {
   state.history.setTokenUsageFull(contextWindow);
+}
+
+/**
+ * Apply session settings updates to configuration.
+ * Port of SessionConfiguration::apply
+ */
+export function applySessionSettings(
+  state: SessionState,
+  updates: SessionSettingsUpdate,
+): SessionState {
+  const newConfig = { ...state.sessionConfiguration };
+
+  if (updates.model !== undefined) {
+    newConfig.model = updates.model;
+  }
+  if (updates.reasoningEffort !== undefined) {
+    newConfig.modelReasoningEffort = updates.reasoningEffort;
+  }
+  if (updates.reasoningSummary !== undefined) {
+    newConfig.modelReasoningSummary = updates.reasoningSummary;
+  }
+  if (updates.approvalPolicy !== undefined) {
+    newConfig.approvalPolicy = updates.approvalPolicy;
+  }
+  if (updates.sandboxPolicy !== undefined) {
+    newConfig.sandboxPolicy = updates.sandboxPolicy;
+  }
+  if (updates.cwd !== undefined) {
+    newConfig.cwd = updates.cwd;
+  }
+
+  return {
+    ...state,
+    sessionConfiguration: newConfig,
+  };
 }

@@ -39,8 +39,7 @@ export class Session {
   private readonly services: SessionServices;
   private _nextInternalSubId = 0;
 
-  // Private state (unused in skeleton, will be used in later sections)
-  // @ts-expect-error - unused until section 5+
+  // Private state
   private _state: SessionState;
   private _activeTurn: ActiveTurn | null = null;
 
@@ -150,17 +149,19 @@ export class Session {
    * Port of Session::update_settings
    */
   async updateSettings(updates: SessionSettingsUpdate): Promise<void> {
-    // TODO: Implement state update
-    console.warn("updateSettings: not yet implemented", { updates });
+    this._state = SessionStateHelpers.applySessionSettings(
+      this._state,
+      updates,
+    );
   }
 
   /**
    * Create a new turn with an auto-generated submission ID.
    * Port of Session::new_turn
    */
-  async newTurn(_updates: SessionSettingsUpdate): Promise<TurnContext> {
-    // TODO: Implement turn creation
-    throw new Error("newTurn: not yet implemented");
+  async newTurn(updates: SessionSettingsUpdate): Promise<TurnContext> {
+    const subId = this.nextInternalSubId();
+    return this.newTurnWithSubId(subId, updates);
   }
 
   /**
@@ -168,11 +169,36 @@ export class Session {
    * Port of Session::new_turn_with_sub_id
    */
   async newTurnWithSubId(
-    _subId: string,
-    _updates: SessionSettingsUpdate,
+    subId: string,
+    updates: SessionSettingsUpdate,
   ): Promise<TurnContext> {
-    // TODO: Implement turn creation with sub_id
-    throw new Error("newTurnWithSubId: not yet implemented");
+    // Apply updates to configuration
+    const sessionConfiguration = SessionStateHelpers.applySessionSettings(
+      this._state,
+      updates,
+    ).sessionConfiguration;
+    this._state.sessionConfiguration = sessionConfiguration;
+
+    // Create turn context
+    // TODO: Port make_turn_context - for now return minimal stub
+    const turnContext: TurnContext = {
+      subId,
+      client: {} as unknown as any, // TODO: Create ModelClient
+      cwd: sessionConfiguration.cwd,
+      developerInstructions: sessionConfiguration.developerInstructions,
+      baseInstructions: sessionConfiguration.baseInstructions,
+      compactPrompt: sessionConfiguration.compactPrompt,
+      userInstructions: sessionConfiguration.userInstructions,
+      approvalPolicy: sessionConfiguration.approvalPolicy,
+      sandboxPolicy: sessionConfiguration.sandboxPolicy,
+      shellEnvironmentPolicy: {} as any, // TODO
+      toolsConfig: {} as any, // TODO
+      finalOutputJsonSchema: updates.finalOutputJsonSchema ?? null,
+      codexLinuxSandboxExe: null,
+      toolCallGate: {} as any, // TODO
+    };
+
+    return turnContext;
   }
 
   /**
@@ -293,23 +319,19 @@ export class Session {
    * Port of Session::call_tool
    */
   async callTool(
-    _server: string,
-    _tool: string,
-    _arguments?: unknown,
+    server: string,
+    tool: string,
+    args?: unknown,
   ): Promise<unknown> {
-    // TODO: Implement MCP tool call
-    console.warn("callTool: not yet implemented");
-    return null;
+    return this.services.mcpConnectionManager.callTool(server, tool, args);
   }
 
   /**
    * Parse MCP tool name into (server, tool) parts.
    * Port of Session::parse_mcp_tool_name
    */
-  parseMcpToolName(_toolName: string): [string, string] | null {
-    // TODO: Implement tool name parsing
-    console.warn("parseMcpToolName: not yet implemented");
-    return null;
+  parseMcpToolName(toolName: string): [string, string] | null {
+    return this.services.mcpConnectionManager.parseToolName(toolName);
   }
 
   /**
