@@ -20,9 +20,11 @@
 - [ ] Port model lookup table (context windows, max tokens)
 - [ ] Add get_model_info function
 - [ ] Create tests (10 tests)
-- [ ] Test model lookup (use models from Rust source code)
-- [ ] Test unknown models (returns None)
+- [ ] Test model lookup function works
+- [ ] Test returns proper context window values
+- [ ] Test unknown model slug returns undefined/null
 - [ ] Verify tests passing
+- [ ] NOTE: This tests the lookup TABLE, not actual API calls
 
 ---
 
