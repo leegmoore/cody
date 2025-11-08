@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "@mendable/firecrawl-js": "^4.5.0",
     "@modelcontextprotocol/sdk": "^1.21.0",
     "@types/uuid": "^10.0.0",
     "@vscode/tree-sitter-wasm": "^0.2.0",
