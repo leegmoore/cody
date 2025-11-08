@@ -293,7 +293,8 @@ function finalizeExecResult(
   sandboxType: SandboxType,
   durationMs: number,
 ): ExecToolCallOutput {
-  let { exitCode, timedOut } = rawOutput;
+  let { exitCode } = rawOutput;
+  const { timedOut } = rawOutput;
 
   // Override exit code if timed out
   if (timedOut) {

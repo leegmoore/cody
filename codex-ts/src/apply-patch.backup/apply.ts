@@ -114,7 +114,7 @@ function deriveNewContentsFromChunks(
     );
   }
 
-  let originalLines = originalContents.split("\n");
+  const originalLines = originalContents.split("\n");
 
   // Drop the trailing empty element that results from the final newline
   if (
@@ -125,7 +125,7 @@ function deriveNewContentsFromChunks(
   }
 
   const replacements = computeReplacements(originalLines, filePath, chunks);
-  let newLines = applyReplacements(originalLines, replacements);
+  const newLines = applyReplacements(originalLines, replacements);
 
   // Ensure trailing newline
   if (newLines.length === 0 || newLines[newLines.length - 1] !== "") {

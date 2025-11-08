@@ -8,7 +8,11 @@
  * @module core/config
  */
 
-import { AskForApproval, SandboxPolicy } from "../protocol/protocol";
+import {
+  AskForApproval,
+  SandboxPolicy,
+  createReadOnlyPolicy,
+} from "../protocol/protocol";
 import {
   ReasoningEffort,
   ReasoningSummary,
@@ -54,13 +58,14 @@ export interface History {
   maxBytes?: number;
 }
 
-export namespace History {
-  export function defaultHistory(): History {
-    return {
-      persistence: HistoryPersistence.SaveAll,
-      maxBytes: undefined,
-    };
-  }
+/**
+ * Create a History with default values
+ */
+export function defaultHistory(): History {
+  return {
+    persistence: HistoryPersistence.SaveAll,
+    maxBytes: undefined,
+  };
 }
 
 /**
@@ -74,23 +79,21 @@ export enum UriBasedFileOpener {
   None = "none",
 }
 
-export namespace UriBasedFileOpener {
-  /**
-   * Get the URI scheme for the file opener
-   */
-  export function getScheme(opener: UriBasedFileOpener): string | undefined {
-    switch (opener) {
-      case UriBasedFileOpener.VsCode:
-        return "vscode";
-      case UriBasedFileOpener.VsCodeInsiders:
-        return "vscode-insiders";
-      case UriBasedFileOpener.Windsurf:
-        return "windsurf";
-      case UriBasedFileOpener.Cursor:
-        return "cursor";
-      case UriBasedFileOpener.None:
-        return undefined;
-    }
+/**
+ * Get the URI scheme for the file opener
+ */
+export function getUriScheme(opener: UriBasedFileOpener): string | undefined {
+  switch (opener) {
+    case UriBasedFileOpener.VsCode:
+      return "vscode";
+    case UriBasedFileOpener.VsCodeInsiders:
+      return "vscode-insiders";
+    case UriBasedFileOpener.Windsurf:
+      return "windsurf";
+    case UriBasedFileOpener.Cursor:
+      return "cursor";
+    case UriBasedFileOpener.None:
+      return undefined;
   }
 }
 
@@ -206,44 +209,42 @@ export interface Config {
   toolsWebSearchRequest: boolean;
 }
 
-export namespace Config {
-  /**
-   * Create a new Config with default values
-   *
-   * @param codexHome - Directory containing all Codex state
-   * @param cwd - Current working directory
-   * @returns A new Config instance with defaults
-   */
-  export function createDefault(codexHome: string, cwd: string): Config {
-    if (!codexHome) {
-      throw new Error("codex_home is required");
-    }
-    if (!cwd) {
-      throw new Error("cwd is required");
-    }
-
-    const config: Config = {} as Config;
-
-    config.model = OPENAI_DEFAULT_MODEL;
-    config.reviewModel = OPENAI_DEFAULT_REVIEW_MODEL;
-    config.modelProviderId = "openai";
-    config.approvalPolicy = "on-failure"; // AskForApproval
-    config.sandboxPolicy = SandboxPolicy.newReadOnlyPolicy();
-    config.didUserSetCustomApprovalPolicyOrSandboxMode = false;
-    config.hideAgentReasoning = false;
-    config.showRawAgentReasoning = false;
-    config.cwd = cwd;
-    config.mcpServers = new Map();
-    config.projectDocMaxBytes = PROJECT_DOC_MAX_BYTES;
-    config.projectDocFallbackFilenames = [];
-    config.codexHome = codexHome;
-    config.history = History.defaultHistory();
-    config.fileOpener = UriBasedFileOpener.None;
-    config.modelReasoningSummary = ReasoningSummary.Auto;
-    config.chatgptBaseUrl = "https://chatgpt.com/backend-api/";
-    config.includeApplyPatchTool = false;
-    config.toolsWebSearchRequest = false;
-
-    return config;
+/**
+ * Create a new Config with default values
+ *
+ * @param codexHome - Directory containing all Codex state
+ * @param cwd - Current working directory
+ * @returns A new Config instance with defaults
+ */
+export function createDefaultConfig(codexHome: string, cwd: string): Config {
+  if (!codexHome) {
+    throw new Error("codex_home is required");
   }
+  if (!cwd) {
+    throw new Error("cwd is required");
+  }
+
+  const config: Config = {} as Config;
+
+  config.model = OPENAI_DEFAULT_MODEL;
+  config.reviewModel = OPENAI_DEFAULT_REVIEW_MODEL;
+  config.modelProviderId = "openai";
+  config.approvalPolicy = "on-failure"; // AskForApproval
+  config.sandboxPolicy = createReadOnlyPolicy();
+  config.didUserSetCustomApprovalPolicyOrSandboxMode = false;
+  config.hideAgentReasoning = false;
+  config.showRawAgentReasoning = false;
+  config.cwd = cwd;
+  config.mcpServers = new Map();
+  config.projectDocMaxBytes = PROJECT_DOC_MAX_BYTES;
+  config.projectDocFallbackFilenames = [];
+  config.codexHome = codexHome;
+  config.history = defaultHistory();
+  config.fileOpener = UriBasedFileOpener.None;
+  config.modelReasoningSummary = ReasoningSummary.Auto;
+  config.chatgptBaseUrl = "https://chatgpt.com/backend-api/";
+  config.includeApplyPatchTool = false;
+  config.toolsWebSearchRequest = false;
+
+  return config;
 }

@@ -276,7 +276,7 @@ describe("mcp-types", () => {
 
       expect(request.method).toBe("tools/call");
       expect(request.params).toHaveProperty("name");
-      expect((request.params as any).name).toBe("my_tool");
+      expect((request.params as { name: string }).name).toBe("my_tool");
     });
 
     it("should handle tool call result", () => {

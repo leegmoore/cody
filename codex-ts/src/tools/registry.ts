@@ -36,7 +36,7 @@ import { type SandboxPolicy } from "../protocol/protocol.js";
 /**
  * Tool function signature
  */
-export type ToolFunction<TParams = any, TResult = any> = (
+export type ToolFunction<TParams = unknown, TResult = unknown> = (
   params: TParams,
   options?: ToolOptions,
 ) => Promise<TResult>;
@@ -48,13 +48,13 @@ export interface ToolMetadata {
   name: string;
   description: string;
   requiresApproval: boolean;
-  schema?: Record<string, any>; // JSON schema for parameters
+  schema?: Record<string, unknown>; // JSON schema for parameters
 }
 
 /**
  * Registered tool with metadata and execution function
  */
-export interface RegisteredTool<TParams = any, TResult = any> {
+export interface RegisteredTool<TParams = unknown, TResult = unknown> {
   metadata: ToolMetadata;
   execute: ToolFunction<TParams, TResult>;
 }

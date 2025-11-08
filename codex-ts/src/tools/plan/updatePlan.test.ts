@@ -99,14 +99,14 @@ describe("updatePlan", () => {
   it("should reject plan that is not an array", async () => {
     const params = {
       plan: "not an array",
-    } as any;
+    } as unknown as UpdatePlanParams;
 
     await expect(updatePlan(params)).rejects.toThrow("plan must be an array");
   });
 
   it("should reject plan item missing step field", async () => {
     const params: UpdatePlanParams = {
-      plan: [{ status: StepStatus.Pending } as any],
+      plan: [{ status: StepStatus.Pending } as unknown as PlanItem],
     };
 
     await expect(updatePlan(params)).rejects.toThrow("missing step field");
@@ -114,7 +114,7 @@ describe("updatePlan", () => {
 
   it("should reject plan item missing status field", async () => {
     const params: UpdatePlanParams = {
-      plan: [{ step: "Do something" } as any],
+      plan: [{ step: "Do something" } as unknown as PlanItem],
     };
 
     await expect(updatePlan(params)).rejects.toThrow("missing status field");
@@ -122,7 +122,7 @@ describe("updatePlan", () => {
 
   it("should reject invalid status value", async () => {
     const params: UpdatePlanParams = {
-      plan: [{ step: "Step 1", status: "invalid" as any }],
+      plan: [{ step: "Step 1", status: "invalid" as unknown as StepStatus }],
     };
 
     await expect(updatePlan(params)).rejects.toThrow("invalid status");
@@ -207,7 +207,7 @@ describe("PLAN_TOOL_SPEC", () => {
 
   it("should have plan item properties", () => {
     const planProp = PLAN_TOOL_SPEC.parameters.properties.plan;
-    const itemSchema = planProp.items as any;
+    const itemSchema = planProp.items as { properties: { step: unknown; status: unknown } };
 
     expect(itemSchema.properties.step).toBeDefined();
     expect(itemSchema.properties.status).toBeDefined();
@@ -215,7 +215,7 @@ describe("PLAN_TOOL_SPEC", () => {
 
   it("should have status enum values", () => {
     const planProp = PLAN_TOOL_SPEC.parameters.properties.plan;
-    const itemSchema = planProp.items as any;
+    const itemSchema = planProp.items as { properties: { status: { enum: string[] } } };
     const statusSchema = itemSchema.properties.status;
 
     expect(statusSchema.enum).toEqual(["pending", "in_progress", "completed"]);
@@ -223,7 +223,7 @@ describe("PLAN_TOOL_SPEC", () => {
 
   it("should mark plan item fields as required", () => {
     const planProp = PLAN_TOOL_SPEC.parameters.properties.plan;
-    const itemSchema = planProp.items as any;
+    const itemSchema = planProp.items as { required: string[] };
 
     expect(itemSchema.required).toContain("step");
     expect(itemSchema.required).toContain("status");

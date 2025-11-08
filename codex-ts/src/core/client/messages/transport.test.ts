@@ -138,7 +138,7 @@ describe("Transport Layer - Stage 7", () => {
     });
 
     it("should send request body as JSON", async () => {
-      let capturedBody: any;
+      let capturedBody: unknown;
 
       global.fetch = vi.fn(async (url, init) => {
         capturedBody = JSON.parse(init?.body as string);

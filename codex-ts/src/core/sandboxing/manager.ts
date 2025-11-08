@@ -102,7 +102,7 @@ export class SandboxManager {
 
     // Apply sandbox wrapping based on type
     let finalCommand: string[];
-    let sandboxEnv: Record<string, string> = {};
+    const sandboxEnv: Record<string, string> = {};
     let arg0Override: string | undefined;
 
     switch (sandbox) {

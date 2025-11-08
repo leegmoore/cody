@@ -163,7 +163,7 @@ export function deepFreeze<T>(obj: T, visited = new Set<unknown>()): T {
 
   // Recursively freeze all property values
   Object.getOwnPropertyNames(obj).forEach((prop) => {
-    const value = (obj as any)[prop];
+    const value = (obj as Record<string, unknown>)[prop];
     if (value && (typeof value === "object" || typeof value === "function")) {
       deepFreeze(value, visited);
     }

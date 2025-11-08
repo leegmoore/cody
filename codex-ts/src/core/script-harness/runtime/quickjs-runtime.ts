@@ -245,18 +245,23 @@ export class QuickJSRuntime implements ScriptRuntimeAdapter {
       const result = await Promise.race([executeWithTimeout(), timeoutPromise]);
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle execution errors
-      const errorCode = error.name || error.constructor?.name || "Error";
-      const errorMessage = error.message || String(error);
+      const errorObj = error && typeof error === "object" ? error : { message: String(error) };
+      const errorCode = ("name" in errorObj && typeof errorObj.name === "string")
+        ? errorObj.name
+        : (errorObj.constructor?.name || "Error");
+      const errorMessage = ("message" in errorObj && typeof errorObj.message === "string")
+        ? errorObj.message
+        : String(error);
 
       return {
         ok: false,
         error: {
           code: errorCode,
           message: errorMessage,
-          phase: "executing",
-          stack: error.stack,
+          phase: "executing" as const,
+          stack: ("stack" in errorObj && typeof errorObj.stack === "string") ? errorObj.stack : undefined,
         },
         metadata: {
           duration_ms: Date.now() - startTime,

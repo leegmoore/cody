@@ -1,16 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
-  Config,
   History,
   HistoryPersistence,
   UriBasedFileOpener,
+  defaultHistory,
+  getUriScheme,
+  createDefaultConfig,
 } from "./config";
 import { ReasoningSummary } from "../protocol/config-types";
 
 describe("Config", () => {
   describe("History", () => {
     it("should have correct default persistence", () => {
-      const history = History.defaultHistory();
+      const history = defaultHistory();
       expect(history.persistence).toBe(HistoryPersistence.SaveAll);
       expect(history.maxBytes).toBeUndefined();
     });
@@ -42,39 +44,31 @@ describe("Config", () => {
 
   describe("UriBasedFileOpener", () => {
     it("should support VSCode scheme", () => {
-      expect(UriBasedFileOpener.getScheme(UriBasedFileOpener.VsCode)).toBe(
-        "vscode",
-      );
+      expect(getUriScheme(UriBasedFileOpener.VsCode)).toBe("vscode");
     });
 
     it("should support VSCode Insiders scheme", () => {
-      expect(
-        UriBasedFileOpener.getScheme(UriBasedFileOpener.VsCodeInsiders),
-      ).toBe("vscode-insiders");
+      expect(getUriScheme(UriBasedFileOpener.VsCodeInsiders)).toBe(
+        "vscode-insiders",
+      );
     });
 
     it("should support Windsurf scheme", () => {
-      expect(UriBasedFileOpener.getScheme(UriBasedFileOpener.Windsurf)).toBe(
-        "windsurf",
-      );
+      expect(getUriScheme(UriBasedFileOpener.Windsurf)).toBe("windsurf");
     });
 
     it("should support Cursor scheme", () => {
-      expect(UriBasedFileOpener.getScheme(UriBasedFileOpener.Cursor)).toBe(
-        "cursor",
-      );
+      expect(getUriScheme(UriBasedFileOpener.Cursor)).toBe("cursor");
     });
 
     it("should return undefined for None", () => {
-      expect(
-        UriBasedFileOpener.getScheme(UriBasedFileOpener.None),
-      ).toBeUndefined();
+      expect(getUriScheme(UriBasedFileOpener.None)).toBeUndefined();
     });
   });
 
   describe("Config defaults", () => {
     it("should create config with required defaults", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -94,7 +88,7 @@ describe("Config", () => {
     });
 
     it("should set correct sandbox policy default", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -104,7 +98,7 @@ describe("Config", () => {
     });
 
     it("should initialize empty MCP servers map", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -113,7 +107,7 @@ describe("Config", () => {
     });
 
     it("should set project doc defaults", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -125,7 +119,7 @@ describe("Config", () => {
 
   describe("Config creation with custom values", () => {
     it("should allow custom model", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -135,7 +129,7 @@ describe("Config", () => {
     });
 
     it("should allow custom approval policy", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -145,7 +139,7 @@ describe("Config", () => {
     });
 
     it("should allow disabling history persistence", () => {
-      const config = Config.createDefault(
+      const config = createDefaultConfig(
         "/home/user/.codex",
         "/home/user/project",
       );
@@ -161,13 +155,13 @@ describe("Config", () => {
   describe("Config validation", () => {
     it("should require codex_home path", () => {
       expect(() => {
-        Config.createDefault("", "/home/user/project");
+        createDefaultConfig("", "/home/user/project");
       }).toThrow();
     });
 
     it("should require cwd path", () => {
       expect(() => {
-        Config.createDefault("/home/user/.codex", "");
+        createDefaultConfig("/home/user/.codex", "");
       }).toThrow();
     });
   });

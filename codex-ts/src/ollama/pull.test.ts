@@ -19,7 +19,7 @@ describe("CliProgressReporter", () => {
     process.stderr.write = vi.fn((chunk: unknown) => {
       writtenOutput.push(String(chunk));
       return true;
-    }) as any;
+    }) as unknown as typeof process.stderr.write;
   });
 
   afterEach(() => {
@@ -141,7 +141,7 @@ describe("TuiProgressReporter", () => {
 
   beforeEach(() => {
     stderrWrite = process.stderr.write;
-    process.stderr.write = vi.fn(() => true) as any;
+    process.stderr.write = vi.fn(() => true) as unknown as typeof process.stderr.write;
   });
 
   afterEach(() => {

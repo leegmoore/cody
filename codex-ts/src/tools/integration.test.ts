@@ -80,7 +80,7 @@ describe("MCP Resource Integration", () => {
 
     const result = await listMcpResources(
       { server: "server1" },
-      mockManager as any,
+      mockManager as unknown as Parameters<typeof listMcpResources>[1],
     );
 
     expect(result.success).toBe(true);
@@ -98,7 +98,7 @@ describe("MCP Resource Integration", () => {
       { uri: "file:///b.txt", name: "b.txt" },
     ]);
 
-    const result = await listMcpResources({}, mockManager as any);
+    const result = await listMcpResources({}, mockManager as unknown as Parameters<typeof listMcpResources>[1]);
 
     expect(result.success).toBe(true);
     const data = JSON.parse(result.content);
@@ -116,7 +116,7 @@ describe("MCP Resource Integration", () => {
 
     const result = await listMcpResources(
       { server: "server1", cursor: "my-cursor" },
-      mockManager as any,
+      mockManager as unknown as Parameters<typeof listMcpResources>[1],
     );
 
     expect(result.success).toBe(true);
@@ -132,7 +132,7 @@ describe("MCP Resource Integration", () => {
 
     const result = await listMcpResourceTemplates(
       { server: "server1" },
-      mockManager as any,
+      mockManager as unknown as Parameters<typeof listMcpResources>[1],
     );
 
     expect(result.success).toBe(true);
@@ -149,7 +149,7 @@ describe("MCP Resource Integration", () => {
       { uriTemplate: "http://{url}", name: "http" },
     ]);
 
-    const result = await listMcpResourceTemplates({}, mockManager as any);
+    const result = await listMcpResourceTemplates({}, mockManager as unknown as Parameters<typeof listMcpResources>[1]);
 
     expect(result.success).toBe(true);
     const data = JSON.parse(result.content);
@@ -163,7 +163,7 @@ describe("MCP Resource Integration", () => {
 
     const result = await readMcpResource(
       { server: "server1", uri: "file:///test.txt" },
-      mockManager as any,
+      mockManager as unknown as Parameters<typeof listMcpResources>[1],
     );
 
     expect(result.success).toBe(true);
@@ -178,7 +178,7 @@ describe("MCP Resource Integration", () => {
     await expect(
       readMcpResource(
         { server: "server1", uri: "file:///missing.txt" },
-        mockManager as any,
+        mockManager as unknown as Parameters<typeof listMcpResources>[1],
       ),
     ).rejects.toThrow("not yet implemented");
   });
@@ -186,7 +186,7 @@ describe("MCP Resource Integration", () => {
   it("INT-13: listMcpResources returns empty for non-existent server", async () => {
     const result = await listMcpResources(
       { server: "nonexistent" },
-      mockManager as any,
+      mockManager as unknown as Parameters<typeof listMcpResources>[1],
     );
 
     expect(result.success).toBe(true);
@@ -197,7 +197,7 @@ describe("MCP Resource Integration", () => {
   it("INT-14: listMcpResourceTemplates returns empty for non-existent server", async () => {
     const result = await listMcpResourceTemplates(
       { server: "nonexistent" },
-      mockManager as any,
+      mockManager as unknown as Parameters<typeof listMcpResources>[1],
     );
 
     expect(result.success).toBe(true);
@@ -214,7 +214,7 @@ describe("MCP Resource Integration", () => {
     ]);
     mockManager.setResources("beta", [{ uri: "file:///b.txt", name: "b.txt" }]);
 
-    const result = await listMcpResources({}, mockManager as any);
+    const result = await listMcpResources({}, mockManager as unknown as Parameters<typeof listMcpResources>[1]);
 
     const data = JSON.parse(result.content);
     expect(data.resources[0].server).toBe("alpha");
@@ -267,7 +267,7 @@ describe("Provider-Specific Tool Pack Usage", () => {
 class MockMcpConnectionManager {
   private resources: Record<string, McpResource[]> = {};
   private templates: Record<string, McpResourceTemplate[]> = {};
-  private resourceContents: Record<string, any> = {};
+  private resourceContents: Record<string, unknown> = {};
   private cursors: Record<string, string> = {};
   public lastCursor?: string;
 
@@ -288,7 +288,7 @@ class MockMcpConnectionManager {
     this.templates[server] = templates;
   }
 
-  setResourceContent(server: string, uri: string, contents: any[]) {
+  setResourceContent(server: string, uri: string, contents: unknown[]) {
     this.resourceContents[`${server}::${uri}`] = contents;
   }
 

@@ -127,10 +127,10 @@ export function buildToolResultMessage(
  * @returns Updated prompt input array
  */
 export function appendToolResults(
-  promptInput: any[],
-  assistantMessage: any,
+  promptInput: AnthropicMessage[],
+  assistantMessage: AnthropicMessage | null,
   toolResults: ToolExecutionResult[],
-): any[] {
+): AnthropicMessage[] {
   const updated = [...promptInput];
 
   // Add assistant message if not already in history
@@ -149,15 +149,23 @@ export function appendToolResults(
   const toolResultMessage = buildToolResultMessage(toolResults);
 
   // Convert to Codex ResponseItem format
-  const userMessage = {
-    type: "message" as const,
+  const contentBlocks = Array.isArray(toolResultMessage.content)
+    ? toolResultMessage.content
+    : [{ type: "text" as const, text: toolResultMessage.content }];
+
+  const userMessage: AnthropicMessage = {
     role: "user" as const,
-    content: toolResultMessage.content.map((block) => ({
-      type: "tool_result" as const,
-      tool_use_id: (block as any).tool_use_id,
-      content: (block as any).content,
-      is_error: (block as any).is_error,
-    })),
+    content: contentBlocks.map((block) => {
+      if (block.type === "tool_result") {
+        return {
+          type: "tool_result" as const,
+          tool_use_id: block.tool_use_id,
+          content: block.content,
+          is_error: block.is_error,
+        };
+      }
+      return block;
+    }),
   };
 
   updated.push(userMessage);

@@ -14,7 +14,7 @@
  */
 interface TrackedPromise {
   /** The promise being tracked */
-  promise: Promise<any>;
+  promise: Promise<unknown>;
 
   /** AbortController to cancel the promise */
   abort: AbortController;
@@ -91,7 +91,7 @@ export class PromiseTracker {
    */
   register(
     toolName: string,
-    promise: Promise<any>,
+    promise: Promise<unknown>,
     abort: AbortController,
     detached = false,
   ): string {

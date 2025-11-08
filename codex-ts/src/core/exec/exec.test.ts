@@ -25,7 +25,9 @@ describe("Core Execution Engine", () => {
     // Create test directory
     try {
       rmSync(testDir, { recursive: true, force: true });
-    } catch {}
+    } catch {
+      // Ignore errors if directory doesn't exist
+    }
     mkdirSync(testDir, { recursive: true });
   });
 
