@@ -4,6 +4,7 @@
  */
 
 import type { ResponseInputItem } from "../../protocol/models.js";
+import type { UserInput } from "../../protocol/items.js";
 import type {
   AskForApproval,
   SandboxPolicy,
@@ -73,15 +74,53 @@ export enum TaskKind {
 }
 
 /**
+ * Session task context - provides session access to tasks.
+ * Port of tasks/mod.rs::SessionTaskContext
+ */
+export interface SessionTaskContext {
+  // Minimal context for tasks - expanded in future sections
+  session: unknown; // Will be Session once we avoid circular deps
+}
+
+/**
+ * A background task that drives a Session turn.
+ * Port of tasks/mod.rs::SessionTask trait
+ */
+export interface SessionTask {
+  /**
+   * Describes the type of work the task performs.
+   */
+  kind(): TaskKind;
+
+  /**
+   * Executes the task until completion or cancellation.
+   * Returns an optional final agent message when finished.
+   */
+  run(
+    session: SessionTaskContext,
+    ctx: TurnContext,
+    input: UserInput[],
+    cancellationSignal: AbortSignal,
+  ): Promise<string | null>;
+
+  /**
+   * Gives the task a chance to perform cleanup after an abort.
+   * Default implementation is a no-op.
+   */
+  abort?(session: SessionTaskContext, ctx: TurnContext): Promise<void>;
+}
+
+/**
  * Metadata about a running task.
  * Port of state/turn.rs::RunningTask
  */
 export interface RunningTask {
-  done: Promise<void>; // Arc<Notify> → Promise
+  done: Promise<void>; // Arc<Notify> → Promise for notification
+  doneResolve: () => void; // Resolver to signal completion
   kind: TaskKind;
-  task: unknown; // TODO: Port SessionTask trait
-  cancellationToken: AbortSignal; // CancellationToken → AbortSignal
-  handle: Promise<void>; // AbortOnDropHandle<()> → Promise
+  task: SessionTask;
+  cancellationToken: AbortController; // CancellationToken → AbortController
+  handle: AbortController; // For aborting the task
   turnContext: TurnContext;
 }
 

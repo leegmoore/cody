@@ -9,7 +9,9 @@ import type {
   Event,
   EventMsg,
   ReviewDecision,
+  TurnAbortReason,
 } from "../../protocol/protocol.js";
+import type { UserInput } from "../../protocol/items.js";
 import type { RolloutItem } from "../rollout.js";
 import type {
   SessionConfiguration,
@@ -18,8 +20,12 @@ import type {
   SessionSettingsUpdate,
   TurnContext,
   ActiveTurn,
+  SessionTask,
+  SessionTaskContext,
+  RunningTask,
 } from "./types.js";
 import * as SessionStateHelpers from "./session-state.js";
+import * as TurnStateHelpers from "./turn-state.js";
 
 /**
  * Internal session state and orchestration.
@@ -34,9 +40,8 @@ export class Session {
   private _nextInternalSubId = 0;
 
   // Private state (unused in skeleton, will be used in later sections)
-  // @ts-expect-error - unused until section 3+
+  // @ts-expect-error - unused until section 5+
   private _state: SessionState;
-  // @ts-expect-error - unused until section 3+
   private _activeTurn: ActiveTurn | null = null;
 
   constructor(
@@ -175,8 +180,8 @@ export class Session {
    * Port of Session::interrupt_task
    */
   async interruptTask(): Promise<void> {
-    // TODO: await this.abortAllTasks(TurnAbortReason.Interrupted);
-    console.warn("interruptTask: not yet implemented");
+    console.info("Interrupt received: aborting current task");
+    await this.abortAllTasks("interrupted");
   }
 
   /**
@@ -352,9 +357,193 @@ export class Session {
     console.warn("recordIntoHistory: not yet implemented");
   }
 
+  /**
+   * Spawn a task to handle a turn.
+   * Aborts any existing tasks before starting the new one.
+   * Port of Session::spawn_task
+   */
+  async spawnTask(
+    turnContext: TurnContext,
+    input: UserInput[],
+    task: SessionTask,
+  ): Promise<void> {
+    // Abort all existing tasks
+    await this.abortAllTasks("replaced");
+
+    const taskKind = task.kind();
+
+    // Create cancellation controller
+    const cancellationToken = new AbortController();
+
+    // Create done promise
+    let doneResolve!: () => void;
+    const done = new Promise<void>((resolve) => {
+      doneResolve = resolve;
+    });
+
+    // Create session context for task
+    const sessionCtx: SessionTaskContext = {
+      session: this,
+    };
+
+    // Spawn the task
+    const handle = new AbortController();
+    const taskPromise = (async () => {
+      try {
+        const lastAgentMessage = await task.run(
+          sessionCtx,
+          turnContext,
+          input,
+          cancellationToken.signal,
+        );
+
+        await this.flushRollout();
+
+        if (!cancellationToken.signal.aborted) {
+          // Task completed successfully
+          await this.onTaskFinished(turnContext, lastAgentMessage);
+        }
+      } catch (error) {
+        console.error("Task error:", error);
+      } finally {
+        doneResolve();
+      }
+    })();
+
+    // Store task metadata
+    const runningTask: RunningTask = {
+      done,
+      doneResolve,
+      kind: taskKind,
+      task,
+      cancellationToken,
+      handle,
+      turnContext,
+    };
+
+    this.registerNewActiveTask(runningTask);
+
+    // Don't await - task runs in background
+    taskPromise.catch((err) => {
+      console.error("Background task error:", err);
+    });
+  }
+
+  /**
+   * Abort all running tasks.
+   * Port of Session::abort_all_tasks
+   */
+  async abortAllTasks(reason: TurnAbortReason): Promise<void> {
+    const tasks = this.takeAllRunningTasks();
+    for (const task of tasks) {
+      await this.handleTaskAbort(task, reason);
+    }
+  }
+
+  /**
+   * Handle task completion.
+   * Port of Session::on_task_finished
+   */
+  async onTaskFinished(
+    turnContext: TurnContext,
+    lastAgentMessage: string | null,
+  ): Promise<void> {
+    // Remove task from active turn
+    if (this._activeTurn) {
+      const wasLast = TurnStateHelpers.removeTask(
+        this._activeTurn,
+        turnContext.subId,
+      );
+      if (wasLast) {
+        this._activeTurn = null;
+      }
+    }
+
+    // Send completion event
+    const event: EventMsg = {
+      type: "task_complete",
+      last_agent_message: lastAgentMessage ?? undefined,
+    };
+    await this.sendEvent(turnContext.subId, event);
+  }
+
+  /**
+   * Register a new active task.
+   * Port of Session::register_new_active_task
+   */
+  private registerNewActiveTask(task: RunningTask): void {
+    const turn = TurnStateHelpers.createActiveTurn();
+    TurnStateHelpers.addTask(turn, task);
+    this._activeTurn = turn;
+  }
+
+  /**
+   * Take all running tasks from the active turn.
+   * Port of Session::take_all_running_tasks
+   */
+  private takeAllRunningTasks(): RunningTask[] {
+    if (!this._activeTurn) {
+      return [];
+    }
+
+    const turn = this._activeTurn;
+    this._activeTurn = null;
+
+    // Clear pending approvals and input
+    TurnStateHelpers.clearPending(turn.turnState);
+
+    // Drain all tasks
+    return TurnStateHelpers.drainTasks(turn);
+  }
+
+  /**
+   * Handle task abort.
+   * Port of Session::handle_task_abort
+   */
+  private async handleTaskAbort(
+    task: RunningTask,
+    reason: TurnAbortReason,
+  ): Promise<void> {
+    const subId = task.turnContext.subId;
+
+    // Already cancelled?
+    if (task.cancellationToken.signal.aborted) {
+      return;
+    }
+
+    console.info(
+      `Aborting task ${subId} (kind: ${task.kind}, reason: ${reason})`,
+    );
+
+    // Cancel the task
+    task.cancellationToken.abort();
+
+    // Wait for graceful shutdown (100ms timeout)
+    const GRACEFUL_TIMEOUT_MS = 100;
+    await Promise.race([
+      task.done,
+      new Promise((resolve) => setTimeout(resolve, GRACEFUL_TIMEOUT_MS)),
+    ]);
+
+    // Abort the handle
+    task.handle.abort();
+
+    // Call task's abort hook if it exists
+    if (task.task.abort) {
+      const sessionCtx: SessionTaskContext = { session: this };
+      await task.task.abort(sessionCtx, task.turnContext);
+    }
+
+    // Send abort event
+    const event: EventMsg = {
+      type: "turn_aborted",
+      reason,
+    };
+    await this.sendEvent(task.turnContext.subId, event);
+  }
+
   // TODO: Port remaining Session methods in future sections:
-  // - spawn_task, abort_all_tasks, on_task_finished (Section 4)
-  // - run_turn, try_run_turn, process_items (Section 4)
+  // - run_turn, try_run_turn, process_items (Section 4 or 5)
   // - MCP and advanced features (Section 5)
-  // - And more...
+  // - spawn, new, and initialization (Section 6)
 }
