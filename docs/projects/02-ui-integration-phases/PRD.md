@@ -43,7 +43,7 @@ Working CLI demonstrating all capabilities, documented library API defining @ope
 
 1. **Code quality baseline maintained:** Run `npx tsc --noEmit && npm run lint && npm test` in sequence. Result: 0 TypeScript errors, 0 ESLint errors (warnings acceptable), 1,876+ tests passing, 0 skipped tests.
 
-2. **Integration test coverage:** [TODO: Define integration test scope and coverage requirements]
+2. **Contract test coverage:** Tests written at library API and REST API contract boundaries with external dependencies mocked. Created in conjunction with library contract and REST API contract definitions during phase planning. See `docs/core/contract-testing-tdd-philosophy.md` for testing approach.
 
 3. **Performance acceptable:** General responsiveness meets user expectations for CLI tool (command execution, API calls, tool execution feel snappy and responsive).
 
