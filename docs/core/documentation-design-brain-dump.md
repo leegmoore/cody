@@ -1511,7 +1511,7 @@ See "OAuth Token Refresh" section for expiry handling.
 
 **After writing any section, ask:**
 
-"Can my target audience in their target role accomplish their goal better after reading this?"
+"Can my target audience in their target role accomplish their goal sufficiently better after reading this?"
 
 **If no:** Section doesn't serve its purpose. Revise.
 **If yes:** Section is good enough. Move on.
@@ -2176,3 +2176,167 @@ We're building TECH-APPROACH.md using these principles:
 
 END DUMP (FOR REAL THIS TIME)
 
+
+## REFINING THE DUMPS: TWO-TIER STRUCTURE
+
+### What We're Sitting On
+
+~13k tokens of interconnected principles captured during visionary articulation. These aren't isolated tips—they form a coherent methodology where each principle reinforces the others.
+
+**Principles captured:**
+- Narrative as substrate (dimensional encoding, temporal/causal context)
+- Altitude progression (25k→1k feet, smooth bridges between levels)
+- Functional-technical weaving (across altitudes and within levels)
+- Structural composition (70% prose, paragraph-list-diagram rhythm, variation)
+- Audience-first design (who, role, enables what, continuous measurement)
+- Contract-driven testing (boundaries, mocks, functional verification)
+- Bespoke depth allocation (signal optimization through selective detail)
+- Attentional weight distribution (structural variation creates hierarchy)
+
+**These interlock.** Not a collection of techniques—a complete system.
+
+### The Two-Tier Refinement Plan
+
+**Tier 1: Constitutional Documents (Foundational, Always Relevant)**
+
+Core methodology that defines how we work. These are loaded for every project, every planning session. They define our identity and standards.
+
+**Documents to create:**
+- **Planning & Execution Methodology** - How we structure projects (PRD → TECH-APPROACH → Phases, progressive planning, phase execution patterns, sub-phase flexibility, quality gates)
+- **Documentation Design Principles** - How we write (narrative structure, altitude levels, functional-technical weaving, bespoke depth, audience-first, structural composition)
+- **Testing Philosophy** - How we verify (contract testing, mocked-service approach, functional verification, TDD scaffolds, integration without external dependencies)
+- **Quality Standards** - What we maintain (zero-error baseline, code review process, verification commands, accountability standards)
+
+**Usage:** Every project references these. Planning agents load them. Define "how we do things around here."
+
+**Characteristics:**
+- Timeless (don't change much once refined)
+- Comprehensive (cover entire methodology)
+- Principled (explain why, not just what)
+- 20-50k tokens each
+- Total constitutional load: ~100-150k tokens
+
+**Tier 2: Reference Layers (Modular, Contextual)**
+
+Focused guides on specific techniques or patterns. Loaded when relevant to current work. Can be used as Claude Skills (activate when needed).
+
+**Reference layers to extract:**
+- **Contract Testing Detailed Guide** (5-10k tokens) - Step-by-step contract identification, mock creation, test writing, verification patterns
+- **Mocked-Service Testing Patterns** (5-10k tokens) - Concrete examples, test templates, mock strategies for common scenarios
+- **CLI Architecture Patterns** (10k tokens) - Dual-mode design, REPL implementation, one-shot commands, JSON output, agent accessibility
+- **Multi-Provider Integration Patterns** (10k tokens) - Provider abstraction, adapter patterns, API normalization, Messages/Chat/Responses handling
+- **Phase Planning Templates** (5k tokens) - README structure, CHECKLIST format, STATUS tracking, QUICK_START patterns
+- **Integration Testing Strategies** (10k tokens) - Wiring existing modules, identifying integration points, verification approaches
+
+**Usage:** Load when applicable. Planning multi-provider feature? Load multi-provider reference. Planning CLI? Load CLI patterns. Contextual, not universal.
+
+**Characteristics:**
+- Focused (single topic or pattern)
+- Actionable (templates, examples, step-by-step)
+- Grounded (extracted from real implementations)
+- 5-15k tokens each
+- Library grows over time (extract from each project)
+
+### The Distinction Matters
+
+**Constitutional documents:**
+- Answer: "How should I approach this type of work?"
+- Always relevant regardless of project specifics
+- Principles and philosophy
+- Updated rarely (only when methodology evolves)
+
+**Reference layers:**
+- Answer: "How do I implement this specific thing?"
+- Relevant when working on that thing
+- Patterns and techniques
+- Updated frequently (new examples, refined approaches)
+
+**Loading strategy:**
+- Planning agent: Always load constitutional, selectively load reference layers based on project type
+- Execution agent: Reference specific layers in QUICK_START (not full constitutional load)
+- Review agent: Load relevant quality/testing references
+
+### The Productization Vision
+
+**This becomes methodology product:**
+
+**Open Source Path:**
+- Constitutional documents (MIT license, GitHub)
+- Core reference layers (community contribution model)
+- Templates and examples (from our projects)
+- "Codex Planning Methodology" as distinct offering
+
+**Product Path:**
+- MCP server serving reference layers on-demand
+- Planning agent trained on our methodology
+- Documentation generator using our patterns
+- Reference layer marketplace (domain-specific guides)
+
+**Educational Path:**
+- Course on planning for agentic development
+- Reference layers as learning resources
+- Case studies from our projects
+- Community of practice
+
+**Compounding Path:**
+- Each project extracts new reference layers
+- Methodology improves with use
+- Reference library grows
+- Network effects (more examples → better guidance)
+
+**The core insight we're productizing:**
+
+Agentic development needs different documentation than human development. Not just "structured" vs "narrative," but **multi-altitude functional-technical weaving with contract-driven verification and narrative substrate**. We've articulated what that means. We're building the reference implementation (this project). We'll extract the methodology.
+
+**This has market value beyond our immediate needs.**
+
+### Processing Plan
+
+**After Project 02 planning complete:**
+
+**Step 1: Review all dumps**
+- This dump (~13k tokens)
+- Any additional dumps created during TECH-APPROACH/Phase planning
+- Total corpus: ~20-30k tokens estimated
+
+**Step 2: Identify themes**
+- Group related insights
+- Separate constitutional from reference layer material
+- Note redundancies (consolidate)
+- Find gaps (what's missing)
+
+**Step 3: Create constitutional documents**
+- Parse dump into 4 foundational docs
+- Add examples from Project 02
+- Cross-reference (principles interlock)
+- Polish for clarity (preserve depth)
+
+**Step 4: Extract reference layers**
+- Pull specific techniques into focused guides
+- Template creation (contract testing, phase planning, etc.)
+- Concrete examples from implementations
+- Tag by domain (testing, planning, architecture)
+
+**Step 5: Index and link**
+- Create reference layer index (catalog)
+- Link constitutional docs → reference layers
+- Link reference layers → principles
+- Build navigable knowledge base
+
+**Step 6: Test with agents**
+- Load constitutional into planning agent
+- Plan hypothetical project
+- Measure output quality
+- Refine based on gaps/confusion
+
+**Step 7: Iterate**
+- Use refined docs on Project 03
+- Note what works, what doesn't
+- Update based on actual usage
+- Continuous improvement
+
+**Iterative refinement:** Use → measure → refine → use.
+
+---
+
+END DUMP (NOW WITH TWO-TIER REFINEMENT PLAN AND PRODUCTIZATION VISION)
