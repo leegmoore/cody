@@ -27,7 +27,7 @@ Working CLI demonstrating all capabilities, documented library API defining @ope
 
 ### Functional Capabilities
 
-1. **Basic operations work:** Create conversation, send messages, receive responses, maintain multi-turn history. Verify via CLI commands (`codex new`, `codex chat`, conversation history persists across turns).
+1. **Basic operations work:** Create conversation, send messages, receive responses, maintain multi-turn history. Verify via CLI commands (`cody new`, `cody chat`, conversation history persists across turns).
 
 2. **All providers functional:** OpenAI Responses API, OpenAI Chat Completions, and Anthropic Messages API all support conversation flows. Verify by running same conversation on each provider—all three work identically.
 

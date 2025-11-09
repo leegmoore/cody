@@ -338,7 +338,7 @@ sequenceDiagram
     participant Client as ModelClient
     participant API as OpenAI API
 
-    User->>CLI: codex new
+    User->>CLI: cody new
     CLI->>CLI: Load config.toml
     CLI->>CLI: Create ModelClient(config)
     CLI->>Manager: createConversation(config)
@@ -348,7 +348,7 @@ sequenceDiagram
     Manager->>CLI: return conversation
     CLI->>User: "Created conversation: conv_abc123"
 
-    User->>CLI: codex chat "Hello"
+    User->>CLI: cody chat "Hello"
     CLI->>Manager: getConversation("conv_abc123")
     Manager->>CLI: return conversation
     CLI->>Conv: sendMessage("Hello")
@@ -375,9 +375,9 @@ sequenceDiagram
 
 **Functional verification (manual CLI testing):**
 
-1. Run `codex new` with valid OpenAI API key configured → conversation ID displayed, no errors
-2. Run `codex chat "Hello"` → response from model displayed to console
-3. Run `codex chat "What did I just say?"` → model responds with context from previous turn
+1. Run `cody new` with valid OpenAI API key configured → conversation ID displayed, no errors
+2. Run `cody chat "Hello"` → response from model displayed to console
+3. Run `cody chat "What did I just say?"` → model responds with context from previous turn
 4. Verify: Multi-turn conversation maintains history, responses coherent
 
 **Mocked-service testing (automated):**
@@ -671,7 +671,7 @@ sequenceDiagram
     participant Registry as ToolRegistry
     participant Handler as ToolHandler (exec)
 
-    User->>CLI: codex chat "run npm test"
+    User->>CLI: cody chat "run npm test"
     CLI->>Conv: sendMessage("run npm test")
     Conv->>Session: processMessage()
     Session->>Session: Send to ModelClient
@@ -709,9 +709,9 @@ sequenceDiagram
 
 **Functional verification (manual CLI testing):**
 
-1. Run `codex chat "read the README file"` → model requests readFile tool, CLI shows approval prompt
+1. Run `cody chat "read the README file"` → model requests readFile tool, CLI shows approval prompt
 2. Approve → tool executes, file content displayed, model responds with summary
-3. Run `codex chat "run npm test"` → model requests exec tool, approval prompt appears
+3. Run `cody chat "run npm test"` → model requests exec tool, approval prompt appears
 4. Deny → execution blocked, model receives denial message
 5. Verify: Approval flow works for both approval and denial cases
 
@@ -792,8 +792,8 @@ Testing verifies parity: same conversation on all three providers produces equiv
 ### Phase 3 Target State
 
 ```
-User runs: codex set-provider anthropic
-           codex set-api messages
+User runs: cody set-provider anthropic
+           cody set-api messages
 
 ┌─────────────────────────────────┐
 │  CLI (Phase 1-2 + NEW)          │
@@ -915,9 +915,9 @@ Each client adapter (ResponsesClient, ChatClient, MessagesClient) parses its pro
 
 **Functional verification (manual CLI testing):**
 
-1. Responses API: `codex chat "Hello"` → verify response
-2. Switch to Chat: `codex set-api chat` → `codex new` → `codex chat "Hello"` → verify response
-3. Switch to Messages: `codex set-provider anthropic` → `codex set-api messages` → `codex new` → `codex chat "Hello"` → verify response
+1. Responses API: `cody chat "Hello"` → verify response
+2. Switch to Chat: `cody set-api chat` → `cody new` → `cody chat "Hello"` → verify response
+3. Switch to Messages: `cody set-provider anthropic` → `cody set-api messages` → `cody new` → `cody chat "Hello"` → verify response
 4. Compare: All three work, conversations coherent, no errors
 
 **Mocked-service testing (automated, no real API calls):**
@@ -1015,8 +1015,8 @@ Testing mocks keyring/filesystem reads. No real token files needed. Mock returns
 ### Phase 4 Target State
 
 ```
-User runs: codex login        (shows current auth)
-           codex set-auth oauth-claude
+User runs: cody login        (shows current auth)
+           cody set-auth oauth-claude
 
 ┌──────────────────────────────────┐
 │  CLI (Phase 1-3 + NEW)           │
@@ -1113,8 +1113,8 @@ classDiagram
 1. OpenAI API key + Responses API: Verify conversation works with API key auth
 2. OpenAI API key + Chat API: Verify conversation works with API key auth
 3. Anthropic API key + Messages API: Verify conversation works with API key auth
-4. ChatGPT OAuth + Responses API: `codex set-auth oauth-chatgpt` → verify uses token from ~/.codex, conversation works with OpenAI Responses
-5. Claude OAuth + Messages API: `codex set-auth oauth-claude` → verify uses token from ~/.claude, conversation works with Anthropic Messages
+4. ChatGPT OAuth + Responses API: `cody set-auth oauth-chatgpt` → verify uses token from ~/.codex, conversation works with OpenAI Responses
+5. Claude OAuth + Messages API: `cody set-auth oauth-claude` → verify uses token from ~/.claude, conversation works with Anthropic Messages
 6. Auth method switching: Toggle between methods, verify each works
 
 **Note:** OAuth methods tested only with their respective providers (ChatGPT OAuth with OpenAI, Claude OAuth with Anthropic). API keys tested with all three APIs (Responses, Chat, Messages).
@@ -1173,8 +1173,8 @@ Testing mocks filesystem for JSONL reads/writes. In-memory buffer simulates file
 ### Phase 5 Target State
 
 ```
-User runs: codex list
-           codex resume conv_abc123
+User runs: cody list
+           cody resume conv_abc123
 
 ┌──────────────────────────────────┐
 │  CLI (Phase 1-4 + NEW)           │
@@ -1246,7 +1246,7 @@ User runs: codex list
 
 During active conversation, after each model response (including tool calls and results), Session calls RolloutRecorder.appendTurn() with complete turn data. Recorder serializes to JSONL format (one line per turn), appends to ~/.codex/conversations/{conversationId}.jsonl. File grows as conversation progresses. No explicit "save" command—persistence is automatic.
 
-To resume, user runs `codex resume {conversationId}`. CLI calls ConversationManager.resumeConversation(id). Manager constructs JSONL file path, calls RolloutRecorder.readRollout(path). Recorder reads file line-by-line, parses JSON, reconstructs array of rollout items. Manager converts rollout items to conversation history (ResponseItems), initializes Session with pre-loaded history, creates Conversation wrapper, returns to CLI. User continues conversation from where they left off—model has full context from loaded history.
+To resume, user runs `cody resume {conversationId}`. CLI calls ConversationManager.resumeConversation(id). Manager constructs JSONL file path, calls RolloutRecorder.readRollout(path). Recorder reads file line-by-line, parses JSON, reconstructs array of rollout items. Manager converts rollout items to conversation history (ResponseItems), initializes Session with pre-loaded history, creates Conversation wrapper, returns to CLI. User continues conversation from where they left off—model has full context from loaded history.
 
 **Persistence cycle steps:**
 1. Turn completes → Session has ResponseItems for this turn
@@ -1255,7 +1255,7 @@ To resume, user runs `codex resume {conversationId}`. CLI calls ConversationMana
 4. Append to file (or buffer in tests)
 
 **Resume cycle steps:**
-1. User: `codex resume conv_id`
+1. User: `cody resume conv_id`
 2. Manager reads JSONL via RolloutRecorder
 3. Parse lines → array of rollout items
 4. Convert to conversation history
@@ -1273,7 +1273,7 @@ sequenceDiagram
 
     Note over User,FS: SAVE FLOW (automatic after each turn)
 
-    User->>CLI: codex chat "message"
+    User->>CLI: cody chat "message"
     CLI->>Manager: sendMessage()
     Note over Manager: Turn completes, ResponseItems ready
     Manager->>Recorder: appendTurn(items)
@@ -1282,7 +1282,7 @@ sequenceDiagram
 
     Note over User,FS: RESUME FLOW (explicit command)
 
-    User->>CLI: codex resume conv_abc123
+    User->>CLI: cody resume conv_abc123
     CLI->>Manager: resumeConversation("conv_abc123")
     Manager->>Recorder: readRollout(path)
     Recorder->>FS: Read .jsonl file
@@ -1293,7 +1293,7 @@ sequenceDiagram
     Manager->>Manager: Initialize Session with history
     Manager-->>CLI: Conversation (with loaded state)
     CLI->>User: "Resumed conversation conv_abc123"
-    User->>CLI: codex chat "continue from where we left off"
+    User->>CLI: cody chat "continue from where we left off"
     Note over Manager: Model has full history from JSONL
 ```
 
@@ -1339,10 +1339,10 @@ classDiagram
 
 **Functional verification (manual CLI testing):**
 
-1. Create conversation: `codex new` → `codex chat "Hello"` → `codex chat "Goodbye"`
+1. Create conversation: `cody new` → `cody chat "Hello"` → `cody chat "Goodbye"`
 2. Exit CLI
-3. List conversations: `codex list` → verify conversation appears
-4. Resume: `codex resume {id}` → `codex chat "Do you remember what I said?"` → model has context from previous session
+3. List conversations: `cody list` → verify conversation appears
+4. Resume: `cody resume {id}` → `cody chat "Do you remember what I said?"` → model has context from previous session
 5. Verify: History loaded correctly, conversation continues seamlessly
 
 **Mocked-service testing:**
