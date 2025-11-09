@@ -2340,3 +2340,218 @@ Agentic development needs different documentation than human development. Not ju
 ---
 
 END DUMP (NOW WITH TWO-TIER REFINEMENT PLAN AND PRODUCTIZATION VISION)
+
+## THE WHITEBOARD PHENOMENON: PROGRESSIVE DIAGRAM COMPREHENSION
+
+### The Discovery
+
+**Observed pattern in team whiteboarding sessions:**
+
+**Scenario A: Built diagram together**
+- Team at whiteboard
+- Takes turns adding components
+- Discusses each addition
+- Circles back, adds detail
+- Walks away with sophisticated understanding
+
+**Scenario B: Presented finished diagram**
+- Take photo of completed diagram
+- Digitize and hand to people
+- Readers are overwhelmed
+- Can't grasp the complexity
+
+**Scenario C: Walked through finished diagram**
+- Present completed diagram
+- Walk through it first time
+- Still overwhelming
+- Too much to absorb at once
+
+**Key insight: The people who BUILT the diagram understood it. The people who RECEIVED the diagram struggled.**
+
+**Why?**
+
+The builders experienced the PROGRESSIVE CONSTRUCTION. They saw:
+- Empty whiteboard → first component added (context established)
+- Second component added (relationship to first)
+- Third component (how it fits with previous two)
+- Arrows and connections (data flow emerges)
+- Details filled in (understanding deepens)
+- Complete system (synthesis of incremental additions)
+
+**This is narrative structure in visual form.** The temporal progression (what came first, what came next) created scaffolding for complexity.
+
+The receivers got the END STATE with no construction narrative. All relationships presented simultaneously. No scaffolding. Cognitive overload.
+
+### Application to Documentation
+
+**Traditional approach (finished diagram first):**
+```
+## System Architecture
+
+[COMPLEX DIAGRAM with 20 components and 40 connections]
+
+The system consists of CLI, ConversationManager, Codex, Session, ModelClient, ToolRouter, and...
+```
+
+**Reader:** Overwhelmed. Can't hold all relationships in working memory. Diagram is noise.
+
+**Progressive approach (build diagram in text):**
+```
+## System Architecture
+
+The system has three layers: CLI for user interaction, Library for orchestration, External for boundaries.
+
+[DIAGRAM 1: Just three layers]
+
+The CLI layer contains command parser, REPL loop, and display renderer.
+
+[DIAGRAM 2: CLI layer expanded]
+
+The Library layer's entry point is ConversationManager. It coordinates Codex and Session.
+
+[DIAGRAM 3: Library layer expanded, showing Manager → Codex → Session]
+
+Session routes to ModelClient for API calls and ToolRouter for tool execution.
+
+[DIAGRAM 4: Session with two branches]
+
+Now the complete system:
+
+[DIAGRAM 5: Full system with all components]
+```
+
+**Reader:** Builds mental model progressively. Each diagram adds to previous. By the time they see full diagram, they've constructed the understanding. Not overwhelming—synthesizing.
+
+**This mimics the whiteboard experience in written form.**
+
+### The Circle-and-Detail Pattern
+
+**Whiteboard sessions naturally circle topics:**
+- Draw box: "This is ConversationManager"
+- Come back: "Manager has these methods"
+- Come back again: "Methods connect to Codex like this"
+- Come back final: "Here's edge case handling"
+
+**Each pass adds detail. Each pass builds on previous.**
+
+**Documentation should do the same:**
+
+**First pass (overview):**
+"Phase 2 adds tool execution to conversation flow."
+
+**Second pass (components):**
+"Session detects tool calls, routes to ToolRouter. CLI handles approval."
+
+**Third pass (detail):**
+[Detailed prose on Session → ToolRouter flow, approval callback mechanism]
+
+**Fourth pass (complete flow):**
+[Full sequence diagram with all steps]
+
+**Circling with progressive detail.** Not linear deep-dive. Spiral inward.
+
+### Why This Works for Complex Systems
+
+**Complex systems have too many moving parts to grasp at once.**
+
+**Two strategies:**
+1. **Decompose:** Break into independent pieces, understand each separately, then compose
+2. **Progressive:** Start simple, add complexity incrementally, build complete mental model
+
+**Documentation often uses #1** (here's the CLI section, here's the Library section, here's how they connect at the end). Readers understand pieces but struggle with integration.
+
+**Whiteboard naturally uses #2** (here's the core flow, now add this branch, now add this detail). Participants build integrated understanding from the start.
+
+**Our Phase 2 structure uses progressive approach:**
+
+1. Integration Approach paragraph (simplest: "we're adding tools to conversation flow")
+2. ASCII diagram (visual: where tools fit in system)
+3. Para describing diagram (narrative: how flow changes)
+4. **Tool Call Cycle deep dive** (zoom into critical path: response → tool detection → execute → result → model)
+5. Sequence diagram of just that cycle (visual: detailed flow of critical path)
+6. Component intro para (classes and methods involved)
+7. UML class diagram (structural: how classes connect)
+8. Connection Points Detail (detailed prose on each connection)
+9. Full sequence diagram (complete flow with all the context from previous sections)
+
+**By step 9, reader has:**
+- Concept (step 1)
+- Visual context (step 2)
+- Narrative flow (step 3)
+- Critical path understanding (steps 4-5)
+- Component knowledge (steps 6-7)
+- Connection details (step 8)
+
+**The full sequence diagram is SYNTHESIS, not INTRODUCTION.**
+
+They've built the understanding progressively. The complex diagram confirms and completes, doesn't overwhelm.
+
+### Applying to Section Design
+
+**For any complex topic requiring multiple diagrams:**
+
+**Step 1: Establish concept** (prose, no diagram)
+**Step 2: First visual** (simple diagram, high-level)
+**Step 3: Describe visual** (narrative matching diagram)
+**Step 4: Zoom in** (critical path, detailed prose)
+**Step 5: Critical path visual** (scoped sequence/flow diagram)
+**Step 6: Component view** (what pieces exist)
+**Step 7: Component visual** (class/module diagram)
+**Step 8: Detailed connections** (prose on integration points)
+**Step 9: Complete synthesis** (full sequence diagram)
+
+**Reader builds understanding in layers:** Concept → Simple visual → Detailed path → Components → Connections → Complete picture.
+
+**This is the whiteboard experience in document form.**
+
+### Why Agents Benefit from This
+
+**Agents process sequentially** (token by token). Can't "see" entire diagram at once like humans.
+
+**Progressive structure matches sequential processing:**
+- Read concept paragraph → encode concept
+- Read simple diagram → add visual structure
+- Read detailed prose → encode relationships
+- Read focused diagram → reinforce critical path
+- Read component details → encode structure
+- Read full diagram → synthesize
+
+**Each element builds on previous encoding.** By the time agent reaches complex diagram, it has scaffolding to hang the complexity on.
+
+**Versus dumping complex diagram first:**
+- Agent encodes without context
+- Relationships unclear
+- No scaffolding
+- Complexity overwhelming
+
+**Progressive disclosure matches how agents build mental models.** Incremental encoding with context at each step.
+
+### The Template for Complex Phase Sections
+
+**Use this structure when phase has significant integration complexity:**
+
+1. Integration Approach (2-3 paras)
+2. Target State Diagram (ASCII, simple, NEW highlighted)
+3. Paragraph describing diagram
+4. **Critical Path Deep Dive** (heading)
+   - Detailed prose on key cycle/flow
+   - Scoped sequence diagram (just that cycle)
+   - Optional bullets outlining steps
+5. **Component Overview** (heading)
+   - Paragraph introducing key classes/methods
+   - UML class diagram
+6. Connection Points Detail (as in Phase 1-2)
+7. Complete End-to-End Sequence (heading)
+   - Full sequence diagram
+   - Optional bullets if complex
+8. Verification Approach
+
+**For simpler phases:** Skip steps 4-5 (critical path zoom), maybe skip step 7 (full sequence). Use judgment.
+
+**The principle:** Circle the topic with progressive detail. Prepare reader for complexity. Don't dump complexity upfront.
+
+**This is the whiteboard principle codified.**
+
+---
+
+END DUMP (WITH WHITEBOARD INSIGHT ADDED)
