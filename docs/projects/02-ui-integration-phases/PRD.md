@@ -167,6 +167,14 @@ tests/
 
 **Test execution:** All tests run in-process with mocked externals. Fast (<5 seconds total), deterministic (no flaky network tests), runnable offline. Run via `npm test`.
 
+**Model integration testing (validation layer):** Additional testing with real LLM providers using cheap models. Validates actual provider behavior, config parameters (thinking, temperature), and live API compatibility. Located in `scripts/integration-tests/` as standalone Node scripts. Tests OpenAI (Responses, Chat), Anthropic (Messages), and OpenRouter with fast non-thinking models (gpt-4o-mini, haiku-4.5, gemini-2.0-flash-001). Requires real API keys, nominal cost. Run manually or via `npm run test:integration`. Later formalized as proper test suite when library/REST API established. Mock server creation for REST API testing deferred to REST API implementation phase.
+
+**Two integration test layers:**
+- **Mocked-service:** Wiring correctness, fast, deterministic, primary development tests
+- **Model integration:** Real provider validation, slower, costs nominal amount, validation gate
+
+**Formalization note:** Model integration tests start as home-grown Node scripts in `scripts/integration-tests/` during this project. After library API and REST API established, these will be formalized into proper test suites. Mock server for REST API testing created during REST API implementation phase (separate from this project or Phase 7).
+
 ### Performance Requirements
 
 **General responsiveness:** CLI commands feel snappy. API overhead minimal. Tool execution doesn't lag. User (project owner) subjective assessment is acceptance gate—no specific latency targets.

@@ -779,4 +779,227 @@ describe('Phase 2: Tool Execution', () => {
 
 ---
 
+## 4. Phase 3: Multi-Provider Support
+
+### Integration Approach
+
+Phase 3 adds Chat Completions and Messages API support alongside the Responses API from Phase 1. The provider abstraction from the port (WireApi enum, adapter pattern) means most heavy lifting is done—we're adding CLI commands for provider switching and verifying the three APIs work identically for end users. Same conversation code, different underlying API, transparent to CLI layer.
+
+Provider switching happens via config or CLI command. User sets provider (openai or anthropic) and API type (responses, chat, or messages). ConversationManager constructs appropriate ModelClient based on config. From there, conversation flow is identical—sendMessage() works the same regardless of provider. The adapters (Phase 4.1-4.2) normalize provider-specific formats to common ResponseItems, making CLI code provider-agnostic.
+
+Testing verifies parity: same conversation on all three providers produces equivalent results. Mock each provider's API responses, run identical conversation sequence, assert ResponseItems match expected structure. If provider-specific differences exist (thinking blocks in Messages, reasoning in Responses), document but don't block—test that they're handled gracefully.
+
+### Phase 3 Target State
+
+```
+User runs: codex set-provider anthropic
+           codex set-api messages
+
+┌─────────────────────────────────┐
+│  CLI (Phase 1-2 + NEW)          │
+│  ┌──────────────────┐           │
+│  │  set-provider   │ (NEW)      │
+│  │  list-providers │ (NEW)      │
+│  └────────┬─────────┘           │
+│            ▼                     │
+│    Provider Config Update        │
+└────────────┬────────────────────┘
+             ▼
+┌──────────────────────────────────┐
+│  ConversationManager             │
+│  ┌────────────────────────────┐  │
+│  │ ModelClient Factory (NEW) │  │
+│  │  ┌─────────────────────┐  │  │
+│  │  │ Switch on provider │  │  │
+│  │  │ + API type         │  │  │
+│  │  └─────────────────────┘  │  │
+│  └────────────────────────────┘  │
+└──────────┬───────────────────────┘
+           ▼
+    ┌──────┴──────┐
+    ▼             ▼             ▼
+┌────────┐  ┌──────────┐  ┌──────────┐
+│Responses│  │   Chat   │  │ Messages │
+│ Client │  │  Client  │  │  Client  │
+│(Phase1)│  │  (NEW)   │  │  (NEW)   │
+└────┬───┘  └────┬─────┘  └────┬─────┘
+     │           │             │
+     └───────────┴─────────────┘
+                 ▼
+          Common ResponseItems
+                 ▼
+            CLI Display
+```
+
+**Highlighted:** Provider switching commands (NEW), ModelClient factory (NEW), Chat and Messages clients (ACTIVATED from port), common ResponseItems abstraction (enables provider-agnostic CLI).
+
+Each provider's client was ported in Phases 4.1-4.2 but never used in complete workflows. Phase 3 activates them, tests parity, and exposes any provider-specific quirks. The CLI doesn't know which provider is active—it just calls Conversation.sendMessage() and renders ResponseItems. Provider abstraction working as designed.
+
+### Technical Deltas
+
+**New code (CLI layer):**
+- src/cli/commands/set-provider.ts: Switch provider (openai/anthropic)
+- src/cli/commands/set-api.ts: Switch API type (responses/chat/messages)
+- src/cli/commands/list-providers.ts: Show available providers and current selection
+
+**New code (integration):**
+- src/core/conversation-manager.ts: ModelClient factory based on provider config
+- Constructs Responses/Chat/Messages client based on config.provider + config.api
+
+**New code (testing):**
+- tests/mocked-service/phase-3-provider-parity.test.ts: Same conversation on all providers
+- tests/mocks/chat-client.ts: Mock Chat API responses
+- tests/mocks/messages-client.ts: Mock Messages API responses
+
+**Wiring points:**
+- CLI set-provider command → updates config → recreates ModelClient
+- ConversationManager factory → switches on provider/API → returns appropriate client
+- All three clients → return ResponseItems (common format)
+
+**Estimated new code:** ~250 lines (CLI commands ~100, client factory ~50, mocked-service tests ~100)
+
+### Component Structure
+
+Provider abstraction uses factory pattern. ConversationManager checks config.provider and config.api, constructs appropriate ModelClient implementation. All clients implement same interface (sendMessage returns ResponseItems). CLI doesn't know which client is active—just calls interface methods.
+
+```mermaid
+classDiagram
+    class ConversationManager {
+        +createConversation(config: ConversationConfig) Conversation
+        -createModelClient(config) ModelClient
+    }
+
+    class ModelClient {
+        <<interface>>
+        +sendMessage(request: ChatRequest) Promise~ResponseItems[]~
+    }
+
+    class ResponsesClient {
+        +sendMessage(request) Promise~ResponseItems[]~
+        -parseResponsesSSE(stream)
+    }
+
+    class ChatClient {
+        +sendMessage(request) Promise~ResponseItems[]~
+        -parseChatSSE(stream)
+        -aggregateDeltas()
+    }
+
+    class MessagesClient {
+        +sendMessage(request) Promise~ResponseItems[]~
+        -parseMessagesSSE(stream)
+        -adaptToResponseItems()
+    }
+
+    ConversationManager --> ModelClient: creates
+    ModelClient <|.. ResponsesClient: implements
+    ModelClient <|.. ChatClient: implements
+    ModelClient <|.. MessagesClient: implements
+```
+
+### Connection Points Detail
+
+**ConversationManager → ModelClient Factory:**
+
+During createConversation(), Manager calls internal createModelClient(config) method. Method switches on config.provider ('openai' | 'anthropic') and config.api ('responses' | 'chat' | 'messages'). Constructs appropriate client: ResponsesClient for openai+responses, ChatClient for openai+chat, MessagesClient for anthropic+messages. Returns ModelClient interface. All downstream code uses interface, doesn't know concrete implementation.
+
+**CLI → Provider Configuration:**
+
+set-provider command updates config.provider, writes to ~/.codex/config.toml. Next conversation creation uses new provider. Existing conversations continue with their original provider (config stored per conversation). list-providers shows available options and current default. Simple config management, no complex migration.
+
+**Provider Adapters → ResponseItems:**
+
+Each client adapter (ResponsesClient, ChatClient, MessagesClient) parses its provider's SSE format and normalizes to ResponseItems array. Responses API returns semantic events (already ResponseItems format). Chat API returns deltas (ChatClient aggregates into complete messages, converts to ResponseItems). Messages API returns content blocks (MessagesClient maps to ResponseItems, handles thinking blocks). All three produce compatible output. CLI receives same structure regardless of provider.
+
+### Verification Approach
+
+**Functional verification (manual CLI testing):**
+
+1. Responses API: `codex chat "Hello"` → verify response
+2. Switch to Chat: `codex set-api chat` → `codex new` → `codex chat "Hello"` → verify response
+3. Switch to Messages: `codex set-provider anthropic` → `codex set-api messages` → `codex new` → `codex chat "Hello"` → verify response
+4. Compare: All three work, conversations coherent, no errors
+
+**Mocked-service testing (automated, no real API calls):**
+
+Tests in `tests/mocked-service/phase-3-provider-parity.test.ts` using vitest, separate from unit tests. Uses mocked-service approach from `docs/core/contract-testing-tdd-philosophy.md`. Verifies wiring correctness with mocked clients.
+
+**Model integration testing (manual, real API calls):**
+
+Additional testing layer with actual LLM providers using cheap models. Tests provider behavior, config parameters (thinking, temperature), and real compatibility. Located in `scripts/integration-tests/` as standalone Node scripts (pre-library formalization).
+
+Tests to run:
+- OpenAI Responses API (gpt-4o-mini, no thinking)
+- OpenAI Chat Completions (gpt-4o-mini)
+- Anthropic Messages API (haiku-4.5, no thinking)
+- OpenRouter Chat (gemini-2.0-flash-001)
+- Thinking controls (Responses + Messages with thinking enabled)
+- Temperature variation (verify different outputs with temperature changes)
+
+Requires real API keys, costs nominal amount. Run via `npm run test:integration` or manually execute scripts. Validates providers actually work with real models, not just mocked responses. Results inform any provider-specific handling needed.
+
+```typescript
+describe('Phase 3: Provider Parity', () => {
+  const testConversation = async (provider: string, api: string, mockClient: MockModelClient) => {
+    const manager = new ConversationManager({client: mockClient});
+    const conv = await manager.createConversation({provider, api, model: 'test', auth: testAuth});
+
+    const response = await conv.sendMessage("Hello");
+
+    expect(response.length).toBeGreaterThan(0);
+    expect(response[0].type).toBe('message');
+    return response;
+  };
+
+  it('Responses API works', async () => {
+    const mock = createMockResponsesClient();
+    await testConversation('openai', 'responses', mock);
+  });
+
+  it('Chat API works', async () => {
+    const mock = createMockChatClient();
+    await testConversation('openai', 'chat', mock);
+  });
+
+  it('Messages API works', async () => {
+    const mock = createMockMessagesClient();
+    await testConversation('anthropic', 'messages', mock);
+  });
+
+  it('all providers return compatible ResponseItems', async () => {
+    // Verify structure matches across providers
+  });
+});
+```
+
+**Model integration scripts:**
+
+Located in `scripts/integration-tests/phase-3/` as standalone Node.js scripts. Each script tests one provider with real API, validates behavior, logs results.
+
+```
+scripts/integration-tests/phase-3/
+├── test-responses-api.ts        (OpenAI Responses, gpt-4o-mini)
+├── test-chat-api.ts             (OpenAI Chat, gpt-4o-mini)
+├── test-messages-api.ts         (Anthropic Messages, haiku-4.5)
+├── test-openrouter.ts           (OpenRouter, gemini-2.0-flash-001)
+├── test-thinking-controls.ts    (Responses + Messages with thinking)
+├── test-temperature.ts          (Temperature 0.2, 0.7, 1.0 variation)
+└── run-all.ts                   (Execute suite, collect results)
+```
+
+Run via `npm run test:integration` or `node scripts/integration-tests/phase-3/run-all.ts`. Requires API keys in .env. Tests make real API calls (costs pennies with cheap models). Validates provider parity, config parameter handling, and actual compatibility. Results inform any provider-specific edge case handling needed.
+
+**Quality gates:**
+- Mocked-service tests: phase-3-provider-parity.test.ts all passing
+- Model integration scripts: All providers tested, results logged (not automated pass/fail, manual review)
+- TypeScript: 0 errors
+- ESLint: 0 errors
+- Combined: Automated checks pass, model integration validated manually
+
+**Code review:**
+- Stage 1: Provider switching logic, config handling, error cases
+- Stage 2: Provider abstraction preserved, adapter patterns correct, model integration results reviewed
+
+---
+
 ## [Remaining sections TBD]
