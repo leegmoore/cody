@@ -13,7 +13,7 @@ VERIFICATION TASKS:
    npm run format       → no changes
    npm test             → all pass, 0 skip
 
-2. Read phase-1/checklist.md → all checked?
+2. Read phase-1/source/checklist.md → all checked?
 3. Read phase-1/decisions.md → reasonable?
 4. Verify files from checklist exist
 

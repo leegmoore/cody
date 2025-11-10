@@ -638,7 +638,7 @@ All 5 tests pass. Mocked-service test file exists and runs. No real API calls ma
 
 ---
 
-TASKS (update checklist.md as you work):
+TASKS (update source/checklist.md as you work):
 
 # Phase 1: Basic Chat Flow - Task Checklist
 

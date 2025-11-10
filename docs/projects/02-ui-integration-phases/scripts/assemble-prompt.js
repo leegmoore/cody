@@ -27,6 +27,8 @@ const promptType = typeArg.split('=')[1] || args[args.indexOf(typeArg) + 1];
 
 const basePath = path.join(__dirname, '..');
 const phasePath = path.join(basePath, `phase-${phaseNum}`);
+const sourceDir = path.join(phasePath, 'source');
+const promptsDir = path.join(phasePath, 'prompts');
 
 function readArtifact(relativePath) {
   const fullPath = path.join(basePath, relativePath);
@@ -47,11 +49,11 @@ function assembleCoderPrompt(phaseNum) {
   sections.push('\n\n---\n\nPROJECT CONTEXT:\n\n');
   sections.push(readArtifact('artifacts/global/project-context.md'));
   sections.push('\n\n---\n\nPHASE ' + phaseNum + ' TECHNICAL DESIGN:\n\n');
-  sections.push(readArtifact(`phase-${phaseNum}/design.md`));
+  sections.push(readArtifact(`phase-${phaseNum}/source/design.md`));
   sections.push('\n\n---\n\nTEST CONDITIONS:\n\n');
-  sections.push(readArtifact(`phase-${phaseNum}/test-conditions.md`));
-  sections.push('\n\n---\n\nTASKS (update checklist.md as you work):\n\n');
-  sections.push(readArtifact(`phase-${phaseNum}/checklist.md`));
+  sections.push(readArtifact(`phase-${phaseNum}/source/test-conditions.md`));
+  sections.push('\n\n---\n\nTASKS (update source/checklist.md as you work):\n\n');
+  sections.push(readArtifact(`phase-${phaseNum}/source/checklist.md`));
   sections.push('\n\n---\n\nSTANDARDS:\n\n');
   sections.push('See docs/core/dev-standards.md for complete coding standards.\n');
   sections.push('See docs/core/contract-testing-tdd-philosophy.md for testing approach.\n\n');
@@ -64,7 +66,7 @@ function assembleCoderPrompt(phaseNum) {
   sections.push('\n\n---\n\nEXECUTION WORKFLOW:\n\n');
   sections.push(readArtifact('artifacts/templates/coder-workflow.txt'));
   sections.push('\n\n---\n\nMANUAL VERIFICATION:\n\n');
-  sections.push(readArtifact(`phase-${phaseNum}/manual-test-script.md`));
+  sections.push(readArtifact(`phase-${phaseNum}/source/manual-test-script.md`));
   sections.push('\n\n---\n\nFINAL QUALITY CHECK:\n\n');
   sections.push('Before declaring phase complete:\n\n');
   sections.push('Run: npm run format && npm run lint && npx tsc --noEmit && npm test\n\n');
@@ -88,7 +90,7 @@ function assembleVerifierPrompt(phaseNum) {
   sections.push('   npm run lint         → 0 errors\n');
   sections.push('   npm run format       → no changes\n');
   sections.push('   npm test             → all pass, 0 skip\n\n');
-  sections.push(`2. Read phase-${phaseNum}/checklist.md → all checked?\n`);
+  sections.push(`2. Read phase-${phaseNum}/source/checklist.md → all checked?\n`);
   sections.push(`3. Read phase-${phaseNum}/decisions.md → reasonable?\n`);
   sections.push('4. Verify files from checklist exist\n\n');
   sections.push('---\n\nOUTPUT FORMAT:\n\n');
@@ -120,8 +122,13 @@ if (promptType === 'coder') {
   process.exit(1);
 }
 
-// Write to phase directory
-const outputPath = path.join(phasePath, `${promptType.toUpperCase()}-PROMPT-ASSEMBLED.txt`);
+// Ensure prompts directory exists
+if (!fs.existsSync(promptsDir)) {
+  fs.mkdirSync(promptsDir, {recursive: true});
+}
+
+// Write to prompts directory
+const outputPath = path.join(promptsDir, `${promptType.toUpperCase()}.txt`);
 fs.writeFileSync(outputPath, prompt, 'utf8');
 
 console.log(`✓ Generated: ${outputPath}`);
