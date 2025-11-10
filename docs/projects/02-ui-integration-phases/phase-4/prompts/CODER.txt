@@ -1,3 +1,58 @@
+===== PHASE 4: CODER PROMPT =====
+ROLE: Senior TypeScript developer implementing phases of the Cody CLI integration project. You write clean, tested code following TDD principles with mocked-service tests at library boundaries.
+
+
+---
+
+PRODUCT:
+
+**Cody** is a command-line interface for the Codex TypeScript library. It provides multi-provider LLM agent capabilities supporting OpenAI (Responses, Chat) and Anthropic (Messages) APIs with tool execution, conversation persistence, and structured tool calling. Built as a TypeScript port of OpenAI's Rust-based Codex CLI, Cody serves as both a standalone CLI tool and reference implementation for the @openai/codex-core library.
+
+
+---
+
+PROJECT CONTEXT:
+
+# Project 02: UI Integration & Library Definition
+
+## What We're Building
+
+Project 02 integrates all ported Codex modules (Phases 1-6) into a working command-line interface called **Cody** and defines the library API surface for @openai/codex-core. This project validates the Rust → TypeScript port by wiring protocol, configuration, persistence, execution, client, tools, and orchestration layers into complete conversation flows.
+
+## Why It Matters
+
+The port is functionally complete but untested as an integrated system. Individual modules have unit tests, but we haven't verified end-to-end workflows. This project proves the port works, exposes integration issues, and establishes the library interface that external developers will use.
+
+## Project Success Criteria
+
+By project completion:
+- User can create conversations, send messages, receive responses (all providers: OpenAI Responses/Chat, Anthropic Messages)
+- All auth methods work (API keys, ChatGPT OAuth, Claude OAuth)
+- Tools execute with approval flow
+- Conversations persist and resume (JSONL format)
+- MCP integration functional
+- Library API documented (public exports, usage examples)
+- REST API designed (optional implementation)
+- Zero-error quality baseline maintained (0 TS errors, 0 ESLint errors, all tests passing)
+
+## Dependencies
+
+- Phase 6 complete (75 modules ported, 1,876 tests passing)
+- Phase 5.2 complete (quality baseline clean)
+- API keys: OpenAI, Anthropic, OpenRouter
+- OAuth tokens: Read from ~/.codex (ChatGPT), ~/.claude (Claude)
+
+## Scope
+
+**In scope:** CLI commands, provider integration (3 APIs), auth methods (4 total), tool execution, persistence/resume, library API docs, REST API spec
+
+**Non-scope:** Script harness (Project 03), memory innovations (Projects 04-06), rich TUI, additional tools, performance optimization, production hardening
+
+
+---
+
+PHASE 4 TECHNICAL DESIGN:
+
 # Phase 4: Technical Design
 
 **Phase:** Authentication Expansion
@@ -862,3 +917,878 @@ Test with actual keyring files to verify paths and parsing are correct. This val
 ## Summary
 
 Phase 4 extends authentication to support four methods (two API keys, two OAuth). The critical constraint is OAuth × provider matching: ChatGPT OAuth only works with OpenAI, Claude OAuth only works with Anthropic. AuthManager enforces this at token retrieval time with clear error messages. CLI commands provide status visibility and easy switching. Testing focuses on token routing, error cases, and the OAuth × API validation constraint.
+
+
+---
+
+TEST CONDITIONS:
+
+# Phase 4: Test Conditions
+
+**Test Framework:** Vitest (mocked-service)
+**Test File:** `tests/mocked-service/phase-4-auth-methods.test.ts`
+**Mocks:** `tests/mocks/keyring.ts`, `tests/mocks/config.ts`
+
+---
+
+## Suite 1: Token Retrieval (All Methods)
+
+### Test 1: OpenAI API Key Retrieval
+- **Setup:** Config with auth.method='openai-api-key', auth.openai_api_key='test-key-123'
+- **Execute:** authManager.getToken('openai')
+- **Verify:** Returns 'test-key-123'
+
+### Test 2: Anthropic API Key Retrieval
+- **Setup:** Config with auth.method='anthropic-api-key', auth.anthropic_api_key='test-key-456'
+- **Execute:** authManager.getToken('anthropic')
+- **Verify:** Returns 'test-key-456'
+
+### Test 3: ChatGPT OAuth Token Retrieval
+- **Setup:** Mock keyring with ~/.cody/oauth/chatgpt.json → 'chatgpt-oauth-token', auth.method='oauth-chatgpt'
+- **Execute:** authManager.getToken('openai')
+- **Verify:** Returns 'chatgpt-oauth-token', keyring.readToken called with correct path
+
+### Test 4: Claude OAuth Token Retrieval
+- **Setup:** Mock keyring with ~/.claude/credentials.json → 'claude-oauth-token', auth.method='oauth-claude'
+- **Execute:** authManager.getToken('anthropic')
+- **Verify:** Returns 'claude-oauth-token', keyring.readToken called
+
+---
+
+## Suite 2: Error Cases
+
+### Test 5: Missing API Key Error
+- **Setup:** Config with auth.method='openai-api-key', but openai_api_key field empty
+- **Execute:** authManager.getToken('openai')
+- **Verify:** Throws AuthError with message "Missing API key for openai", includes how to set it
+
+### Test 6: Missing OAuth Token Error (ChatGPT)
+- **Setup:** Mock keyring returns null (file not found), auth.method='oauth-chatgpt'
+- **Execute:** authManager.getToken('openai')
+- **Verify:** Throws AuthError with message "ChatGPT OAuth token not found", suggests logging into ChatGPT Pro CLI
+
+### Test 7: Missing OAuth Token Error (Claude)
+- **Setup:** Mock keyring returns null for all paths, auth.method='oauth-claude'
+- **Execute:** authManager.getToken('anthropic')
+- **Verify:** Throws AuthError with message "Claude OAuth token not found", lists paths searched, suggests logging into Claude Code
+
+### Test 8: Provider Mismatch (ChatGPT OAuth + Anthropic)
+- **Setup:** Mock keyring with ChatGPT token, auth.method='oauth-chatgpt'
+- **Execute:** authManager.getToken('anthropic')
+- **Verify:** Throws AuthError with message "ChatGPT OAuth can only be used with OpenAI providers"
+
+### Test 9: Provider Mismatch (Claude OAuth + OpenAI)
+- **Setup:** Mock keyring with Claude token, auth.method='oauth-claude'
+- **Execute:** authManager.getToken('openai')
+- **Verify:** Throws AuthError with message "Claude OAuth can only be used with Anthropic providers"
+
+---
+
+## Suite 3: CLI Commands
+
+### Test 10: set-auth Updates Config
+- **Setup:** Temp config file with method='openai-api-key'
+- **Execute:** Run CLI command `cody set-auth oauth-claude` (use temp config)
+- **Verify:** Config file updated, auth.method now 'oauth-claude'
+
+### Test 11: set-auth Validates Method Name
+- **Execute:** Run `cody set-auth invalid-method`
+- **Verify:** Exit code 1, stderr contains "Invalid auth method", lists valid methods
+
+### Test 12: set-auth Prompts for API Key
+- **Setup:** Config with no openai_api_key set
+- **Execute:** Run `cody set-auth openai-api-key` (mock stdin to provide key)
+- **Verify:** Prompts user for key, saves to config
+
+### Test 13: login Displays Status
+- **Setup:** Config with some methods available, some missing
+- **Execute:** Run `cody login`
+- **Verify:** Stdout shows all four methods, ✓ for available, ✗ for missing, → for current
+
+---
+
+## Suite 4: OAuth × API Validation
+
+**Critical: Verify OAuth methods only work with correct providers**
+
+### Test 14: ChatGPT OAuth + Responses API (Valid)
+- **Setup:** Mock keyring with ChatGPT token, config provider=openai api=responses, auth.method='oauth-chatgpt'
+- **Execute:** Create conversation, send message
+- **Verify:** Works (token retrieved, conversation succeeds)
+
+### Test 15: ChatGPT OAuth + Chat API (Valid)
+- **Setup:** Mock keyring with ChatGPT token, config provider=openai api=chat, auth.method='oauth-chatgpt'
+- **Execute:** Create conversation, send message
+- **Verify:** Works (ChatGPT OAuth valid for all OpenAI APIs)
+
+### Test 16: Claude OAuth + Messages API (Valid)
+- **Setup:** Mock keyring with Claude token, config provider=anthropic api=messages, auth.method='oauth-claude'
+- **Execute:** Create conversation, send message
+- **Verify:** Works (token retrieved, conversation succeeds)
+
+### Test 17: ChatGPT OAuth + Messages API (Invalid - Wrong Provider)
+- **Setup:** Mock keyring with ChatGPT token, config provider=anthropic api=messages, auth.method='oauth-chatgpt'
+- **Execute:** Attempt to create conversation
+- **Verify:** Throws AuthError before API call (provider mismatch caught early)
+
+### Test 18: Claude OAuth + Responses API (Invalid - Wrong Provider)
+- **Setup:** Mock keyring with Claude token, config provider=openai api=responses, auth.method='oauth-claude'
+- **Execute:** Attempt to create conversation
+- **Verify:** Throws AuthError (provider mismatch)
+
+---
+
+## Mock Strategy
+
+**Mock KeyringStore:**
+- Returns preset tokens for configured paths
+- Returns null to simulate missing tokens
+- No actual filesystem access
+
+**Mock Config:**
+- Use temp files or in-memory config for CLI command tests
+- Avoid touching real ~/.cody/config.toml
+
+**Mock stdin:**
+- For set-auth prompting tests, mock readline to provide test input
+- Verify prompt text, verify input saved to config
+
+---
+
+## Verification Checklist
+
+**Automated tests pass:**
+- [ ] Token retrieval tests: 4 tests (one per method)
+- [ ] Error case tests: 5 tests (missing tokens, provider mismatches)
+- [ ] CLI command tests: 4 tests (set-auth, login)
+- [ ] OAuth × API validation: 5 tests (valid combos, invalid combos)
+- [ ] Total: 18 tests, all passing in <2 seconds
+
+**Quality gates:**
+- [ ] TypeScript: 0 errors
+- [ ] ESLint: 0 errors
+- [ ] Format: no changes
+- [ ] Combined: All checks pass
+
+**Manual verification:**
+- [ ] Follow manual-test-script.md
+- [ ] Test all 4 auth methods
+- [ ] Test OAuth × API validation manually (if real tokens available)
+
+**Code review:**
+- [ ] Stage 1: Token security, keyring safety, error messages
+- [ ] Stage 2: Auth patterns match Phase 5, OAuth × API validation correct
+
+---
+
+**All checks ✓ → Phase 4 test conditions complete**
+
+
+---
+
+TASKS (update source/checklist.md as you work):
+
+# Phase 4: Authentication Expansion – Task Checklist
+
+**Status:** Not Started
+**Estimated Code:** ~350 lines (CLI 110, auth layer 80, mocked tests 160)
+
+---
+
+## Setup & Planning
+
+- [ ] Review Phase 3 implementation (provider switching works)
+- [ ] Read TECH-APPROACH Section 5 (Phase 4 technical approach)
+- [ ] Read phase-4/source/design.md (implementation details)
+- [ ] Inspect ported AuthManager: `codex-ts/src/core/auth/index.ts`
+- [ ] Inspect KeyringStore: `codex-ts/src/core/keyring-store/index.ts`
+- [ ] Check for existing ChatGPT OAuth implementation (Phase 5 port)
+
+---
+
+## AuthManager Enhancements
+
+### Type Definitions
+
+- [ ] Define AuthMethod type (union of 4 method strings)
+- [ ] Update AuthConfig interface to include method field
+- [ ] Export types for CLI usage
+
+### Token Retrieval Logic
+
+- [ ] Implement getToken(provider) method:
+  - [ ] Check configured auth method
+  - [ ] Route to appropriate retrieval function
+  - [ ] Validate provider matches method (OAuth constraint)
+  - [ ] Return token string
+- [ ] Implement getApiKey(provider) helper:
+  - [ ] Read from config.auth[`${provider}_api_key`]
+  - [ ] Throw AuthError if missing
+- [ ] Implement getChatGPTOAuthToken() helper:
+  - [ ] Call keyring.readToken('~/.cody/oauth/chatgpt.json')
+  - [ ] Parse JSON, extract access_token
+  - [ ] Throw AuthError if missing
+- [ ] Implement getClaudeOAuthToken() helper (NEW):
+  - [ ] Try multiple paths (3 possible locations)
+  - [ ] Return first successful read
+  - [ ] Throw AuthError if all fail, list paths tried
+
+### Method Management
+
+- [ ] Implement getSelectedMethod():
+  - [ ] Return config.auth.method
+  - [ ] Provide default if missing (openai-api-key)
+- [ ] Implement setMethod(method):
+  - [ ] Validate method is one of four valid values
+  - [ ] Update config
+  - [ ] Save config file
+
+### Error Handling
+
+- [ ] All errors are AuthError type with helpful messages
+- [ ] Missing token errors suggest how to fix
+- [ ] Provider mismatch errors explain constraint
+- [ ] Document error message templates in code comments
+
+---
+
+## CLI Commands
+
+### login Command
+
+- [ ] Create `src/cli/commands/login.ts`
+- [ ] Implement command:
+  - [ ] Load config and create AuthManager
+  - [ ] Get current method
+  - [ ] For each of 4 methods, check if token available
+  - [ ] Display table: method name, status (✓/✗), current marker (→)
+  - [ ] For missing tokens, show help text
+- [ ] Format output:
+  - [ ] Clear visual hierarchy
+  - [ ] Current method obvious
+  - [ ] Help text actionable
+
+### set-auth Command
+
+- [ ] Create `src/cli/commands/set-auth.ts`
+- [ ] Implement command:
+  - [ ] Accept method argument
+  - [ ] Validate method name (one of four valid)
+  - [ ] Load config
+  - [ ] Update auth.method
+  - [ ] If API key method and key missing, prompt user
+  - [ ] Save config
+  - [ ] Verify token available (call auth.getToken())
+  - [ ] Print confirmation or warning
+- [ ] Error handling:
+  - [ ] Invalid method → list valid options
+  - [ ] Token unavailable after switch → show warning with fix
+
+---
+
+## Config System Updates
+
+- [ ] Extend Config type:
+  - [ ] Add auth.method: AuthMethod
+  - [ ] Keep auth.openai_api_key, auth.anthropic_api_key
+- [ ] Update config loader:
+  - [ ] Read auth.method field
+  - [ ] Provide default if missing (openai-api-key)
+- [ ] Update config writer:
+  - [ ] Save auth.method
+  - [ ] Preserve existing API keys
+- [ ] Validation:
+  - [ ] Method is valid value
+  - [ ] No validation of provider match here (AuthManager handles)
+
+---
+
+## Claude OAuth Implementation
+
+- [ ] Create `src/core/auth/claude-oauth.ts` (or add to auth-manager.ts)
+- [ ] Implement getClaudeOAuthToken():
+  - [ ] Define possible paths array
+  - [ ] Loop through paths, try keyring.readToken() for each
+  - [ ] Return first successful read
+  - [ ] If all fail, throw with paths listed
+- [ ] Token parsing:
+  - [ ] Read JSON file
+  - [ ] Extract access_token field (or equivalent)
+  - [ ] Handle malformed JSON gracefully
+- [ ] Document actual path found in DECISIONS.md
+
+---
+
+## Mocked-Service Tests (TDD)
+
+- [ ] Create `tests/mocked-service/phase-4-auth-methods.test.ts`
+- [ ] Create mock implementations:
+  - [ ] tests/mocks/keyring.ts (createMockKeyring)
+  - [ ] Test helper: createTestConfig(method, keys)
+
+### Token Retrieval Suite
+
+- [ ] Test 1: OpenAI API key retrieval
+- [ ] Test 2: Anthropic API key retrieval
+- [ ] Test 3: ChatGPT OAuth token retrieval
+- [ ] Test 4: Claude OAuth token retrieval
+
+### Error Cases Suite
+
+- [ ] Test 5: Missing API key error
+- [ ] Test 6: Missing ChatGPT OAuth token error
+- [ ] Test 7: Missing Claude OAuth token error (all paths fail)
+- [ ] Test 8: Provider mismatch (ChatGPT OAuth + Anthropic)
+- [ ] Test 9: Provider mismatch (Claude OAuth + OpenAI)
+
+### CLI Commands Suite
+
+- [ ] Test 10: set-auth updates config
+- [ ] Test 11: set-auth validates method name
+- [ ] Test 12: set-auth prompts for API key (mock stdin)
+- [ ] Test 13: login displays status
+
+### OAuth × API Validation Suite
+
+- [ ] Test 14: ChatGPT OAuth + Responses API (valid)
+- [ ] Test 15: ChatGPT OAuth + Chat API (valid)
+- [ ] Test 16: Claude OAuth + Messages API (valid)
+- [ ] Test 17: ChatGPT OAuth + Messages API (invalid - wrong provider)
+- [ ] Test 18: Claude OAuth + Responses API (invalid - wrong provider)
+
+- [ ] All 18 tests passing
+- [ ] Tests run fast (<2 seconds)
+- [ ] No skipped tests
+
+---
+
+## Manual Verification
+
+**Follow manual-test-script.md:**
+- [ ] Test API key auth (both providers)
+- [ ] Test ChatGPT OAuth (if real token available)
+- [ ] Test Claude OAuth (if real token available)
+- [ ] Test auth method switching
+- [ ] Test login command output
+- [ ] Test error cases (missing tokens, invalid methods)
+
+---
+
+## Quality Gates
+
+- [ ] Run: `npm run format` → no changes
+- [ ] Run: `npm run lint` → 0 errors
+- [ ] Run: `npx tsc --noEmit` → 0 errors
+- [ ] Run: `npm test` → all passing (1,876+ baseline + 18 new)
+- [ ] Combined: All checks in sequence
+
+---
+
+## Code Review
+
+- [ ] Stage 1 (Traditional): Token security (no logs), keyring safety, error handling, CLI UX
+- [ ] Stage 2 (Port Validation): Auth patterns match Phase 5, OAuth × API validation enforced
+
+---
+
+**All checks ✓ → Phase 4 test conditions complete**
+
+
+---
+
+STANDARDS:
+
+See docs/core/dev-standards.md for complete coding standards.
+See docs/core/contract-testing-tdd-philosophy.md for testing approach.
+
+Key requirements:
+- TypeScript strict mode, no any types
+- ESLint 0 errors
+- Prettier formatted
+- Mocked-service tests at library boundaries
+- Mock all external dependencies
+
+
+---
+
+EXECUTION WORKFLOW:
+
+EXECUTION WORKFLOW:
+
+1. Read all reference documents (project context, phase design, standards, test conditions)
+2. Review checklist (understand all tasks)
+3. Write mocked-service tests FIRST (TDD):
+   - Create test file based on test-conditions.md
+   - Implement mocks (ModelClient, Config, etc.)
+   - Write tests for each functional condition
+   - Run tests (should fail - nothing implemented)
+4. Implement code to pass tests:
+   - Create files listed in checklist
+   - Follow design.md implementation specifics
+   - Run tests after each component
+   - Iterate until all tests green
+5. Manual functional testing:
+   - Follow manual-test-script.md
+   - Execute each test case
+   - Verify expected behavior
+   - Document any issues
+6. Quality verification:
+   - Run: npm run format (fix formatting)
+   - Run: npm run lint (fix errors)
+   - Run: npx tsc --noEmit (fix type errors)
+   - Run: npm test (verify all pass)
+   - Run combined: npm run format && npm run lint && npx tsc --noEmit && npm test
+   - All must pass before proceeding
+7. Update artifacts:
+   - Update checklist.md (check off completed tasks)
+   - Update decisions.md (log implementation choices with rationale)
+8. Final verification:
+   - All checklist items checked
+   - All quality gates pass
+   - Manual tests successful
+   - Decisions documented
+9. Commit and push
+10. Report completion, ready for quality verifier and code reviewer
+
+DO NOT declare phase complete until all steps verified.
+
+
+---
+
+MANUAL VERIFICATION:
+
+# Phase 4: Manual Test Script
+
+**Goal:** Verify all four authentication methods work correctly and OAuth × provider validation enforced
+
+**Prerequisites:**
+- Phase 3 complete (provider switching works)
+- API keys available (OpenAI, Anthropic)
+- Optional: Real OAuth tokens (ChatGPT, Claude) for full validation
+
+---
+
+## Setup
+
+**1. Verify API keys:**
+```bash
+# Check keys in config
+cat ~/.cody/config.toml
+# Should have openai_api_key and anthropic_api_key
+
+# Or check environment
+echo $OPENAI_API_KEY
+echo $ANTHROPIC_API_KEY
+```
+
+**2. Check OAuth token availability (optional):**
+```bash
+# ChatGPT token
+ls ~/.cody/oauth/chatgpt.json
+
+# Claude token  
+ls ~/.claude/credentials.json
+# (Path may vary - check ~/.claude/config/, ~/.config/claude/)
+```
+
+---
+
+## Test 1: OpenAI API Key Auth
+
+**Objective:** Verify API key auth works with OpenAI providers
+
+**Steps:**
+1. Set auth method:
+   ```bash
+   cody set-auth openai-api-key
+   ```
+   **Expected:** Prints "✓ Auth method set to openai-api-key"
+
+2. Verify status:
+   ```bash
+   cody login
+   ```
+   **Expected:**
+   - Shows → openai-api-key (current)
+   - Shows ✓ next to openai-api-key (token available)
+
+3. Test with Responses API:
+   ```bash
+   cody set-provider openai --api responses
+   cody new
+   cody chat "test message"
+   ```
+   **Expected:** Conversation works, response received
+
+4. Test with Chat API:
+   ```bash
+   cody set-api chat
+   cody new
+   cody chat "test message"
+   ```
+   **Expected:** Conversation works (API key works with both OpenAI APIs)
+
+**Success criteria:**
+- [ ] Auth method set successfully
+- [ ] Token available (login shows ✓)
+- [ ] Works with Responses API
+- [ ] Works with Chat API
+
+---
+
+## Test 2: Anthropic API Key Auth
+
+**Objective:** Verify API key auth works with Anthropic
+
+**Steps:**
+1. Set auth method:
+   ```bash
+   cody set-auth anthropic-api-key
+   ```
+   **Expected:** Prints "✓ Auth method set to anthropic-api-key"
+
+2. Verify status:
+   ```bash
+   cody login
+   ```
+   **Expected:**
+   - Shows → anthropic-api-key (current)
+   - Shows ✓ next to anthropic-api-key
+
+3. Test with Messages API:
+   ```bash
+   cody set-provider anthropic --api messages
+   cody new
+   cody chat "test message"
+   ```
+   **Expected:** Conversation works, Claude responds
+
+**Success criteria:**
+- [ ] Auth method set successfully
+- [ ] Token available
+- [ ] Works with Messages API
+
+---
+
+## Test 3: ChatGPT OAuth (If Available)
+
+**Objective:** Verify ChatGPT OAuth token retrieval and usage
+
+**Prerequisites:** Logged into ChatGPT Pro CLI (token in ~/.cody)
+
+**Steps:**
+1. Set auth method:
+   ```bash
+   cody set-auth oauth-chatgpt
+   ```
+   **Expected:** Prints "✓ Auth method set to oauth-chatgpt", "✓ Token available for openai"
+
+2. Verify status:
+   ```bash
+   cody login
+   ```
+   **Expected:**
+   - Shows → oauth-chatgpt (current)
+   - Shows ✓ next to oauth-chatgpt (token found in keyring)
+
+3. Test with Responses API:
+   ```bash
+   cody set-provider openai --api responses
+   cody new
+   cody chat "test message"
+   ```
+   **Expected:** Conversation works using OAuth token
+
+4. Test with Chat API:
+   ```bash
+   cody set-api chat
+   cody new
+   cody chat "test message"
+   ```
+   **Expected:** Conversation works (OAuth valid for both OpenAI APIs)
+
+**Success criteria:**
+- [ ] OAuth token retrieved from keyring
+- [ ] Works with Responses API
+- [ ] Works with Chat API
+- [ ] No errors
+
+**If token not available:** Skip this test, verify error message is helpful:
+```bash
+cody set-auth oauth-chatgpt
+cody new
+# Should error with: "ChatGPT OAuth token not found. Log in via ChatGPT Pro CLI..."
+```
+
+---
+
+## Test 4: Claude OAuth (If Available)
+
+**Objective:** Verify Claude OAuth token retrieval and usage
+
+**Prerequisites:** Logged into Claude Code (token in ~/.claude)
+
+**Steps:**
+1. Set auth method:
+   ```bash
+   cody set-auth oauth-claude
+   ```
+   **Expected:** Prints "✓ Auth method set to oauth-claude", "✓ Token available for anthropic"
+
+2. Verify status:
+   ```bash
+   cody login
+   ```
+   **Expected:**
+   - Shows → oauth-claude (current)
+   - Shows ✓ next to oauth-claude (token found)
+
+3. Test with Messages API:
+   ```bash
+   cody set-provider anthropic --api messages
+   cody new
+   cody chat "test message"
+   ```
+   **Expected:** Conversation works using Claude OAuth token
+
+**Success criteria:**
+- [ ] OAuth token retrieved from keyring
+- [ ] Works with Messages API
+- [ ] No errors
+
+**If token not available:** Verify error message:
+```bash
+cody set-auth oauth-claude
+cody new
+# Should error with: "Claude OAuth token not found. Searched: [paths]. Log in via Claude Code..."
+```
+
+---
+
+## Test 5: Auth Method Switching
+
+**Objective:** Verify can switch between methods seamlessly
+
+**Steps:**
+1. Start with API key:
+   ```bash
+   cody set-auth openai-api-key
+   cody set-provider openai --api responses
+   cody new
+   cody chat "test 1"
+   ```
+   **Expected:** Works
+
+2. Switch to OAuth (if available):
+   ```bash
+   cody set-auth oauth-chatgpt
+   cody new
+   cody chat "test 2"
+   ```
+   **Expected:** Works with OAuth token
+
+3. Switch back to API key:
+   ```bash
+   cody set-auth openai-api-key
+   cody new
+   cody chat "test 3"
+   ```
+   **Expected:** Works with API key again
+
+4. Switch providers and auth together:
+   ```bash
+   cody set-provider anthropic --api messages
+   cody set-auth anthropic-api-key
+   cody new
+   cody chat "test 4"
+   ```
+   **Expected:** Works with Anthropic API key
+
+**Success criteria:**
+- [ ] Can switch between methods
+- [ ] Each method works after switch
+- [ ] Config persists across switches
+- [ ] No state corruption
+
+---
+
+## Test 6: OAuth × Provider Validation
+
+**Objective:** Verify OAuth methods only work with correct providers
+
+**Test 6a: ChatGPT OAuth + OpenAI (Valid)**
+```bash
+cody set-auth oauth-chatgpt
+cody set-provider openai --api responses
+cody new
+cody chat "test"
+```
+**Expected:** Works (ChatGPT OAuth valid for OpenAI)
+
+**Test 6b: ChatGPT OAuth + Anthropic (Invalid)**
+```bash
+cody set-auth oauth-chatgpt
+cody set-provider anthropic --api messages
+cody new
+```
+**Expected:** 
+- Error: "ChatGPT OAuth can only be used with OpenAI providers"
+- Suggests: "Switch to OpenAI: cody set-provider openai"
+- No conversation created
+
+**Test 6c: Claude OAuth + Anthropic (Valid)**
+```bash
+cody set-auth oauth-claude
+cody set-provider anthropic --api messages
+cody new
+cody chat "test"
+```
+**Expected:** Works (Claude OAuth valid for Anthropic)
+
+**Test 6d: Claude OAuth + OpenAI (Invalid)**
+```bash
+cody set-auth oauth-claude
+cody set-provider openai --api responses
+cody new
+```
+**Expected:**
+- Error: "Claude OAuth can only be used with Anthropic providers"
+- Suggests: "Switch to Anthropic: cody set-provider anthropic"
+- No conversation created
+
+**Success criteria:**
+- [ ] Valid combinations work
+- [ ] Invalid combinations rejected before API call
+- [ ] Error messages explain constraint
+- [ ] Suggestions actionable
+
+---
+
+## Test 7: Missing Token Error Handling
+
+**Objective:** Verify clear errors when tokens missing
+
+**Test 7a: Missing API Key**
+```bash
+# Temporarily remove key from config
+# Edit ~/.cody/config.toml, delete openai_api_key line
+
+cody set-auth openai-api-key
+cody set-provider openai --api responses
+cody new
+```
+**Expected:**
+- Error: "Missing API key for openai"
+- Shows: "Set in config: [auth]\nopenai_api_key = \"...\""
+- Or: "Run: cody set-auth openai-api-key" (triggers prompt)
+
+**Test 7b: Missing OAuth Token**
+```bash
+# If you don't have real OAuth tokens, this is the normal case
+cody set-auth oauth-chatgpt
+cody new
+```
+**Expected:**
+- Error: "ChatGPT OAuth token not found at ~/.cody/oauth/chatgpt.json"
+- Suggests: "Log in via ChatGPT Pro CLI to refresh token"
+- Alternative: "Or switch to API key: cody set-auth openai-api-key"
+
+**Restore config after test**
+
+**Success criteria:**
+- [ ] Missing tokens detected
+- [ ] Error messages clear
+- [ ] Suggestions actionable (which app to log into, or use API key instead)
+
+---
+
+## Test 8: login Command Output
+
+**Objective:** Verify login command provides useful status overview
+
+**Steps:**
+1. Run with mixed availability:
+   ```bash
+   # Assume API keys set, OAuth tokens not available
+   cody login
+   ```
+   
+   **Expected output:**
+   ```
+   Authentication Status:
+   
+   Current method: openai-api-key
+   
+   Available methods:
+   
+   → ✓ openai-api-key
+   ✗ anthropic-api-key
+      Set in config: [auth]
+      anthropic_api_key = "..."
+   
+     ✗ oauth-chatgpt
+      Log in via ChatGPT Pro CLI to refresh
+   
+     ✗ oauth-claude
+      Log in via Claude Code to refresh
+   ```
+
+2. Verify visual clarity:
+   - Current method has arrow (→)
+   - Available methods have checkmark (✓)
+   - Missing methods have X (✗) and help text
+   - Easy to understand at a glance
+
+**Success criteria:**
+- [ ] Shows all four methods
+- [ ] Status indicators clear (✓/✗)
+- [ ] Current method highlighted (→)
+- [ ] Help text for missing tokens
+- [ ] Output is readable and actionable
+
+---
+
+## Success Checklist
+
+**Functional verification:**
+- [ ] OpenAI API key auth works (tested with Responses + Chat)
+- [ ] Anthropic API key auth works (tested with Messages)
+- [ ] ChatGPT OAuth works with OpenAI (if token available)
+- [ ] Claude OAuth works with Anthropic (if token available)
+- [ ] Auth method switching persists
+- [ ] login command shows useful status
+- [ ] OAuth × provider validation enforced (invalid combos rejected)
+- [ ] Missing token errors clear and actionable
+
+**Quality verification:**
+- [ ] All mocked-service tests passing (18 tests)
+- [ ] TypeScript: 0 errors
+- [ ] ESLint: 0 errors
+- [ ] Format: clean
+- [ ] Combined: All checks pass
+
+**Code review:**
+- [ ] Stage 1 complete (security, errors, UX)
+- [ ] Stage 2 complete (port validation, OAuth constraints)
+
+---
+
+**All checks ✓ → Phase 4 functional verification complete**
+
+**Next:** Commit changes, update project logs, proceed to Phase 5
+
+
+---
+
+FINAL QUALITY CHECK:
+
+Before declaring phase complete:
+
+Run: npm run format && npm run lint && npx tsc --noEmit && npm test
+
+ALL must pass. Document results.
+Update checklist.md and decisions.md.
+Commit and push.
+Ready for verification stages.
+
+===== END CODER PROMPT =====
