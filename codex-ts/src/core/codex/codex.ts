@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from "events";
+import { join } from "path";
 import type { ConversationId } from "../../protocol/conversation-id/index.js";
 import type { Event, Op, Submission } from "../../protocol/protocol.js";
 import type { Config } from "../config.js";
@@ -14,7 +15,8 @@ import { Session } from "./session.js";
 import { submissionLoop } from "./submission-loop.js";
 import { WireApi } from "../client/model-provider-info.js";
 import { Features } from "../features/index.js";
-import { SessionSource } from "../rollout.js";
+import { SessionSource, SESSIONS_SUBDIR } from "../rollout.js";
+import type { ModelClientFactory } from "../client/model-client-factory.js";
 
 /**
  * Error thrown when the Codex agent dies unexpectedly.
@@ -134,7 +136,8 @@ export class Codex {
     config: Config,
     authManager: AuthManager,
     _conversationHistory: unknown, // TODO: Port InitialHistory
-    sessionSource: unknown, // TODO: Port SessionSource type
+    sessionSource: SessionSource | null, // TODO: Port SessionSource type
+    modelClientFactory: ModelClientFactory,
   ): Promise<CodexSpawnOk> {
     // Create communication channels
     const txSub = new EventEmitter();
@@ -171,25 +174,22 @@ export class Codex {
       features,
       originalConfigDoNotUse: config,
       // TODO: Pass sessionSource properly - for now default to CLI if unknown
-      sessionSource:
-        (sessionSource as SessionSource | null) ?? SessionSource.CLI,
+      sessionSource: sessionSource ?? SessionSource.CLI,
     };
 
     // Create session
+    const modelClient = await modelClientFactory({ config, authManager });
+
     const session = await Session.create(
       sessionConfiguration,
       config,
       authManager,
       txEvent,
       sessionSource,
+      modelClient,
     );
 
     const conversationId = session.conversationId;
-
-    // Spawn submission loop in background
-    submissionLoop(session, config, txSub).catch((err) => {
-      console.error("Submission loop error:", err);
-    });
 
     // Create Codex instance
     const codex = new Codex(txSub, rxEvent);
@@ -197,6 +197,19 @@ export class Codex {
     // Wire up event forwarding
     txEvent.on("event", (event: Event) => {
       rxEvent.emit("event", event);
+    });
+
+    const defaultRolloutPath = join(
+      config.codexHome,
+      SESSIONS_SUBDIR,
+      `${conversationId.toString()}.jsonl`,
+    );
+
+    await session.emitSessionConfiguredEvent(defaultRolloutPath);
+
+    // Spawn submission loop in background
+    submissionLoop(session, config, txSub).catch((err) => {
+      console.error("Submission loop error:", err);
     });
 
     return {

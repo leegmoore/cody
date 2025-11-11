@@ -12,13 +12,13 @@ import {
   AskForApproval,
   SandboxPolicy,
   createReadOnlyPolicy,
-} from "../protocol/protocol";
+} from "../protocol/protocol.js";
 import {
   ReasoningEffort,
   ReasoningSummary,
   Verbosity,
   ForcedLoginMethod,
-} from "../protocol/config-types";
+} from "../protocol/config-types.js";
 
 /**
  * Maximum number of bytes of the documentation that will be embedded.

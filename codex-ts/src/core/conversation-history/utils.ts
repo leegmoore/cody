@@ -3,7 +3,7 @@
  * Ported from codex-rs/protocol/src/protocol.rs
  */
 
-import type { TokenUsage, TokenUsageInfo } from "../../protocol/protocol";
+import type { TokenUsage, TokenUsageInfo } from "../../protocol/protocol.js";
 
 /**
  * Creates a new TokenUsageInfo or appends to an existing one.

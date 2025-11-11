@@ -25,7 +25,9 @@ import type { CodexAuth } from "../auth/stub-auth.js";
 import type { ReasoningEffort } from "../../protocol/config-types.js";
 import { ReasoningSummary } from "../../protocol/config-types.js";
 import type { Prompt, ResponseEvent } from "./client-common.js";
+import type { ResponseItem } from "../../protocol/models.js";
 import { streamMessages as streamAnthropicMessages } from "./messages/index.js";
+import { sendResponsesRequest } from "./responses/client.js";
 
 /**
  * Response stream type - async generator of response events.
@@ -142,6 +144,17 @@ export class ModelClient {
     }
   }
 
+  async sendMessage(prompt: Prompt): Promise<ResponseItem[]> {
+    switch (this.provider.wireApi) {
+      case WireApiEnum.Responses:
+        return this.sendResponses(prompt);
+      default:
+        throw new Error(
+          `sendMessage() not implemented for wire API ${this.provider.wireApi}`,
+        );
+    }
+  }
+
   /**
    * Stream using the Responses API.
    *
@@ -151,10 +164,7 @@ export class ModelClient {
    * @returns A stream of response events
    */
   private async streamResponses(_prompt: Prompt): Promise<ResponseStream> {
-    // TODO(Phase 4.5+): Implement Responses API streaming
-    throw new Error(
-      "streamResponses() not yet implemented - deferred to Phase 4.5+",
-    );
+    throw new Error("Responses streaming not yet implemented");
   }
 
   /**
@@ -230,5 +240,35 @@ export class ModelClient {
     }
 
     return apiKey;
+  }
+
+  private async sendResponses(prompt: Prompt): Promise<ResponseItem[]> {
+    const apiKey = await this.getOpenAiApiKey();
+    return sendResponsesRequest(prompt, {
+      provider: this.provider,
+      model: this.modelSlug,
+      apiKey,
+      reasoningEffort: this.reasoningEffort,
+      reasoningSummary: this.reasoningSummary,
+    });
+  }
+
+  private async getOpenAiApiKey(): Promise<string> {
+    if (this.auth) {
+      const token = (await this.auth.getToken()).trim();
+      if (token) {
+        return token;
+      }
+    }
+
+    const envKey = this.provider.envKey ?? "OPENAI_API_KEY";
+    const apiKey = process.env[envKey]?.trim();
+    if (apiKey) {
+      return apiKey;
+    }
+
+    throw new Error(
+      `Missing API key for provider ${this.provider.name}. Set ${envKey} or configure Codex auth.`,
+    );
   }
 }

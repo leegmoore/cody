@@ -114,4 +114,4 @@ export const JSONRPC_VERSION = "2.0";
 /**
  * Re-export AuthMode from core/auth for convenience.
  */
-export { AuthMode } from "../core/auth/index";
+export { AuthMode } from "../core/auth/index.js";

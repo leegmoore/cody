@@ -5,7 +5,7 @@
  * A model family is a group of models that share certain characteristics.
  */
 
-import { ReasoningSummaryFormat, ApplyPatchToolType } from "./types";
+import { ReasoningSummaryFormat, ApplyPatchToolType } from "./types.js";
 
 // TODO: Import actual prompt content when available
 const BASE_INSTRUCTIONS = "<!-- Base instructions placeholder -->";
@@ -219,4 +219,4 @@ export function deriveDefaultModelFamily(model: string): ModelFamily {
 }
 
 // Re-export types
-export { ReasoningSummaryFormat, ApplyPatchToolType } from "./types";
+export { ReasoningSummaryFormat, ApplyPatchToolType } from "./types.js";

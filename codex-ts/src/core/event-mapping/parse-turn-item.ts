@@ -6,7 +6,7 @@
  * conversation history tracking.
  */
 
-import type { ResponseItem, ContentItem } from "../../protocol/models";
+import type { ResponseItem, ContentItem } from "../../protocol/models.js";
 import type {
   TurnItem,
   UserMessageItem,
@@ -15,7 +15,7 @@ import type {
   AgentMessageContent,
   ReasoningItem,
   WebSearchItem,
-} from "../../protocol/items";
+} from "../../protocol/items.js";
 
 // Session prefix marker (filters out internal messages)
 const SESSION_PREFIX_MARKER = "<!-- session -->";

@@ -13,10 +13,10 @@ import type {
   PaginatedListTaskListItem,
   RateLimitStatusPayload,
   TurnAttemptsSiblingTurnsResponse,
-} from "./types";
-import type { CodexAuth } from "../core/auth/stub-auth";
-import type { RateLimitSnapshot, RateLimitWindow } from "../protocol/protocol";
-import { getCodexUserAgent } from "./user-agent";
+} from "./types.js";
+import type { CodexAuth } from "../core/auth/stub-auth.js";
+import type { RateLimitSnapshot, RateLimitWindow } from "../protocol/protocol.js";
+import { getCodexUserAgent } from "./user-agent.js";
 
 /**
  * Path style for backend API requests

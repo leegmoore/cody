@@ -45,8 +45,7 @@ export async function submissionLoop(
 
         case "user_input":
         case "user_turn":
-          // TODO: await handlers.userInputOrTurn(session, sub.id, sub.op);
-          console.warn("user_input/user_turn not yet implemented");
+          await handlers.userInputOrTurn(session, sub.id, sub.op.items);
           break;
 
         case "exec_approval":

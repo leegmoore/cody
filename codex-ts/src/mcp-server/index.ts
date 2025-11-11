@@ -6,9 +6,9 @@
  * Ported from: codex-rs/mcp-server
  */
 
-export { McpServerManager, executeMcpTool } from "./server";
+export { McpServerManager, executeMcpTool } from "./server.js";
 export type {
   McpServerConfig,
   McpServerTransportConfig,
   McpToolCallContext,
-} from "./server";
+} from "./server.js";

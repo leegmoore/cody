@@ -1,5 +1,5 @@
-import type { PlanType } from "./plan-type";
-import type { RateLimitStatusDetails } from "./rate-limit-status-details";
+import type { PlanType } from "./plan-type.js";
+import type { RateLimitStatusDetails } from "./rate-limit-status-details.js";
 
 /**
  * Rate limit status payload

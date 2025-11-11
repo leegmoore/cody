@@ -1,4 +1,4 @@
-import type { RateLimitWindowSnapshot } from "./rate-limit-window-snapshot";
+import type { RateLimitWindowSnapshot } from "./rate-limit-window-snapshot.js";
 
 /**
  * Rate limit status details

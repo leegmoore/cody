@@ -1,5 +1,3 @@
-===== CODEX /REVIEW PROMPT FOR PHASE 1 =====
-
 /review
 
 Read these documents first:

@@ -173,9 +173,9 @@ export interface ResponsesApiRequest {
   /** Available tools */
   tools: unknown[];
   /** Tool choice mode */
-  toolChoice: string;
+  tool_choice?: "auto" | "none" | "required" | { type: string };
   /** Whether parallel tool calls are enabled */
-  parallelToolCalls: boolean;
+  parallel_tool_calls?: boolean;
   /** Reasoning configuration */
   reasoning?: Reasoning;
   /** Whether to store the conversation */

@@ -7,8 +7,8 @@
  * - Future: OneShotHistoryStrategy (epic + log file pattern)
  */
 
-import type { ResponseItem } from "../../protocol/models";
-import type { TurnItem } from "../../protocol/items";
+import type { ResponseItem } from "../../protocol/models.js";
+import type { TurnItem } from "../../protocol/items.js";
 
 /**
  * Token budget for history retrieval.

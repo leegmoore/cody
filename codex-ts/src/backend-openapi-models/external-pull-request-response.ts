@@ -1,4 +1,4 @@
-import type { GitPullRequest } from "./git-pull-request";
+import type { GitPullRequest } from "./git-pull-request.js";
 
 /**
  * External pull request response

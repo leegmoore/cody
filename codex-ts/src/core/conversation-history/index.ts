@@ -9,17 +9,17 @@
 import type {
   ResponseItem,
   FunctionCallOutputContentItem,
-} from "../../protocol/models";
-import type { TokenUsage, TokenUsageInfo } from "../../protocol/protocol";
+} from "../../protocol/models.js";
+import type { TokenUsage, TokenUsageInfo } from "../../protocol/protocol.js";
 import {
   takeBytesAtCharBoundary,
   takeLastBytesAtCharBoundary,
-} from "../../utils/string";
+} from "../../utils/string/index.js";
 import {
   newOrAppendTokenUsage,
   fillToContextWindow,
   fullContextWindow,
-} from "./utils";
+} from "./utils.js";
 
 // Model-formatting limits: clients get full streams; only content sent to the model is truncated.
 export const MODEL_FORMAT_MAX_BYTES = 10 * 1024; // 10 KiB

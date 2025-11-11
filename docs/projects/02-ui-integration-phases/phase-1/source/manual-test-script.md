@@ -26,20 +26,18 @@
    openai_key = "sk-proj-..."
    ```
 
-3. Make CLI available:
+3. Launch the interactive REPL (this keeps the conversation manager alive for the whole session):
    ```bash
-   npm link
-   # or
-   node src/cli/index.js
+   node dist/cli/index.js repl
    ```
 
 ---
 
 ## Test 1: Create Conversation
 
-**Execute:**
-```bash
-cody new
+**Execute inside the REPL:**
+```
+new
 ```
 
 **Expected output:**
@@ -58,9 +56,9 @@ Created conversation: conv_[some-id]
 
 ## Test 2: Send First Message
 
-**Execute:**
-```bash
-cody chat "Hello, can you hear me?"
+**Execute inside the REPL (after Test 1):**
+```
+chat Hello, can you hear me?
 ```
 
 **Expected output:**
@@ -81,9 +79,9 @@ Assistant: Yes, I can hear you! How can I help you today?
 
 ## Test 3: Multi-Turn Conversation (Context Maintained)
 
-**Execute:**
-```bash
-cody chat "I just said hello. What did I say?"
+**Execute inside the REPL:**
+```
+chat I just said hello. What did I say?
 ```
 
 **Expected output:**
@@ -104,12 +102,12 @@ Assistant: You said "Hello, can you hear me?"
 
 ## Test 4: Multiple Messages in Sequence
 
-**Execute:**
-```bash
-cody chat "My name is Alex"
-cody chat "What is my name?"
-cody chat "Tell me a short joke"
-cody chat "What was the joke about?"
+**Execute inside the REPL:**
+```
+chat My name is Alex
+chat What is my name?
+chat Tell me a short joke
+chat What was the joke about?
 ```
 
 **Expected behavior:**
@@ -128,18 +126,18 @@ cody chat "What was the joke about?"
 
 **Test 5a: No active conversation**
 
-Execute (without running `cody new` first):
-```bash
-cody chat "This should fail"
+Execute (skip `new` on purpose):
+```
+chat This should fail
 ```
 
 Expected: Clear error message like "No active conversation. Run: cody new"
 
 **Test 5b: Invalid config**
 
-Temporarily rename ~/.codex/config.toml, then:
-```bash
-cody new
+Temporarily rename ~/.codex/config.toml, then inside a fresh REPL:
+```
+new
 ```
 
 Expected: Configuration error with helpful message pointing to config file.

@@ -15,7 +15,7 @@ import {
 import { SandboxType, SandboxManager } from "../sandboxing/index.js";
 import type { SandboxPolicy } from "../../protocol/protocol.js";
 import { tmpdir } from "os";
-import { mkdirSync, rmSync } from "fs";
+import { mkdirSync, rmSync, realpathSync } from "fs";
 import { join } from "path";
 
 describe("Core Execution Engine", () => {
@@ -303,8 +303,9 @@ describe("Core Execution Engine", () => {
         testDir,
       );
 
-      // pwd output should match testDir (normalized)
-      expect(result.stdout.text.trim()).toBe(testDir);
+      const actual = realpathSync(result.stdout.text.trim());
+      const expected = realpathSync(testDir);
+      expect(actual).toBe(expected);
     });
   });
 

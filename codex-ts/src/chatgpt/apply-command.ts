@@ -11,8 +11,8 @@
  * TODO(Phase 5): Add CLI integration
  */
 
-import type { GetTaskResponse } from "./get-task";
-import { extractDiffFromTask } from "./get-task";
+import type { GetTaskResponse } from "./get-task.js";
+import { extractDiffFromTask } from "./get-task.js";
 
 /**
  * Apply diff from a task response.

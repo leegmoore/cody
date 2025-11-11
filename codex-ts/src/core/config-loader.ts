@@ -12,7 +12,7 @@
 import { promises as fs } from "fs";
 import { join } from "path";
 import * as TOML from "smol-toml";
-import { CONFIG_TOML_FILE } from "./config";
+import { CONFIG_TOML_FILE } from "./config.js";
 
 /**
  * Type representing a TOML value (any valid TOML type)

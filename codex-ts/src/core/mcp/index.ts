@@ -7,13 +7,13 @@
  */
 
 // Auth
-export { computeAuthStatuses, computeAuthStatus } from "./auth";
-export type { McpAuthStatusEntry } from "./auth";
 
 // Connection Management
-export { McpConnectionManager, ConnectionState } from "./connection-manager";
-export type { McpConnection } from "./connection-manager";
 
 // Tool Calls
-export { executeMcpToolCall } from "./tool-call";
-export type { McpToolCall, McpToolResult } from "./tool-call";
+export { computeAuthStatuses, computeAuthStatus } from "./auth.js";
+export type { McpAuthStatusEntry } from "./auth.js";
+export { McpConnectionManager, ConnectionState } from "./connection-manager.js";
+export type { McpConnection } from "./connection-manager.js";
+export { executeMcpToolCall } from "./tool-call.js";
+export type { McpToolCall, McpToolResult } from "./tool-call.js";

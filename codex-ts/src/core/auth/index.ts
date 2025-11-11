@@ -8,7 +8,7 @@
 import { mkdir, readFile, writeFile, unlink, access } from "node:fs/promises";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { TokenData } from "../../token-data";
+import { TokenData } from "../../token-data/index.js";
 
 /**
  * Determine where Codex should store CLI auth credentials.

@@ -4,7 +4,7 @@
  * Ported from: codex-rs/backend-client
  */
 
-export { Client, PathStyle, pathStyleFromBaseUrl } from "./client";
+export { Client, PathStyle, pathStyleFromBaseUrl } from "./client.js";
 export type {
   CodeTaskDetailsResponse,
   PaginatedListTaskListItem,
@@ -20,12 +20,12 @@ export type {
   WorklogMessage,
   ContentFragment,
   DiffPayload,
-} from "./types";
+} from "./types.js";
 export {
   unifiedDiff,
   assistantTextMessages,
   userTextPrompt,
   assistantErrorMessage,
   PlanType,
-} from "./types";
-export { getCodexUserAgent } from "./user-agent";
+} from "./types.js";
+export { getCodexUserAgent } from "./user-agent.js";

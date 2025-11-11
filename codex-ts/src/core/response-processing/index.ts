@@ -6,7 +6,7 @@
  * for recording in conversation history.
  */
 
-import type { ResponseItem, ResponseInputItem } from "../../protocol/models";
+import type { ResponseItem, ResponseInputItem } from "../../protocol/models.js";
 
 /**
  * A processed response item contains both the original item and an optional response

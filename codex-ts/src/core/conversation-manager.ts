@@ -9,6 +9,9 @@ import type { AuthManager } from "./auth/index.js";
 import type { EventMsg } from "../protocol/protocol.js";
 import { Codex, type CodexSpawnOk } from "./codex/codex.js";
 import { CodexConversation } from "./codex-conversation.js";
+import type { ModelClientFactory } from "./client/model-client-factory.js";
+import { SessionSource } from "./rollout.js";
+import { Conversation } from "./conversation.js";
 
 // Extract SessionConfigured event type from EventMsg union
 type SessionConfiguredEvent = Extract<EventMsg, { type: "session_configured" }>;
@@ -18,7 +21,7 @@ type SessionConfiguredEvent = Extract<EventMsg, { type: "session_configured" }>;
  */
 export interface NewConversation {
   conversationId: ConversationId;
-  conversation: CodexConversation;
+  conversation: Conversation;
   sessionConfigured: SessionConfiguredEvent;
 }
 
@@ -27,13 +30,19 @@ export interface NewConversation {
  * maintaining them in memory.
  */
 export class ConversationManager {
-  private readonly conversations: Map<string, CodexConversation> = new Map();
+  private readonly conversations: Map<string, Conversation> = new Map();
   private readonly authManager: AuthManager;
-  private readonly sessionSource: unknown; // TODO: Port SessionSource
+  private readonly sessionSource: SessionSource | null;
+  private readonly modelClientFactory: ModelClientFactory;
 
-  constructor(authManager: AuthManager, sessionSource: unknown) {
+  constructor(
+    authManager: AuthManager,
+    sessionSource: SessionSource | null,
+    modelClientFactory: ModelClientFactory,
+  ) {
     this.authManager = authManager;
     this.sessionSource = sessionSource;
+    this.modelClientFactory = modelClientFactory;
   }
 
   /**
@@ -55,9 +64,10 @@ export class ConversationManager {
       authManager,
       null, // InitialHistory::New (TODO: proper type)
       this.sessionSource,
+      this.modelClientFactory,
     );
 
-    return this.finalizeSpawn(codex, conversationId);
+    return this.finalizeSpawn(codex, conversationId, config);
   }
 
   /**
@@ -66,6 +76,7 @@ export class ConversationManager {
   private async finalizeSpawn(
     codex: Codex,
     conversationId: ConversationId,
+    config: Config,
   ): Promise<NewConversation> {
     // The first event must be SessionConfigured
     const event = await codex.nextEvent();
@@ -78,9 +89,15 @@ export class ConversationManager {
 
     const sessionConfigured = event.msg as SessionConfiguredEvent;
 
-    const conversation = new CodexConversation(
+    const rawConversation = new CodexConversation(
       codex,
       sessionConfigured.rollout_path,
+    );
+
+    const conversation = new Conversation(
+      rawConversation,
+      config,
+      conversationId,
     );
 
     // Store in map (using conversation ID as string key)
@@ -98,12 +115,8 @@ export class ConversationManager {
    */
   async getConversation(
     conversationId: ConversationId,
-  ): Promise<CodexConversation> {
-    const conversation = this.conversations.get(conversationId.toString());
-    if (!conversation) {
-      throw new Error(`Conversation not found: ${conversationId.toString()}`);
-    }
-    return conversation;
+  ): Promise<Conversation | undefined> {
+    return this.conversations.get(conversationId.toString());
   }
 
   /**
@@ -136,7 +149,7 @@ export class ConversationManager {
    */
   async removeConversation(
     conversationId: ConversationId,
-  ): Promise<CodexConversation | null> {
+  ): Promise<Conversation | null> {
     const conversation = this.conversations.get(conversationId.toString());
     if (conversation) {
       this.conversations.delete(conversationId.toString());

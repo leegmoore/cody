@@ -12,7 +12,7 @@ import type {
   TurnAbortReason,
 } from "../../protocol/protocol.js";
 import type { UserInput } from "../../protocol/items.js";
-import type { RolloutItem } from "../rollout.js";
+import type { RolloutItem, SessionSource } from "../rollout.js";
 import type {
   SessionConfiguration,
   SessionState,
@@ -24,13 +24,19 @@ import type {
   SessionTaskContext,
   RunningTask,
 } from "./types.js";
+import { INITIAL_SUBMIT_ID } from "./types.js";
 import type { AuthManager } from "../auth/index.js";
 import type { ModelClient } from "../client/client.js";
+import type { Config } from "../config.js";
 import * as SessionStateHelpers from "./session-state.js";
 import * as TurnStateHelpers from "./turn-state.js";
 import { Features } from "../features/index.js";
 import { McpConnectionManager } from "../mcp/index.js";
 import type { BashShell } from "../shell/index.js";
+import type { Prompt } from "../client/client-common.js";
+import { userInputToResponseInputItem } from "../../protocol/models.js";
+import { parseTurnItem } from "../event-mapping/parse-turn-item.js";
+import type { ResponseItem } from "../../protocol/models.js";
 
 /**
  * Internal session state and orchestration.
@@ -42,6 +48,7 @@ export class Session {
   readonly conversationId: ConversationId;
   private readonly txEvent: EventEmitter;
   private readonly services: SessionServices;
+  private readonly modelClient: ModelClient;
   private _nextInternalSubId = 0;
 
   // Private state
@@ -53,11 +60,27 @@ export class Session {
     sessionConfiguration: SessionConfiguration,
     services: SessionServices,
     txEvent: EventEmitter,
+    modelClient: ModelClient,
   ) {
     this.conversationId = conversationId;
     this.txEvent = txEvent;
     this._state = SessionStateHelpers.createSessionState(sessionConfiguration);
     this.services = services;
+    this.modelClient = modelClient;
+  }
+
+  async emitSessionConfiguredEvent(rolloutPath: string): Promise<void> {
+    const sessionConfig = this._state.sessionConfiguration;
+    const event: EventMsg = {
+      type: "session_configured",
+      session_id: this.conversationId.toString(),
+      model: sessionConfig.model,
+      reasoning_effort: sessionConfig.modelReasoningEffort ?? undefined,
+      history_log_id: 0,
+      history_entry_count: 0,
+      rollout_path: rolloutPath,
+    };
+    await this.sendEvent(INITIAL_SUBMIT_ID, event);
   }
 
   /**
@@ -207,6 +230,72 @@ export class Session {
     };
 
     return turnContext;
+  }
+
+  async processUserTurn(subId: string, items: UserInput[]): Promise<void> {
+    if (items.length === 0) {
+      await this.sendEvent(subId, {
+        type: "error",
+        message: "User message cannot be empty",
+      });
+      await this.sendEvent(subId, { type: "task_complete" });
+      return;
+    }
+
+    const userMessage = userInputToResponseInputItem(items);
+    if (userMessage.type !== "message") {
+      throw new Error("Unexpected user input payload");
+    }
+    const userRecord: ResponseItem = {
+      type: "message",
+      role: userMessage.role,
+      content: userMessage.content,
+    };
+    SessionStateHelpers.recordItems(this._state, [userRecord]);
+
+    const prompt: Prompt = {
+      input: this._state.history.getHistoryForPrompt(),
+      tools: [],
+      parallelToolCalls: false,
+    };
+
+    let responseItems: ResponseItem[] = [];
+    try {
+      responseItems = await this.modelClient.sendMessage(prompt);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown model error";
+      await this.sendEvent(subId, { type: "error", message });
+      await this.sendEvent(subId, { type: "task_complete" });
+      return;
+    }
+
+    if (responseItems.length > 0) {
+      SessionStateHelpers.recordItems(this._state, responseItems);
+    }
+
+    let lastAgentMessage: string | undefined;
+
+    for (const item of responseItems) {
+      const turnItem = parseTurnItem(item);
+      if (!turnItem) {
+        continue;
+      }
+
+      if (turnItem.type === "agent_message") {
+        const text = turnItem.item.content.map((c) => c.text).join("");
+        lastAgentMessage = text;
+        await this.sendEvent(subId, {
+          type: "agent_message",
+          message: text,
+        });
+      }
+    }
+
+    await this.sendEvent(subId, {
+      type: "task_complete",
+      last_agent_message: lastAgentMessage ?? undefined,
+    });
   }
 
   /**
@@ -586,10 +675,11 @@ export class Session {
    */
   static async create(
     sessionConfiguration: SessionConfiguration,
-    _config: unknown, // Config type - TODO: Use for full initialization
+    _config: Config,
     authManager: AuthManager,
     txEvent: EventEmitter,
-    _sessionSource: unknown, // SessionSource - TODO: Use for initialization
+    _sessionSource: SessionSource | null,
+    modelClient: ModelClient,
   ): Promise<Session> {
     // Generate conversation ID
     // TODO: Handle resumed conversations
@@ -621,7 +711,13 @@ export class Session {
     };
 
     // Create session instance
-    return new Session(conversationId, sessionConfiguration, services, txEvent);
+    return new Session(
+      conversationId,
+      sessionConfiguration,
+      services,
+      txEvent,
+      modelClient,
+    );
   }
 
   // TODO: Port remaining Session methods in future sections:

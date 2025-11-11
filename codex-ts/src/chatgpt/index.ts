@@ -8,13 +8,13 @@
  */
 
 // Token management
-export type { ChatGptTokenData } from "./token";
+export type { ChatGptTokenData } from "./token.js";
 export {
   getChatGptTokenData,
   setChatGptTokenData,
   clearChatGptTokenData,
   initChatGptTokenFromAuth,
-} from "./token";
+} from "./token.js";
 
 // Get task functionality
 export type {
@@ -22,8 +22,8 @@ export type {
   AssistantTurn,
   OutputItem,
   OutputDiff,
-} from "./get-task";
-export { extractDiffFromTask } from "./get-task";
+} from "./get-task.js";
+export { extractDiffFromTask } from "./get-task.js";
 
 // Apply command
-export { applyDiffFromTask, getDiffFromTask } from "./apply-command";
+export { applyDiffFromTask, getDiffFromTask } from "./apply-command.js";

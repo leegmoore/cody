@@ -12,8 +12,8 @@
  * - Integrate with rmcp-client for real auth checks
  */
 
-import type { McpAuthStatus } from "../../protocol/protocol";
-import type { McpServerConfig } from "../../mcp-server";
+import type { McpAuthStatus } from "../../protocol/protocol.js";
+import type { McpServerConfig } from "../../mcp-server/index.js";
 
 /**
  * MCP auth status entry

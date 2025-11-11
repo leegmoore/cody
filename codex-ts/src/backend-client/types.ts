@@ -11,8 +11,8 @@ export type {
   RateLimitStatusPayload,
   RateLimitStatusDetails,
   RateLimitWindowSnapshot,
-} from "../backend-openapi-models";
-export { PlanType } from "../backend-openapi-models";
+} from "../backend-openapi-models/index.js";
+export { PlanType } from "../backend-openapi-models/index.js";
 
 /**
  * Content fragment - can be structured or plain text

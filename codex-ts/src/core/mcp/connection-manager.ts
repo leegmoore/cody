@@ -14,7 +14,7 @@
  * - Integrate with McpServerManager
  */
 
-import type { McpServerConfig } from "../../mcp-server";
+import type { McpServerConfig } from "../../mcp-server/index.js";
 import type {
   McpResource,
   McpResourceTemplate,

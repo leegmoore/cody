@@ -7,7 +7,7 @@
  * Omits complex writable_roots logic and approval_policy for MVP.
  */
 
-import type { Shell } from "../shell";
+import type { Shell } from "../shell/index.js";
 
 /**
  * Network access level.

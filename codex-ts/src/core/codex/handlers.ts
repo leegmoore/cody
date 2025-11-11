@@ -7,6 +7,7 @@ import type { Session } from "./session.js";
 import type { Config } from "../config.js";
 import type { SessionSettingsUpdate } from "./types.js";
 import type { ReviewDecision, EventMsg } from "../../protocol/protocol.js";
+import type { UserInput } from "../../protocol/items.js";
 
 /**
  * Handle Interrupt operation.
@@ -25,6 +26,14 @@ export async function overrideTurnContext(
   updates: SessionSettingsUpdate,
 ): Promise<void> {
   await session.updateSettings(updates);
+}
+
+export async function userInputOrTurn(
+  session: Session,
+  subId: string,
+  items: UserInput[],
+): Promise<void> {
+  await session.processUserTurn(subId, items);
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { TaskListItem } from "./task-list-item";
+import type { TaskListItem } from "./task-list-item.js";
 
 /**
  * Paginated list of task list items

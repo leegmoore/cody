@@ -14,6 +14,6 @@ export {
   performOAuthLogin,
   saveOAuthTokens,
   deleteOAuthTokens,
-} from "./client";
+} from "./client.js";
 
-export type { StoredOAuthTokens, WrappedOAuthTokenResponse } from "./client";
+export type { StoredOAuthTokens, WrappedOAuthTokenResponse } from "./client.js";

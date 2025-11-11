@@ -1,4 +1,4 @@
-import type { ExternalPullRequestResponse } from "./external-pull-request-response";
+import type { ExternalPullRequestResponse } from "./external-pull-request-response.js";
 
 /**
  * Task list item
