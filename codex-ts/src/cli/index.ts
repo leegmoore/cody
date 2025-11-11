@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 import { Command, CommanderError } from "commander";
 import { pathToFileURL } from "url";
 import { registerNewCommand } from "./commands/new.js";
@@ -71,3 +71,4 @@ if (entryPoint) {
     runCli();
   }
 }
+loadEnv({ override: true });
