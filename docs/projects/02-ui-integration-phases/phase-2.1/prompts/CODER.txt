@@ -1,0 +1,361 @@
+===== PHASE 2.1: CODER PROMPT =====
+ROLE: Senior TypeScript developer implementing phases of the Cody CLI integration project. You write clean, tested code following TDD principles with mocked-service tests at library boundaries.
+
+
+---
+
+PRODUCT:
+
+**Cody** is a command-line interface for the Codex TypeScript library. It provides multi-provider LLM agent capabilities supporting OpenAI (Responses, Chat) and Anthropic (Messages) APIs with tool execution, conversation persistence, and structured tool calling. Built as a TypeScript port of OpenAI's Rust-based Codex CLI, Cody serves as both a standalone CLI tool and reference implementation for the @openai/codex-core library.
+
+
+---
+
+PROJECT CONTEXT:
+
+# Project 02: UI Integration & Library Definition
+
+## What We're Building
+
+Project 02 integrates all ported Codex modules (Phases 1-6) into a working command-line interface called **Cody** and defines the library API surface for @openai/codex-core. This project validates the Rust → TypeScript port by wiring protocol, configuration, persistence, execution, client, tools, and orchestration layers into complete conversation flows.
+
+## Why It Matters
+
+The port is functionally complete but untested as an integrated system. Individual modules have unit tests, but we haven't verified end-to-end workflows. This project proves the port works, exposes integration issues, and establishes the library interface that external developers will use.
+
+## Project Success Criteria
+
+By project completion:
+- User can create conversations, send messages, receive responses (all providers: OpenAI Responses/Chat, Anthropic Messages)
+- All auth methods work (API keys, ChatGPT OAuth, Claude OAuth)
+- Tools execute with approval flow
+- Conversations persist and resume (JSONL format)
+- MCP integration functional
+- Library API documented (public exports, usage examples)
+- REST API designed (optional implementation)
+- Zero-error quality baseline maintained (0 TS errors, 0 ESLint errors, all tests passing)
+
+## Dependencies
+
+- Phase 6 complete (75 modules ported, 1,876 tests passing)
+- Phase 5.2 complete (quality baseline clean)
+- API keys: OpenAI, Anthropic, OpenRouter
+- OAuth tokens: Read from ~/.codex (ChatGPT), ~/.claude (Claude)
+
+## Scope
+
+**In scope:** CLI commands, provider integration (3 APIs), auth methods (4 total), tool execution, persistence/resume, library API docs, REST API spec
+
+**Non-scope:** Script harness (Project 03), memory innovations (Projects 04-06), rich TUI, additional tools, performance optimization, production hardening
+
+
+---
+
+PHASE 2.1 TECHNICAL DESIGN:
+
+# Phase 2.1: UX Refinement & Config Loading - Complete Design
+
+See first part of file above for issues and overview.
+
+## Expected Behavior After Fixes (continued)
+
+---
+
+TEST CONDITIONS:
+
+# Phase 2.1: Test Conditions
+
+## Test 1: Approval Policy Loading
+
+**Functional:** Config file with approval_policy="never" results in tools executing without prompts.
+
+**Setup:**
+- Create test config.toml with approval_policy="never"
+- Load config via loadCliConfig()
+
+**Execute:**
+- Check loaded.core.approvalPolicy
+
+**Verify:**
+- Equals "never" (not default "on-failure")
+
+## Test 2: Invalid Approval Policy
+
+**Functional:** Invalid approval_policy value throws clear error.
+
+**Setup:**
+- Config with approval_policy="invalid-value"
+
+**Execute:**
+- loadCliConfig()
+
+**Verify:**
+- Throws ConfigurationError
+- Error message lists valid values
+
+## Test 3: Sandbox Policy Loading
+
+**Functional:** sandbox_policy from config is applied.
+
+**Setup:**
+- Config with sandbox_policy="full-access"
+
+**Execute:**
+- Load config
+
+**Verify:**
+- core.sandboxPolicy reflects full-access mode
+
+## Test 4: Reasoning Effort Loading
+
+**Functional:** model_reasoning_effort from config is applied.
+
+**Setup:**
+- Config with model_reasoning_effort="low"
+
+**Execute:**
+- Load config
+
+**Verify:**
+- core.modelReasoningEffort === "low"
+
+
+---
+
+TASKS (update source/checklist.md as you work):
+
+# Phase 2.1 Checklist
+
+## Setup
+- [ ] Read phase-2.1/source/design.md
+- [ ] Read LESSONS-LEARNED.md
+- [ ] Understand current config loading (cli/config.ts)
+
+## Issue 1: Config Loading
+- [ ] Create normalizeApprovalPolicy() function
+- [ ] Create normalizeSandboxMode() function
+- [ ] Create normalizeReasoningEffort() function
+- [ ] Create normalizeSandboxPolicy() helper if needed
+- [ ] Update loadCliConfig() to call normalization functions
+- [ ] Apply approval_policy from config to core.approvalPolicy
+- [ ] Apply sandbox_policy from config to core.sandboxPolicy
+- [ ] Apply reasoning_effort from config to core.modelReasoningEffort
+- [ ] Apply reasoning_summary from config to core.modelReasoningSummary
+- [ ] Write unit test: approval_policy="never" loads correctly
+- [ ] Write unit test: approval_policy="on-request" loads correctly
+- [ ] Write unit test: invalid approval_policy throws error
+- [ ] Write unit test: sandbox_policy loads correctly
+- [ ] All config loading tests pass
+
+## Issue 2: Duplicate Tool Display
+- [ ] Remove console.log from approval.ts line 10
+- [ ] Remove console.log from approval.ts line 11
+- [ ] Verify display.ts still shows tools (unchanged)
+- [ ] Test: Tool shown once, not twice
+
+## Issue 3: Submission Logging
+- [ ] Remove console.debug("Submission:", sub) from submission-loop.ts line 27
+- [ ] Remove console.debug("Submission loop started") from submission-loop.ts line 121
+- [ ] Or make both conditional on CODY_DEBUG env var
+- [ ] Test: No submission dumps without DEBUG
+
+## Issue 4: Path References
+- [ ] Update rollout.ts comments (~/.codex → ~/.cody)
+- [ ] Update message-history.ts comments (~/.codex → ~/.cody)
+- [ ] Search for other .codex references
+- [ ] Update all found references
+
+## Quality Verification
+- [ ] npm run format (clean)
+- [ ] npm run lint (0 errors)
+- [ ] npx tsc --noEmit (0 errors)
+- [ ] npm test (all pass, baseline maintained)
+
+## Manual Testing
+- [ ] Create ~/.cody/config.toml with approval_policy="never"
+- [ ] Test: `cody chat "add 99 to README"` - no approval prompt
+- [ ] Test: Tool executes automatically
+- [ ] Test: No timeout errors
+- [ ] Test: Output clean (<200 lines)
+- [ ] Test: No duplicate tool displays
+- [ ] Test: No "Submission:" dumps
+- [ ] Update config to approval_policy="on-request"
+- [ ] Test: Approval prompts DO appear
+- [ ] Test: Can approve/deny successfully
+
+## Documentation
+- [ ] Update decisions.md with changes
+- [ ] Document config loading enhancement
+- [ ] Note UX improvements
+
+
+---
+
+STANDARDS:
+
+See docs/core/dev-standards.md for complete coding standards.
+See docs/core/contract-testing-tdd-philosophy.md for testing approach.
+
+Key requirements:
+- TypeScript strict mode, no any types
+- ESLint 0 errors
+- Prettier formatted
+- Mocked-service tests at library boundaries
+- Mock all external dependencies
+
+
+---
+
+EXECUTION WORKFLOW:
+
+EXECUTION WORKFLOW:
+
+1. Read all reference documents (project context, phase design, standards, test conditions)
+2. Review checklist (understand all tasks)
+3. Write mocked-service tests FIRST (TDD):
+   - Create test file based on test-conditions.md
+   - Implement mocks (ModelClient, Config, etc.)
+   - Write tests for each functional condition
+   - Run tests (should fail - nothing implemented)
+4. Implement code to pass tests:
+   - Create files listed in checklist
+   - Follow design.md implementation specifics
+   - Run tests after each component
+   - Iterate until all tests green
+5. Manual functional testing:
+   - Follow manual-test-script.md
+   - Execute each test case
+   - Verify expected behavior
+   - Document any issues
+6. Quality verification:
+   - Run: npm run format (fix formatting)
+   - Run: npm run lint (fix errors)
+   - Run: npx tsc --noEmit (fix type errors)
+   - Run: npm test (verify all pass)
+   - Run combined: npm run format && npm run lint && npx tsc --noEmit && npm test
+   - All must pass before proceeding
+7. Update artifacts:
+   - Update checklist.md (check off completed tasks)
+   - Update decisions.md (log implementation choices with rationale)
+8. Final verification:
+   - All checklist items checked
+   - All quality gates pass
+   - Manual tests successful
+   - Decisions documented
+9. Commit and push
+10. Report completion, ready for quality verifier and code reviewer
+
+DO NOT declare phase complete until all steps verified.
+
+
+---
+
+MANUAL VERIFICATION:
+
+# Phase 2.1: Manual Test Script
+
+## Setup
+
+Create config file:
+```bash
+cat > ~/.cody/config.toml << 'EOF'
+model = "gpt-5-codex"
+model_reasoning_effort = "low"
+approval_policy = "never"
+EOF
+```
+
+Rebuild:
+```bash
+cd /Users/leemoore/code/codex-port-02/codex-ts
+npm run build
+```
+
+---
+
+## Test 1: Auto-Approve Works
+
+**Command:**
+```bash
+cody chat "add the number 99 to the end of README.md"
+```
+
+**Expected:**
+- No approval prompt
+- Tool executes automatically
+- File modified
+- Model confirms
+- Total output <200 lines
+- No "Submission:" dumps
+- Tool shown once (not twice)
+
+**Success criteria:**
+- ✓ No "Approve? (y/n):" prompt
+- ✓ No CodexInternalAgentDiedError
+- ✓ README.md updated with "99"
+- ✓ Clean output
+
+---
+
+## Test 2: Manual Approve Works
+
+Update config:
+```bash
+cat > ~/.cody/config.toml << 'EOF'
+model = "gpt-5-codex"
+model_reasoning_effort = "low"
+approval_policy = "on-request"
+EOF
+```
+
+**Command:**
+```bash
+cody chat "list files in /tmp"
+```
+
+**Expected:**
+- Approval prompt DOES appear
+- Can type 'y' or 'n'
+- Tool executes if approved
+- No timeout
+
+**Success criteria:**
+- ✓ Prompt appears
+- ✓ Accepts y/n input
+- ✓ No timeout/crash
+- ✓ Tool executes when approved
+
+---
+
+## Test 3: Output is Clean
+
+**Command:**
+```bash
+cody chat "what is 2+2" 2>&1 | wc -l
+```
+
+**Expected:**
+- <50 lines for simple response
+- No tool calls for simple math
+- Clean, minimal output
+
+**Success criteria:**
+- ✓ Line count reasonable
+- ✓ No debug spam
+- ✓ Just startup + response + prompt
+
+
+---
+
+FINAL QUALITY CHECK:
+
+Before declaring phase complete:
+
+Run: npm run format && npm run lint && npx tsc --noEmit && npm test
+
+ALL must pass. Document results.
+Update checklist.md and decisions.md.
+Commit and push.
+Ready for verification stages.
+
+===== END CODER PROMPT =====
