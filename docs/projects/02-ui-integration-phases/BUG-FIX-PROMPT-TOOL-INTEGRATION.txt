@@ -1,0 +1,872 @@
+===== BUG FIX: TOOL INTEGRATION FAILURES =====
+
+ROLE: Senior TypeScript developer fixing critical bugs in the Cody CLI tool integration. You follow TDD principles, write tests at the correct boundary (HTTP/I/O level, not business logic), and verify fixes with both automated tests and manual CLI testing.
+
+---
+
+PRODUCT:
+
+**Cody** is a command-line interface for the Codex TypeScript library. It provides multi-provider LLM agent capabilities supporting OpenAI (Responses, Chat) and Anthropic (Messages) APIs with tool execution, conversation persistence, and structured tool calling. Built as a TypeScript port of OpenAI's Rust-based Codex CLI, Cody serves as both a standalone CLI tool and reference implementation for the @openai/codex-core library.
+
+---
+
+PROJECT CONTEXT:
+
+You are fixing bugs discovered during Phase 1-2 manual testing. The CLI works for basic chat but fails when the model attempts to use tools. Investigation revealed three interconnected issues that prevent tool integration from working.
+
+---
+
+BUGS DISCOVERED:
+
+## Bug 1: Incomplete Response Mapping (CRITICAL)
+
+**Location:** `codex-ts/src/core/client/responses/client.ts` - `mapOutputToResponseItems()` function (lines 173-194)
+
+**Problem:** Function only maps items with `type: "message"` and silently ignores:
+- `type: "reasoning"` (thinking blocks from gpt-5-codex, gpt-5-nano)
+- `type: "function_call"` (tool call requests)
+- `type: "function_call_output"` (tool results, if any)
+
+**Evidence from debug logs:**
+```
+[DEBUG] Extracted output array length: 2
+[DEBUG] Mapped to 0 ResponseItems
+```
+
+API returned:
+```json
+{
+  "output": [
+    {
+      "type": "reasoning",
+      "summary": [...]
+    },
+    {
+      "type": "function_call",
+      "name": "exec",
+      "arguments": "..."
+    }
+  ]
+}
+```
+
+Both items filtered out â†’ empty ResponseItem[] â†’ no output displayed.
+
+**Impact:** Any response with tool calls or reasoning fails silently.
+
+---
+
+## Bug 2: No Tool Usage Instructions
+
+**Location:** `codex-ts/src/core/client/responses/client.ts` line 49
+
+**Problem:** System prompt is just "You are Cody, a helpful AI assistant." with zero guidance on:
+- When to use tools
+- How to format tool calls
+- What tools are for
+- Examples of tool usage
+
+**Impact:** Model lacks context on tool usage patterns, may format calls incorrectly or not use tools when appropriate.
+
+---
+
+## Bug 3: Empty Tool Parameter Schemas
+
+**Location:** Tool registry / `getToolSpecs()` output
+
+**Problem:** Tools in API request have incomplete schemas:
+```json
+{
+  "name": "exec",
+  "parameters": {
+    "type": "object",
+    "properties": {}  // â† Empty! Should define cmd, cwd, etc.
+  }
+}
+```
+
+**Impact:** Model doesn't know what parameters each tool accepts, leading to malformed arguments.
+
+---
+
+ROOT CAUSE ANALYSIS:
+
+**Why tests didn't catch this:**
+
+Phase 2 service-mocked tests used:
+```typescript
+const mockClient = createMockClient([
+  [{type: "function_call", name: "exec", ...}]  // Pre-formed ResponseItem
+]);
+```
+
+This **bypassed the mapping layer entirely**. The test never exercised `mapOutputToResponseItems()`.
+
+**Correct test approach:**
+```typescript
+// Mock at HTTP boundary, test real client
+global.fetch = vi.fn().mockResolvedValue({
+  ok: true,
+  text: async () => JSON.stringify({
+    output: [{type: "function_call", ...}]  // Raw API format
+  })
+});
+
+const client = new ResponsesClient({...});
+const items = await client.sendMessage(prompt);
+// Now we test the actual mapping logic
+```
+
+See `docs/projects/02-ui-integration-phases/LESSONS-LEARNED.md` for full analysis.
+
+---
+
+YOUR TASK:
+
+Fix all three bugs using TDD with tests at the correct boundary (HTTP level for client, not ModelClient interface).
+
+---
+
+WORKFLOW:
+
+## Step 1: Switch to gpt-5-codex for Testing (5 min)
+
+Before making any code changes, set up reliable testing with the best model.
+
+**Update .env:**
+```bash
+cd /Users/leemoore/code/codex-port-02/codex-ts
+```
+
+Edit `.env` file, change:
+```
+# Find this line (or add if missing)
+# Set model to gpt-5-codex with low reasoning effort for fast, reliable testing
+OPENAI_DEFAULT_MODEL=gpt-5-codex
+```
+
+**Also update config loading** if it doesn't read from env. Check `codex-ts/src/core/config.ts` for `OPENAI_DEFAULT_MODEL` constant.
+
+**Why gpt-5-codex:** Most capable model, reliable tool calls, worth the API cost for testing. Use low reasoning effort for speed.
+
+**Verify:** Rebuild and test:
+```bash
+npm run build
+cody chat "what model are you?"
+```
+
+Should work with gpt-5-codex now.
+
+---
+
+## Step 2: Write HTTP-Level Client Tests (TDD - RED) (30-45 min)
+
+Create tests that mock at HTTP boundary and exercise the real mapping logic.
+
+**Create:** `codex-ts/tests/integration/responses-client-adapter.test.ts`
+
+**Structure:**
+
+```typescript
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { sendResponsesRequest } from "../../src/core/client/responses/client.js";
+import type { ResponseItem } from "../../src/protocol/models.js";
+
+describe("ResponsesClient Adapter (HTTP-level)", () => {
+  let originalFetch: typeof global.fetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockApiResponse(output: unknown[]) {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        id: "resp_test",
+        object: "response",
+        created_at: Date.now(),
+        status: "completed",
+        output,
+        usage: { total_tokens: 100 }
+      })
+    });
+  }
+
+  it("maps message items correctly", async () => {
+    mockApiResponse([
+      {
+        type: "message",
+        role: "assistant",
+        content: [
+          { type: "output_text", text: "Hello!" }
+        ]
+      }
+    ]);
+
+    const items = await sendResponsesRequest(
+      { input: [], tools: [], parallelToolCalls: false },
+      {
+        provider: { /* minimal provider info */ },
+        model: "gpt-4",
+        apiKey: "test-key",
+        reasoningSummary: "auto"
+      }
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: "message",
+      role: "assistant",
+      content: [{ type: "output_text", text: "Hello!" }]
+    });
+  });
+
+  it("maps reasoning items correctly", async () => {
+    mockApiResponse([
+      {
+        type: "reasoning",
+        id: "rs_123",
+        summary: [
+          { type: "summary_text", text: "I'm thinking..." }
+        ],
+        content: [
+          { type: "reasoning_text", text: "Detailed thoughts..." }
+        ]
+      }
+    ]);
+
+    const items = await sendResponsesRequest(/* ... */);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].type).toBe("reasoning");
+    expect(items[0]).toHaveProperty("summary");
+    // Verify structure matches ResponseItem for reasoning
+  });
+
+  it("maps function_call items correctly", async () => {
+    mockApiResponse([
+      {
+        type: "function_call",
+        id: "fc_456",
+        call_id: "call-abc",
+        name: "exec",
+        arguments: JSON.stringify({ cmd: ["ls"] }),
+        status: "completed"
+      }
+    ]);
+
+    const items = await sendResponsesRequest(/* ... */);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: "function_call",
+      name: "exec",
+      call_id: "call-abc",
+      arguments: expect.stringContaining("ls")
+    });
+  });
+
+  it("maps mixed response (reasoning + function_call + message)", async () => {
+    mockApiResponse([
+      { type: "reasoning", summary: [...] },
+      { type: "function_call", name: "exec", ... },
+      { type: "message", role: "assistant", content: [...] }
+    ]);
+
+    const items = await sendResponsesRequest(/* ... */);
+
+    expect(items).toHaveLength(3);
+    expect(items[0].type).toBe("reasoning");
+    expect(items[1].type).toBe("function_call");
+    expect(items[2].type).toBe("message");
+  });
+
+  it("handles empty output array", async () => {
+    mockApiResponse([]);
+
+    const items = await sendResponsesRequest(/* ... */);
+
+    expect(items).toHaveLength(0);
+  });
+});
+```
+
+**Run tests:** `npm test -- integration/responses-client-adapter.test.ts`
+
+**Expected:** All tests FAIL (mapping doesn't handle reasoning/function_call yet).
+
+**Checklist:**
+- [ ] Test file created in `tests/integration/`
+- [ ] Tests mock at HTTP level (global.fetch)
+- [ ] Tests cover: message, reasoning, function_call, mixed, empty
+- [ ] All tests fail with "expected 1, received 0" or similar
+- [ ] Failures confirm the bug (mapping returns empty for reasoning/function_call)
+
+---
+
+## Step 3: Fix Response Mapping (TDD - GREEN) (30-45 min)
+
+Update `mapOutputToResponseItems()` to handle all response types.
+
+**File:** `codex-ts/src/core/client/responses/client.ts`
+
+**Current code (lines 173-194):**
+```typescript
+function mapOutputToResponseItems(
+  output: ResponsesOutputItem[],
+): ResponseItem[] {
+  const items: ResponseItem[] = [];
+
+  for (const entry of output) {
+    if (entry.type === "message" && entry.role && entry.content) {
+      const content = entry.content
+        .map(mapContentBlock)
+        .filter((block): block is ContentItem => Boolean(block));
+      if (content.length > 0) {
+        items.push({
+          type: "message",
+          role: entry.role,
+          content,
+        });
+      }
+    }
+  }
+
+  return items;
+}
+```
+
+**Fix:** Add cases for reasoning and function_call.
+
+**Reference the actual API response structure from debug logs:**
+
+Reasoning item:
+```json
+{
+  "type": "reasoning",
+  "id": "rs_xxx",
+  "summary": [
+    { "type": "summary_text", "text": "..." }
+  ],
+  "content": [
+    { "type": "reasoning_text", "text": "..." }
+  ]
+}
+```
+
+Function call item:
+```json
+{
+  "type": "function_call",
+  "id": "fc_xxx",
+  "call_id": "call_xxx",
+  "name": "exec",
+  "arguments": "{...}",
+  "status": "completed"
+}
+```
+
+**Map these to ResponseItem types** (check `codex-ts/src/protocol/models.ts` for correct structure).
+
+**Important:** Look at how other clients (Chat, Messages) handle these types. Check:
+- `codex-ts/src/core/client/chat/adapter.ts` (if exists)
+- `codex-ts/src/core/client/messages/adapter.ts`
+
+Reference their mapping logic for consistency.
+
+**Run tests after each type added:**
+```bash
+npm test -- integration/responses-client-adapter.test.ts
+```
+
+Watch tests turn green one by one as you complete the mapping.
+
+**Checklist:**
+- [ ] Added mapping for type: "reasoning"
+- [ ] Added mapping for type: "function_call"
+- [ ] Added mapping for type: "function_call_output" (if exists)
+- [ ] All integration tests pass
+- [ ] Existing unit tests still pass
+- [ ] TypeScript: 0 errors
+- [ ] ESLint: 0 errors
+
+---
+
+## Step 4: Add Tool Usage Instructions to System Prompt (15-20 min)
+
+**File:** `codex-ts/src/core/client/responses/client.ts` line 49
+
+**Current:**
+```typescript
+const DEFAULT_RESPONSES_INSTRUCTIONS = "You are Cody, a helpful AI assistant.";
+```
+
+**Update to:**
+```typescript
+const DEFAULT_RESPONSES_INSTRUCTIONS = `You are Cody, a helpful AI assistant with access to tools.
+
+When you need to interact with the system (read files, execute commands, etc.), use the available tools by calling them as functions. Tool results will be provided to you, and you can use that information in your response.
+
+Available tools:
+- readFile: Read file contents
+- writeFile: Write content to a file
+- exec: Execute shell commands
+- applyPatch: Apply code changes
+- glob: Find files by pattern
+- grepFiles: Search file contents
+- listDir: List directory contents
+
+Always use tools when you need current information (file contents, command output, etc.) rather than guessing or using outdated knowledge.`;
+```
+
+**Guidance:**
+- Keep instructions concise but informative
+- Mention tool calling explicitly
+- List key tools (user will see this helps model choose correctly)
+- Emphasize using tools over guessing
+
+**Consider:** Check if Rust Codex has system prompt you can reference:
+```bash
+grep -r "system.*prompt\|instructions" codex-rs/core/src/ | grep -i tool
+```
+
+**No test needed for this** - we'll verify in manual testing (Step 6).
+
+**Checklist:**
+- [ ] System prompt updated with tool usage guidance
+- [ ] Instructions mention when to use tools
+- [ ] Key tools listed
+- [ ] TypeScript: 0 errors
+- [ ] Rebuild: `npm run build`
+
+---
+
+## Step 5: Fix Tool Parameter Schemas (30-40 min)
+
+**Investigation needed:** Determine why tool specs have empty `properties: {}`.
+
+**Check:** `codex-ts/src/tools/registry.ts` - `getToolSpecs()` method
+
+**Likely causes:**
+1. Tool handlers don't define parameter schemas
+2. Schema conversion is incomplete
+3. Tools were ported without schema definitions
+
+**Action:**
+
+1. **Find where tool schemas are defined**
+   - Check each tool in `codex-ts/src/tools/*/index.ts`
+   - Look for parameter definitions
+   - Compare to Rust definitions in `codex-rs/tools/src/*/mod.rs`
+
+2. **Verify schema conversion**
+   - Check `getToolSpecs()` in registry
+   - Ensure it includes complete parameter definitions
+   - Match OpenAI function calling schema format
+
+3. **Add complete schemas for core tools:**
+
+**exec tool schema:**
+```json
+{
+  "name": "exec",
+  "description": "Execute a shell command",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "cmd": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Command and arguments as array (e.g., ['ls', '-la', '/tmp'])"
+      },
+      "cwd": {
+        "type": "string",
+        "description": "Working directory (optional)"
+      }
+    },
+    "required": ["cmd"]
+  }
+}
+```
+
+**readFile tool schema:**
+```json
+{
+  "name": "readFile",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "File path to read"
+      },
+      "slice": {
+        "type": "object",
+        "description": "Optional line range to read",
+        "properties": {
+          "start": {"type": "integer"},
+          "end": {"type": "integer"}
+        }
+      }
+    },
+    "required": ["path"]
+  }
+}
+```
+
+**Do this for all tools used in testing:** exec, readFile, writeFile, applyPatch, glob, grepFiles, listDir
+
+**Write test:**
+
+Create `codex-ts/tests/integration/tool-schemas.test.ts`:
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { toolRegistry } from "../../src/tools/registry.js";
+
+describe("Tool Schemas", () => {
+  const specs = toolRegistry.getToolSpecs();
+
+  it("all tools have parameter schemas", () => {
+    for (const spec of specs) {
+      expect(spec.parameters).toBeDefined();
+      expect(spec.parameters.type).toBe("object");
+      expect(spec.parameters.properties).toBeDefined();
+      expect(Object.keys(spec.parameters.properties).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("exec tool has complete schema", () => {
+    const exec = specs.find(s => s.name === "exec");
+    expect(exec).toBeDefined();
+    expect(exec.parameters.properties).toHaveProperty("cmd");
+    expect(exec.parameters.required).toContain("cmd");
+  });
+
+  it("readFile tool has complete schema", () => {
+    const readFile = specs.find(s => s.name === "readFile");
+    expect(readFile).toBeDefined();
+    expect(readFile.parameters.properties).toHaveProperty("path");
+  });
+
+  // Add for other tools...
+});
+```
+
+**Run:** Should FAIL initially, then pass after you add schemas.
+
+**Checklist:**
+- [ ] Investigated why schemas are empty
+- [ ] Added complete schemas for exec, readFile, writeFile
+- [ ] Added schemas for applyPatch, glob, grepFiles, listDir
+- [ ] Integration test verifies schemas present
+- [ ] Test passes
+
+---
+
+## Step 6: Manual Verification with Real API (15-20 min)
+
+After all fixes, test with the actual CLI using gpt-5-codex.
+
+**Verify model selection:**
+```bash
+# Should show gpt-5-codex
+grep -E "model|DEFAULT" codex-ts/.env
+```
+
+**Test 1: Simple tool call (readFile)**
+
+```bash
+# Create test file
+echo "test content" > /tmp/cody-test-file.txt
+
+# Test
+cody chat "read the file /tmp/cody-test-file.txt"
+```
+
+**Expected:**
+```
+Cody REPL. Type 'help' for commands.
+Started new conversation: <UUID>
+
+ðŸ”§ Tool: readFile
+   Args: {"path": "/tmp/cody-test-file.txt"}
+Approve? (y/n): y
+
+âœ“ Result (call-xxx): test content
+Assistant: The file was read successfully and contains "test content".
+
+cody> exit
+```
+
+**What to verify:**
+-  Reasoning block shown (if model used thinking)
+-  Tool call displayed with =' icon
+-  Approval prompt appeared
+-  After approval, tool executed
+-  Result displayed with  icon
+-  Model response incorporates tool result
+-  No silent failures or empty responses
+
+**Test 2: Command execution (exec)**
+
+```bash
+cody chat "run the command: echo 'Hello from shell'"
+```
+
+**Expected:**
+```
+=' Tool: exec
+   Args: {"cmd": ["echo", "Hello from shell"]}
+Approve? (y/n): y
+
+ Result (call-xxx): Hello from shell
+Assistant: Command executed successfully. Output: "Hello from shell"
+
+cody> exit
+```
+
+**Test 3: Multi-step tool usage**
+
+```bash
+echo "TODO: write tests" > /tmp/todo.txt
+cody chat "read /tmp/todo.txt and then create a file /tmp/done.txt that says the task is complete"
+```
+
+**Expected:**
+- Model reads todo.txt (approve)
+- Model sees content
+- Model writes to done.txt (approve)
+- Model confirms completion
+- Both tool calls work in sequence
+
+**Test 4: Weather scenario (original failure case)**
+
+```bash
+cody chat "what's the weather like?"
+```
+
+Model asks for location. Respond:
+
+```
+cody> chat cockeysville, maryland
+```
+
+**Expected:**
+- Model attempts web search OR
+- Model explains it needs search capability OR
+- Model attempts some tool call (depending on available tools)
+- **Should NOT return empty response**
+- Tool call should be visible
+
+**Test 5: Verify thinking/reasoning displays**
+
+```bash
+# Use a complex query that triggers reasoning
+cody chat "analyze this: if I have 5 apples and give away 2, then buy 3 more, how many do I have? Show your reasoning"
+```
+
+**Expected:**
+- Reasoning block displayed (if model uses thinking mode)
+- Clear thought process shown
+- Final answer provided
+
+**Checklist - Manual Verification:**
+- [ ] Test 1: readFile works (tool call, approval, result, response)
+- [ ] Test 2: exec works
+- [ ] Test 3: Multi-step tool sequence works
+- [ ] Test 4: No empty responses for any query
+- [ ] Test 5: Reasoning blocks display (if model uses thinking)
+- [ ] All tool calls show =' icon and arguments clearly
+- [ ] All results show  or  appropriately
+- [ ] No silent failures
+
+---
+
+## Step 7: Remove Debug Logging (10 min)
+
+After confirming fixes work, remove the debug logging added during investigation.
+
+**Files to clean:**
+- `codex-ts/src/core/codex/session.ts` - Remove [DEBUG] console statements
+- `codex-ts/src/cli/display.ts` - Remove [DEBUG] console statements
+- `codex-ts/src/core/client/responses/client.ts` - Remove [DEBUG] console statements
+
+**Keep the actual code changes** (mapping fixes, system prompt, schemas), just remove temporary debug output.
+
+**Checklist:**
+- [ ] All console.debug("[DEBUG]") statements removed
+- [ ] All console.warn("[DEBUG]") statements removed
+- [ ] All debug JSON.stringify logging removed
+- [ ] Normal console.log/error/warn kept (user-facing messages)
+- [ ] Tests still pass after debug removal
+- [ ] Manual testing still works
+
+---
+
+## Step 8: Run Full Quality Verification (10 min)
+
+**Run the complete verification command:**
+
+```bash
+cd /Users/leemoore/code/codex-port-02/codex-ts
+npm run format && npm run lint && npx tsc --noEmit && npm test
+```
+
+**Must see:**
+- Prettier: No changes needed (or changes applied)
+- ESLint: 0 errors (warnings acceptable)
+- TypeScript: 0 errors
+- Tests: All passing (1,895+, including new integration tests)
+- 0 skipped tests
+
+**If any failures:** Fix them before proceeding.
+
+**Checklist:**
+- [ ] Format: Clean
+- [ ] Lint: 0 errors
+- [ ] TypeScript: 0 errors
+- [ ] Unit tests: All passing (baseline maintained)
+- [ ] Integration tests: All passing (new tests for fixes)
+- [ ] Service-mocked tests: All passing
+- [ ] No skipped tests
+
+---
+
+## Step 9: Document Changes (5 min)
+
+**Update:** `docs/projects/02-ui-integration-phases/phase-2/decisions.md`
+
+Add entry:
+
+```markdown
+## Bug Fixes - Tool Integration
+
+**Date:** [Today's date]
+**Issue:** Tool calls failed silently due to incomplete response mapping
+
+**Changes made:**
+
+1. **Response Mapping:** Updated `mapOutputToResponseItems()` in responses/client.ts to handle:
+   - reasoning items (type: "reasoning")
+   - function_call items (type: "function_call")
+   - function_call_output items (type: "function_call_output")
+
+2. **System Prompt:** Enhanced DEFAULT_RESPONSES_INSTRUCTIONS with tool usage guidance
+
+3. **Tool Schemas:** Added complete parameter schemas for all tools (exec, readFile, etc.)
+
+4. **Testing:** Added HTTP-level integration tests for client adapter at correct boundary
+
+**Verification:** Manual testing with gpt-5-codex confirms all tool calls work correctly.
+
+**Root cause:** Original service-mocked tests bypassed mapping layer by mocking at ModelClient interface instead of HTTP boundary. See LESSONS-LEARNED.md for analysis.
+```
+
+---
+
+## COMPLETION CHECKLIST
+
+Before considering this task complete, verify ALL of the following:
+
+### Code Changes
+- [ ] mapOutputToResponseItems() handles reasoning items
+- [ ] mapOutputToResponseItems() handles function_call items
+- [ ] mapOutputToResponseItems() handles function_call_output items (if exists)
+- [ ] System prompt includes tool usage instructions
+- [ ] All tool specs have complete parameter schemas (properties not empty)
+- [ ] Debug logging removed
+
+### Testing
+- [ ] New integration test: responses-client-adapter.test.ts exists and passes
+- [ ] New integration test: tool-schemas.test.ts exists and passes
+- [ ] All existing tests still pass (baseline maintained)
+- [ ] Manual test 1 (readFile) passes
+- [ ] Manual test 2 (exec) passes
+- [ ] Manual test 3 (multi-step) passes
+- [ ] Manual test 4 (weather/complex query) passes - no empty responses
+- [ ] Manual test 5 (reasoning display) passes
+
+### Quality Gates
+- [ ] npm run format: Clean or changes applied
+- [ ] npm run lint: 0 errors
+- [ ] npx tsc --noEmit: 0 errors
+- [ ] npm test: All passing, 0 skipped
+
+### Documentation
+- [ ] decisions.md updated with bug fix entry
+- [ ] Changes explained clearly
+
+### Final Verification
+- [ ] Tested with gpt-5-codex (real API, reliable model)
+- [ ] Tool calls work end-to-end (approval ’ execution ’ result ’ model response)
+- [ ] No silent failures or empty responses
+- [ ] Reasoning blocks display correctly
+- [ ] All three bugs fixed and verified
+
+---
+
+REFERENCES:
+
+**Read these for context:**
+- docs/projects/02-ui-integration-phases/LESSONS-LEARNED.md - Why these bugs happened
+- docs/projects/02-ui-integration-phases/PRD.md - Project requirements
+- docs/projects/02-ui-integration-phases/TECH-APPROACH.md Section 3 - Phase 2 design
+- docs/core/dev-standards.md - Code quality standards
+- codex-ts/src/protocol/models.ts - ResponseItem type definitions
+- codex-ts/src/core/client/messages/adapter.ts - Reference for mapping other APIs
+
+**Existing code to understand:**
+- codex-ts/src/core/client/responses/client.ts - File you'll fix
+- codex-ts/src/tools/registry.ts - Tool schema source
+- codex-ts/tests/mocks/model-client.ts - Current mock (wrong boundary)
+- codex-ts/tests/mocked-service/phase-2-tool-execution.test.ts - Existing tests
+
+---
+
+STANDARDS:
+
+**Code Quality:**
+- TypeScript strict mode: No `any` types
+- Proper error handling: All errors caught and reported
+- Consistent patterns: Follow existing code style
+- Clean formatting: Prettier compliant
+
+**Testing:**
+- Mock at I/O boundary (HTTP/filesystem/process), not business logic
+- Test adapters thoroughly (API ’ internal types)
+- Include edge cases (empty, malformed, errors)
+- Fast execution (<5 seconds for all tests)
+
+**Verification:**
+- Automated tests pass
+- Manual CLI testing confirms fixes
+- No regressions (existing tests still pass)
+- Documentation updated
+
+---
+
+START:
+
+1. Read LESSONS-LEARNED.md to understand root cause
+2. Set up gpt-5-codex in .env for reliable testing
+3. Write HTTP-level integration tests (TDD RED)
+4. Fix response mapping (TDD GREEN)
+5. Add tool instructions to system prompt
+6. Fix tool parameter schemas
+7. Manual verification with real CLI
+8. Remove debug logging
+9. Run full quality verification
+10. Document changes
+
+Report back with test results and confirmation that tool integration now works end-to-end.
+
+---
+
+END OF PROMPT
