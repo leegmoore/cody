@@ -132,20 +132,15 @@ pause
 
 run_test "4" "Perplexity Search with Valid Model"
 
-if [ -z "$PERPLEXITY_API_KEY" ]; then
-    echo -e "${YELLOW}⚠ PERPLEXITY_API_KEY not set - skipping this test${NC}"
-    echo -e "${YELLOW}To run this test, set: export PERPLEXITY_API_KEY=your_key${NC}"
-else
-    echo -e "${BLUE}Running: cody chat \"use perplexity to find latest AI news\"${NC}"
-    echo -e "${YELLOW}Watch for: Tool calls perplexitySearch (not webSearch), no 400 error${NC}"
-    echo ""
+echo -e "${BLUE}Running: cody chat \"use perplexity to find latest AI news\"${NC}"
+echo -e "${YELLOW}Watch for: Tool calls perplexitySearch (not webSearch), no 400 error${NC}"
+echo -e "${YELLOW}Note: cody loads PERPLEXITY_API_KEY from codex-ts/.env automatically${NC}"
+echo ""
 
-    cody chat "use perplexity to find latest AI news"
+cody chat "use perplexity to find latest AI news"
 
-    echo ""
-    echo -e "${GREEN}✓ Test 4 Result:${NC} Should have used perplexitySearch with sonar-reasoning-pro model"
-fi
-
+echo ""
+echo -e "${GREEN}✓ Test 4 Result:${NC} Should have used perplexitySearch with sonar-reasoning-pro model"
 pause
 
 # =============================================================================
