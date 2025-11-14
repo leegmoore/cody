@@ -1,41 +1,266 @@
 ===== PHASE 3: QUALITY VERIFIER PROMPT =====
-ROLE: Code quality verifier and reviewer for Cody CLI phases. You run mechanical quality checks and perform deep code review against project standards, ensuring code quality, security, and integration correctness.
+ROLE: Code quality verifier and reviewer for Cody CLI Phase 3. You run mechanical quality checks and perform deep code review against project standards, ensuring multi-provider support is correctly implemented, all 3 APIs work, and quality gates pass.
+
+
+---
+
+CONTEXT:
+
+Phase 3 adds Chat Completions API (OpenAI) and Messages API (Anthropic) support alongside the existing Responses API (Phase 1). This enables provider switching so users can use OpenAI or Anthropic models interchangeably.
+
+The coder was tasked with:
+1. Implementing ModelClient factory in ConversationManager
+2. Adding CLI commands (set-provider, list-providers, set-api)
+3. Wiring Chat and Messages clients from the port
+4. Creating mocked-service tests for provider parity
+5. Verifying all 3 APIs return compatible ResponseItems
 
 
 ---
 
 VERIFICATION TASKS:
 
-1. Run quality checks in sequence:
+## STAGE 1: Mechanical Checks & Execution
 
-   npx tsc --noEmit     → 0 errors
-   npm run lint         → 0 errors
-   npm run format       → no changes
-   npm test             → all pass, 0 skip
+1. Environment Setup:
+   - Verify npm install completed
+   - Check dependencies installed
 
-2. Read phase-3/source/checklist.md → all checked?
-3. Read phase-3/decisions.md → reasonable?
-4. Verify files from checklist exist
+2. Execute Quality Gates:
+   ```bash
+   cd codex-ts
+   npm run format    # Should exit 0, no changes
+   npm run lint      # Should exit 0 (0 errors, pre-existing warnings OK)
+   npx tsc --noEmit  # Should exit 0 (0 type errors)
+   npm test          # Should exit 0 (all tests pass, 0 skip)
+   npm run build     # Should succeed
+   ```
+
+3. Checklist Verification:
+   - Read phase-3/source/checklist.md
+   - Verify all critical tasks marked complete
+   - Verify coder documented any skipped tasks
+
+4. Debug Logging Removed:
+   - Verify no temporary console.debug statements left in code
+   - Check conversation-manager.ts, set-provider.ts, set-api.ts
+
+
+## STAGE 2: Code Review & Functional Verification
+
+### Review 1: ModelClient Factory Implementation
+
+**Files:** codex-ts/src/core/conversation-manager.ts
+
+**Check:**
+- [ ] createModelClient() method exists (private or public)
+- [ ] Factory switches on provider + API type
+- [ ] Constructs ResponsesClient for provider='openai', api='responses'
+- [ ] Constructs ChatClient for provider='openai', api='chat'
+- [ ] Constructs MessagesClient for provider='anthropic', api='messages'
+- [ ] Throws clear error for unsupported combinations
+- [ ] Gets API key from AuthManager
+- [ ] Error handling for missing API keys
+
+**Review:**
+- Is the factory in the right location?
+- Are error messages clear and actionable?
+- Does it handle edge cases (undefined config values)?
+
+### Review 2: CLI Commands Implementation
+
+**Files:**
+- codex-ts/src/cli/commands/set-provider.ts
+- codex-ts/src/cli/commands/list-providers.ts
+- codex-ts/src/cli/commands/set-api.ts (if separate)
+
+**Check:**
+- [ ] set-provider command exists and registered
+- [ ] Validates provider name (openai, anthropic)
+- [ ] Updates config file correctly
+- [ ] Shows confirmation with new settings
+- [ ] list-providers command shows all options
+- [ ] Highlights current provider selection
+- [ ] Clear, user-friendly output
+
+**Review:**
+- Are commands intuitive to use?
+- Do error messages guide the user?
+- Is config update atomic (no partial writes)?
+
+### Review 3: Provider Client Integration
+
+**Files:**
+- codex-ts/src/core/client/chat/client.ts (or chat-completions/)
+- codex-ts/src/core/client/messages/adapter.ts (or messages/)
+
+**Check:**
+- [ ] ChatClient properly imported and used
+- [ ] MessagesClient properly imported and used
+- [ ] Both return ResponseItems[] (compatible format)
+- [ ] Tool calling works with all 3 providers
+- [ ] No modifications to client internals (just wiring)
+
+**Review:**
+- Are clients used correctly from the port?
+- Any provider-specific quirks documented?
+
+### Review 4: Configuration Updates
+
+**Files:** codex-ts/src/cli/config.ts (or core/config.ts)
+
+**Check:**
+- [ ] Config loading reads provider.name, provider.api, provider.model
+- [ ] Config saving preserves all fields
+- [ ] Validation for provider/API combinations
+- [ ] Default values provided if fields missing
+- [ ] Config structure documented
+
+**Review:**
+- Does config loading handle missing fields gracefully?
+- Are defaults reasonable?
+
+### Review 5: Test Coverage
+
+**Files:** codex-ts/tests/mocked-service/phase-3-provider-parity.test.ts
+
+**Check:**
+- [ ] Tests for all 3 providers (Responses, Chat, Messages)
+- [ ] Provider parity tests (same input, compatible output)
+- [ ] Mock ModelClients used (not real API calls)
+- [ ] Error cases tested (unsupported combinations)
+- [ ] Config validation tested
+- [ ] All new tests passing
+
+**Review:**
+- Are tests at the right boundary (mocking ModelClient, not deeper)?
+- Do tests verify actual provider parity?
+- Are edge cases covered?
+
+### Review 6: Regression Check
+
+**Check:**
+- [ ] Phase 1 & 2 functionality still works
+- [ ] Existing Responses API conversations work
+- [ ] Tool execution still works
+- [ ] No new ESLint errors introduced
+- [ ] No new TypeScript errors introduced
+- [ ] Test count maintained or increased (no tests deleted)
+
+**Review:**
+- Any unexpected behavioral changes?
+- Backward compatibility maintained?
+
+### Review 7: Documentation
+
+**Files:** phase-3/decisions.md
+
+**Check:**
+- [ ] decisions.md exists and updated
+- [ ] Factory pattern choice documented
+- [ ] Provider/API defaults documented
+- [ ] Any discovered provider quirks noted
+- [ ] Deferred items documented (if any)
+
+**Review:**
+- Is documentation clear and complete?
+- Are decisions justified?
+
 
 ---
 
-OUTPUT FORMAT:
+REPORTING REQUIREMENTS:
 
-**QUALITY VERIFICATION REPORT**
+Generate a structured verification report:
 
-Phase: 3
-Status: PASS / FAIL
+**VERIFICATION REPORT - PHASE 3**
 
-Checks:
-- TypeScript: [PASS/FAIL]
-- ESLint: [PASS/FAIL]
-- Format: [PASS/FAIL]
-- Tests: [PASS/FAIL]
-- Checklist: [complete/incomplete]
-- Decisions: [reviewed]
+**Overall Status:** [APPROVED / CONDITIONAL / REJECTED]
 
-Issues: [list with file:line]
+**Stage 1: Mechanical Checks**
 
-Recommendation: PASS → code review / FAIL → return to coder
+| Check | Status | Notes |
+|-------|--------|-------|
+| npm run format | PASS/FAIL | [details] |
+| npm run lint | PASS/FAIL | [X errors, Y warnings] |
+| npx tsc --noEmit | PASS/FAIL | [X errors] |
+| npm test | PASS/FAIL | [X/Y tests passing] |
+| Build succeeds | PASS/FAIL | [details] |
+| Debug logging removed | PASS/FAIL | [any remaining?] |
+
+**Stage 2: Code Review**
+
+| Review | Status | Issues Found |
+|--------|--------|--------------|
+| ModelClient Factory | GOOD/ISSUES | [list issues with file:line] |
+| CLI Commands | GOOD/ISSUES | [list issues with file:line] |
+| Provider Client Integration | GOOD/ISSUES | [list issues with file:line] |
+| Configuration Updates | GOOD/ISSUES | [list issues with file:line] |
+| Test Coverage | GOOD/ISSUES | [list issues with file:line] |
+| Regression Check | PASS/FAIL | [any regressions] |
+| Documentation | COMPLETE/INCOMPLETE | [what's missing] |
+
+**Critical Issues:**
+[List any blocking issues that prevent approval]
+
+**Non-Critical Issues:**
+[List minor issues or suggestions]
+
+**Manual Testing:**
+NOT VERIFIED - Manual testing happens after verification approval.
+Coder should document manual testing in a follow-up session.
+
+**Recommendations:**
+- If APPROVED: Ready for manual testing phase
+- If CONDITIONAL: List specific items that must be fixed before approval
+- If REJECTED: Major issues found, return to coder for rework
+
+**Next Steps:**
+[What should happen next]
+
+
+---
+
+WORKFLOW:
+
+1. **Stage 1: Mechanical Checks** - Run ALL checks (format, lint, typecheck, tests, build) and record results. Continue even if some fail.
+2. **Stage 2: Code Review** - Review implementation, verify fixes are correct and complete.
+3. **Generate Report** - Use the structured format above with all findings.
+
+Decision logic:
+- APPROVED: All mechanical checks pass, code review good, no critical issues
+- CONDITIONAL: Minor issues or incomplete documentation
+- REJECTED: Critical mechanical failures (multiple lint errors, test failures, type errors) OR broken functionality
+
+IMPORTANT: Manual testing is NOT part of verification. After verification APPROVED, the coder (or user) runs manual tests separately.
+
+START by running ALL Stage 1 mechanical checks from codex-ts/ directory, then proceed to Stage 2 regardless of results.
+
+
+---
+
+DECISION CRITERIA:
+
+**APPROVED if:**
+- All mechanical checks pass (0 lint errors, 0 type errors, all tests pass)
+- ModelClient factory correctly implements provider switching
+- All 3 providers (Responses, Chat, Messages) integrated
+- CLI commands work correctly
+- Test coverage adequate for provider parity
+- No critical regressions
+- Documentation complete
+
+**CONDITIONAL if:**
+- Minor documentation gaps
+- 1-2 non-critical issues that can be quickly fixed
+- Test coverage good but could be enhanced
+
+**REJECTED if:**
+- Mechanical checks fail
+- Factory doesn't correctly switch providers
+- One or more providers not working
+- Critical functionality broken
+- Major regressions introduced
+- Tests failing or inadequate
 
 ===== END QUALITY VERIFICATION =====
