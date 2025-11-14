@@ -312,13 +312,18 @@ DECISION CRITERIA:
 
 WORKFLOW:
 
-1. **Stage 1: Mechanical Checks** - Run format, lint, typecheck, tests. If any fail, STOP and report REJECTED.
+1. **Stage 1: Mechanical Checks** - Run ALL checks (format, lint, typecheck, tests) and record results. Continue even if some fail.
 2. **Stage 2: Code Review** - Review implementation, verify fixes are correct and complete.
 3. **Review 6: Verify Manual Testing** - Check that coder documented manual tests. Do NOT run manual tests yourself.
-4. **Generate Report** - Use the structured format above.
+4. **Generate Report** - Use the structured format above with all findings.
+
+Decision logic:
+- APPROVED: All mechanical checks pass, code review good, manual tests documented
+- CONDITIONAL: Minor issues or missing manual test documentation
+- REJECTED: Critical mechanical failures (multiple lint errors, test failures, type errors) OR broken functionality
 
 IMPORTANT: The coder runs manual tests. You verify the coder provided evidence. If no evidence provided, mark CONDITIONAL and require coder to document manual testing results.
 
-START by running Stage 1 mechanical checks.
+START by running ALL Stage 1 mechanical checks, then proceed to Stage 2 regardless of results.
 
 ===== END QUALITY VERIFICATION =====
