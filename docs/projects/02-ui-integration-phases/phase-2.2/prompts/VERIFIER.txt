@@ -179,21 +179,26 @@ cody chat "read /tmp/test.txt"
 
 ### Review 6: Manual Test Results
 
+**IMPORTANT:** The coder is responsible for running manual tests BEFORE submitting for verification. Your role is to verify the coder provided evidence that tests were run and passed.
+
 **Files:** Any manual test logs or output provided by coder
 
 **Check:**
-- [ ] Coder ran manual tests from manual-test-script.md
-- [ ] Test 1 passed (auto-approve works)
-- [ ] Test 2 passed (applyPatch works without timeout)
-- [ ] Test 3 passed (exec works without timeout)
-- [ ] Test 4 passed (iteration limit increased)
-- [ ] Test 5 passed (perplexitySearch valid model)
-- [ ] Test 6 passed (no duplicate display)
-- [ ] Evidence provided (test output or confirmation)
+- [ ] Coder documented running manual tests from manual-test-script.md
+- [ ] Test 1 evidence: auto-approve works (no prompts, tool executes)
+- [ ] Test 2 evidence: applyPatch works without timeout
+- [ ] Test 3 evidence: exec works without timeout
+- [ ] Test 4 evidence: iteration limit increased (>6 tools work)
+- [ ] Test 5 evidence: perplexitySearch with valid model (no 400 error)
+- [ ] Test 6 evidence: no duplicate tool display
+- [ ] Evidence format: test output, screenshots, or detailed confirmation
 
 **Review:**
-- Did coder provide sufficient evidence tests passed?
+- Did coder provide sufficient evidence tests were actually run?
+- Are test results clearly documented with expected vs actual?
 - Any test failures documented and explained?
+
+**If manual tests not documented:** Mark as CONDITIONAL - require coder to run and document tests before APPROVED.
 
 ### Review 7: Regression Check
 
@@ -305,6 +310,15 @@ DECISION CRITERIA:
 
 ---
 
-START by running Stage 1 mechanical checks. If all pass, proceed to Stage 2 code review. Generate structured report at completion.
+WORKFLOW:
+
+1. **Stage 1: Mechanical Checks** - Run format, lint, typecheck, tests. If any fail, STOP and report REJECTED.
+2. **Stage 2: Code Review** - Review implementation, verify fixes are correct and complete.
+3. **Review 6: Verify Manual Testing** - Check that coder documented manual tests. Do NOT run manual tests yourself.
+4. **Generate Report** - Use the structured format above.
+
+IMPORTANT: The coder runs manual tests. You verify the coder provided evidence. If no evidence provided, mark CONDITIONAL and require coder to document manual testing results.
+
+START by running Stage 1 mechanical checks.
 
 ===== END QUALITY VERIFICATION =====
