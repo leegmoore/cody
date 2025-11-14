@@ -14,6 +14,11 @@ NC='\033[0m' # No Color
 WORKSPACE="/Users/leemoore/code/codex-port-02"
 CODEX_TS="${WORKSPACE}/codex-ts"
 
+# Load .env file
+if [ -f "$CODEX_TS/.env" ]; then
+    export $(cat "$CODEX_TS/.env" | grep -v '^#' | xargs)
+fi
+
 echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}Phase 2.2 Manual Testing${NC}"
 echo -e "${BLUE}======================================${NC}"
@@ -132,9 +137,15 @@ pause
 
 run_test "4" "Perplexity Search with Valid Model"
 
+# Check if API key is set (loaded from .env above)
+if echo "$PERPLEXITY_API_KEY" | grep -qE '^pplx-[A-Za-z0-9]+$'; then
+    echo -e "${GREEN}✓ API key found in .env${NC}"
+else
+    echo -e "${RED}✗ PERPLEXITY_API_KEY not found or invalid in .env - test may fail${NC}"
+fi
+
 echo -e "${BLUE}Running: cody chat \"use perplexity to find latest AI news\"${NC}"
 echo -e "${YELLOW}Watch for: Tool calls perplexitySearch (not webSearch), no 400 error${NC}"
-echo -e "${YELLOW}Note: cody loads PERPLEXITY_API_KEY from codex-ts/.env automatically${NC}"
 echo ""
 
 cody chat "use perplexity to find latest AI news"
