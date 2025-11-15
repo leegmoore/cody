@@ -169,9 +169,39 @@ VERIFICATION TASKS:
 
 ---
 
-REPORTING REQUIREMENTS:
+OUTPUT FORMAT INSTRUCTIONS:
 
-Generate a structured verification report:
+You MUST generate your report in the EXACT format specified below. Do NOT add commentary, explanations, or additional sections. Follow the template precisely.
+
+**Structure rules:**
+1. Use the EXACT section headings shown in the template
+2. Fill in tables completely - do NOT skip rows
+3. Keep "Notes" column concise (one line per check)
+4. Keep "Issues Found" column concise (file:line format only)
+5. "Critical Issues" section: List ONLY blocking issues (or write "None")
+6. "Non-Critical Issues" section: List suggestions (or write "None")
+7. "Recommendations" section: Choose ONE of the three options
+8. "Next Steps" section: ONE sentence stating what happens next
+9. Do NOT add file references section or implementation details
+10. Do NOT offer to implement fixes
+
+**What to include:**
+- Actual command results (PASS/FAIL)
+- Specific file:line for issues
+- Clear, actionable issue descriptions
+
+**What to exclude:**
+- Rambling explanations
+- Implementation details you discovered
+- Offers to fix things
+- Random observations
+- File organization commentary
+
+---
+
+REPORT TEMPLATE:
+
+Generate your report using this EXACT format:
 
 **VERIFICATION REPORT - PHASE 3**
 
@@ -206,12 +236,8 @@ Generate a structured verification report:
 **Non-Critical Issues:**
 [List minor issues or suggestions]
 
-**Manual Testing:**
-NOT VERIFIED - Manual testing happens after verification approval.
-Coder should document manual testing in a follow-up session.
-
 **Recommendations:**
-- If APPROVED: Ready for manual testing phase
+- If APPROVED: Phase complete, ready for production use
 - If CONDITIONAL: List specific items that must be fixed before approval
 - If REJECTED: Major issues found, return to coder for rework
 
@@ -231,8 +257,6 @@ Decision logic:
 - APPROVED: All mechanical checks pass, code review good, no critical issues
 - CONDITIONAL: Minor issues or incomplete documentation
 - REJECTED: Critical mechanical failures (multiple lint errors, test failures, type errors) OR broken functionality
-
-IMPORTANT: Manual testing is NOT part of verification. After verification APPROVED, the coder (or user) runs manual tests separately.
 
 START by running ALL Stage 1 mechanical checks from codex-ts/ directory, then proceed to Stage 2 regardless of results.
 
