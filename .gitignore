@@ -83,3 +83,6 @@ CHANGELOG.ignore.md
 .direnv
 .envrc
 .archive/
+
+# external projects
+gemini-cli-main/
