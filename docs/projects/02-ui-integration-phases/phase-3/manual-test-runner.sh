@@ -43,6 +43,16 @@ echo -e "${BLUE}Setup: Rebuilding Cody CLI...${NC}"
 cd "$CODEX_TS"
 npm run build > /dev/null 2>&1
 echo -e "${GREEN}✓ Build complete${NC}"
+
+# Force clean config
+echo ""
+echo "Creating clean test config..."
+cat > ~/.cody/config.toml << 'EOF'
+model = "gpt-4o-mini"
+model_reasoning_effort = "low"
+approval_policy = "never"
+EOF
+echo -e "${GREEN}✓ Config initialized${NC}"
 echo ""
 
 # Verify API keys loaded
