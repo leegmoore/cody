@@ -4,7 +4,6 @@
  */
 
 import { EventEmitter } from "events";
-import { join } from "path";
 import type { ConversationId } from "../../protocol/conversation-id/index.js";
 import type { Event, Op, Submission } from "../../protocol/protocol.js";
 import type { Config } from "../config.js";
@@ -19,13 +18,18 @@ import {
   type ModelProviderInfo,
 } from "../client/model-provider-info.js";
 import { Features } from "../features/index.js";
-import { SessionSource, SESSIONS_SUBDIR } from "../rollout.js";
+import { SessionSource } from "../rollout.js";
+import type { RolloutStore, RolloutRecorderParams } from "../rollout.js";
 import type { ModelClientFactory } from "../client/model-client-factory.js";
 import type { ToolApprovalCallback } from "../../tools/types.js";
 import { ConfigurationError } from "../errors.js";
+import type { ResponseItem } from "../../protocol/models.js";
 
 export interface CodexSpawnOptions {
   approvalCallback?: ToolApprovalCallback;
+  rolloutStore?: RolloutStore;
+  conversationId?: ConversationId;
+  rolloutParams?: RolloutRecorderParams;
 }
 
 /**
@@ -145,7 +149,7 @@ export class Codex {
   static async spawn(
     config: Config,
     authManager: AuthManager,
-    _conversationHistory: unknown, // TODO: Port InitialHistory
+    initialHistory: ResponseItem[] | null,
     sessionSource: SessionSource | null, // TODO: Port SessionSource type
     modelClientFactory: ModelClientFactory,
     options?: CodexSpawnOptions,
@@ -194,6 +198,12 @@ export class Codex {
       sessionSource,
       modelClient,
       options?.approvalCallback,
+      {
+        conversationId: options?.conversationId,
+        initialHistory: initialHistory ?? undefined,
+        rolloutStore: options?.rolloutStore,
+        rolloutParams: options?.rolloutParams,
+      },
     );
 
     const conversationId = session.conversationId;
@@ -206,13 +216,7 @@ export class Codex {
       rxEvent.emit("event", event);
     });
 
-    const defaultRolloutPath = join(
-      config.codexHome,
-      SESSIONS_SUBDIR,
-      `${conversationId.toString()}.jsonl`,
-    );
-
-    await session.emitSessionConfiguredEvent(defaultRolloutPath);
+    await session.emitSessionConfiguredEvent();
 
     // Spawn submission loop in background
     submissionLoop(session, config, txSub).catch((err) => {

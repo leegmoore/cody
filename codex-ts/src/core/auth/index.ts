@@ -1,505 +1,243 @@
-/**
- * Authentication module for Codex.
- *
- * Provides centralized authentication management, credential storage,
- * and token refresh for both API key and ChatGPT OAuth authentication.
- */
-
-import { mkdir, readFile, writeFile, unlink, access } from "node:fs/promises";
-import { readFileSync, existsSync } from "node:fs";
+import { promises as fs } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
-import { TokenData } from "../../token-data/index.js";
+import {
+  createDefaultConfig,
+  type AuthConfig,
+  type AuthMethod,
+  type Config,
+} from "../config.js";
+import { CodexAuth } from "./stub-auth.js";
+import { readClaudeOAuthToken, CLAUDE_OAUTH_PATHS } from "./claude-oauth.js";
 
-/**
- * Determine where Codex should store CLI auth credentials.
- */
-export enum AuthCredentialsStoreMode {
-  /** Persist credentials in CODEX_HOME/auth.json */
-  File = "file",
-  /** Persist credentials in the system keyring */
-  Keyring = "keyring",
-  /** Use keyring when available; otherwise fall back to file */
-  Auto = "auto",
-}
-
-/**
- * Authentication mode.
- */
-export enum AuthMode {
-  /** API key authentication */
-  ApiKey = "ApiKey",
-  /** ChatGPT OAuth authentication */
-  ChatGPT = "ChatGPT",
-}
-
-/**
- * Expected structure for $CODEX_HOME/auth.json.
- */
-export interface AuthDotJson {
-  /** OpenAI API key */
-  OPENAI_API_KEY?: string;
-  /** OAuth token data */
-  tokens?: TokenData;
-  /** Last token refresh timestamp */
-  last_refresh?: Date;
-}
-
-/**
- * Environment variable names for API keys.
- */
-export const OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY";
-export const CODEX_API_KEY_ENV_VAR = "CODEX_API_KEY";
-
-/**
- * OAuth client ID for token refresh.
- */
-export const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
-
-/**
- * Read OpenAI API key from environment variable.
- *
- * @returns API key if set, undefined otherwise
- */
-export function readOpenaiApiKeyFromEnv(): string | undefined {
-  const value = process.env[OPENAI_API_KEY_ENV_VAR];
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-/**
- * Read Codex API key from environment variable.
- *
- * @returns API key if set, undefined otherwise
- */
-export function readCodexApiKeyFromEnv(): string | undefined {
-  const value = process.env[CODEX_API_KEY_ENV_VAR];
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-/**
- * Get the auth.json file path.
- */
-function getAuthFile(codexHome: string): string {
-  return join(codexHome, "auth.json");
-}
-
-/**
- * Storage backend interface for auth credentials.
- */
-interface AuthStorageBackend {
-  load(): Promise<AuthDotJson | undefined>;
-  save(auth: AuthDotJson): Promise<void>;
-  delete(): Promise<boolean>;
-}
-
-/**
- * File-based auth storage backend.
- */
-class FileAuthStorage implements AuthStorageBackend {
-  constructor(private codexHome: string) {}
-
-  async load(): Promise<AuthDotJson | undefined> {
-    const authFile = getAuthFile(this.codexHome);
-    try {
-      const content = await readFile(authFile, "utf-8");
-      const data = JSON.parse(content);
-
-      // Parse date if present
-      if (data.last_refresh) {
-        data.last_refresh = new Date(data.last_refresh);
-      }
-
-      return data;
-    } catch (error: unknown) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "ENOENT"
-      ) {
-        return undefined;
-      }
-      throw error;
-    }
-  }
-
-  async save(auth: AuthDotJson): Promise<void> {
-    const authFile = getAuthFile(this.codexHome);
-
-    // Ensure directory exists
-    const dir = this.codexHome;
-    try {
-      await access(dir);
-    } catch {
-      await mkdir(dir, { recursive: true, mode: 0o700 });
-    }
-
-    // Write with restrictive permissions (0600 on Unix)
-    const json = JSON.stringify(auth, null, 2);
-    await writeFile(authFile, json, { mode: 0o600 });
-  }
-
-  async delete(): Promise<boolean> {
-    const authFile = getAuthFile(this.codexHome);
-    try {
-      await unlink(authFile);
-      return true;
-    } catch (error: unknown) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "ENOENT"
-      ) {
-        return false;
-      }
-      throw error;
-    }
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
   }
 }
 
-/**
- * Create auth storage backend based on mode.
- *
- * Note: For library port, only File mode is fully implemented.
- * Keyring and Auto modes fall back to File storage.
- */
-function createAuthStorage(
-  codexHome: string,
-  _mode: AuthCredentialsStoreMode,
-): AuthStorageBackend {
-  // For library port, always use file storage
-  // Full keyring integration can be added later using keyring-store module
-  return new FileAuthStorage(codexHome);
+export { CodexAuth, AuthMode } from "./stub-auth.js";
+
+const DEFAULT_CHATGPT_TOKEN_PATHS = [
+  join(homedir(), ".cody", "oauth", "chatgpt.json"),
+  join(homedir(), ".codex", "auth.json"),
+];
+
+export interface AuthManagerOptions {
+  saveAuthConfig?: (auth: AuthConfig) => Promise<void>;
+  readChatGptToken?: () => Promise<string | undefined>;
+  readClaudeToken?: () => Promise<string | undefined>;
+  fixedCodexAuth?: CodexAuth;
 }
 
-/**
- * Core authentication object.
- *
- * Manages authentication state and provides access to tokens/API keys.
- */
-export class CodexAuth {
-  constructor(
-    public readonly mode: AuthMode,
-    private apiKey: string | undefined,
-    private authDotJson: AuthDotJson | undefined,
-    // @ts-expect-error - Storage backend for future use
-    private _storage: AuthStorageBackend,
-  ) {}
-
-  /**
-   * Create CodexAuth from an API key.
-   */
-  static fromApiKey(apiKey: string): CodexAuth {
-    return new CodexAuth(
-      AuthMode.ApiKey,
-      apiKey,
-      undefined,
-      createAuthStorage("", AuthCredentialsStoreMode.File),
-    );
-  }
-
-  /**
-   * Create dummy ChatGPT auth for testing.
-   */
-  static createDummyChatGptAuthForTesting(tokenData?: TokenData): CodexAuth {
-    const authData: AuthDotJson = {
-      OPENAI_API_KEY: undefined,
-      tokens: tokenData || {
-        id_token: {
-          email: "test@example.com",
-          raw_jwt: "fake.jwt.token",
-        },
-        access_token: "test-access-token",
-        refresh_token: "test-refresh-token",
-        account_id: "test-account",
-      },
-      last_refresh: new Date(),
-    };
-
-    return new CodexAuth(
-      AuthMode.ChatGPT,
-      undefined,
-      authData,
-      createAuthStorage("", AuthCredentialsStoreMode.File),
-    );
-  }
-
-  /**
-   * Load auth from storage.
-   */
-  static async fromAuthStorage(
-    codexHome: string,
-    authCredentialsStoreMode: AuthCredentialsStoreMode,
-  ): Promise<CodexAuth | undefined> {
-    const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
-    const authData = await storage.load();
-
-    if (!authData) {
-      return undefined;
-    }
-
-    // Prefer API key if set
-    if (authData.OPENAI_API_KEY) {
-      return new CodexAuth(
-        AuthMode.ApiKey,
-        authData.OPENAI_API_KEY,
-        authData,
-        storage,
-      );
-    }
-
-    // Otherwise use ChatGPT tokens
-    if (authData.tokens) {
-      return new CodexAuth(AuthMode.ChatGPT, undefined, authData, storage);
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Get the API key (for API key auth mode).
-   */
-  getApiKey(): string | undefined {
-    return this.apiKey;
-  }
-
-  /**
-   * Get the account ID from token data.
-   */
-  getAccountId(): string | undefined {
-    return this.authDotJson?.tokens?.account_id;
-  }
-
-  /**
-   * Get the account email from token data.
-   */
-  getAccountEmail(): string | undefined {
-    return this.authDotJson?.tokens?.id_token.email;
-  }
-
-  /**
-   * Get current token data.
-   */
-  getTokenData(): TokenData | undefined {
-    return this.authDotJson?.tokens;
-  }
-
-  /**
-   * Get access token (for ChatGPT mode).
-   */
-  async getToken(): Promise<string> {
-    if (this.mode === AuthMode.ApiKey) {
-      return this.apiKey || "";
-    }
-
-    const tokenData = this.getTokenData();
-    if (!tokenData) {
-      throw new Error("Token data is not available");
-    }
-
-    return tokenData.access_token;
-  }
-}
-
-/**
- * Save auth data to storage.
- */
-export async function saveAuth(
-  codexHome: string,
-  auth: AuthDotJson,
-  authCredentialsStoreMode: AuthCredentialsStoreMode,
-): Promise<void> {
-  const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
-  await storage.save(auth);
-}
-
-/**
- * Load auth data from storage.
- */
-export async function loadAuthDotJson(
-  codexHome: string,
-  authCredentialsStoreMode: AuthCredentialsStoreMode,
-): Promise<AuthDotJson | undefined> {
-  const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
-  return await storage.load();
-}
-
-/**
- * Login with API key.
- *
- * Creates an auth.json file containing only the API key.
- */
-export async function loginWithApiKey(
-  codexHome: string,
-  apiKey: string,
-  authCredentialsStoreMode: AuthCredentialsStoreMode,
-): Promise<void> {
-  const authData: AuthDotJson = {
-    OPENAI_API_KEY: apiKey,
-    tokens: undefined,
-    last_refresh: undefined,
-  };
-  await saveAuth(codexHome, authData, authCredentialsStoreMode);
-}
-
-/**
- * Logout by deleting the auth.json file.
- *
- * @returns true if a file was removed, false if no auth file existed
- */
-export async function logout(
-  codexHome: string,
-  authCredentialsStoreMode: AuthCredentialsStoreMode,
-): Promise<boolean> {
-  const storage = createAuthStorage(codexHome, authCredentialsStoreMode);
-  return await storage.delete();
-}
-
-/**
- * Central manager providing a single source of truth for auth.json derived
- * authentication data.
- *
- * Loads once (or on preference change) and then hands out cloned CodexAuth
- * values so the rest of the program has a consistent snapshot.
- *
- * External modifications to auth.json will NOT be observed until reload()
- * is called explicitly.
- */
 export class AuthManager {
-  private cachedAuth: CodexAuth | undefined;
+  private readonly readChatGptTokenFn: () => Promise<string | undefined>;
+  private readonly readClaudeTokenFn: () => Promise<string | undefined>;
+  private readonly fixedCodexAuth?: CodexAuth;
 
-  /**
-   * Create auth manager (loads auth synchronously from environment and storage).
-   */
   constructor(
-    private codexHome: string,
-    private enableCodexApiKeyEnv: boolean,
-    private authCredentialsStoreMode: AuthCredentialsStoreMode,
+    private readonly config: Config,
+    private readonly options: AuthManagerOptions = {},
   ) {
-    // Load auth synchronously from environment and storage
-    this.cachedAuth = this.loadAuthSync();
+    this.readChatGptTokenFn =
+      options.readChatGptToken ?? (() => readChatGptOAuthToken());
+    this.readClaudeTokenFn =
+      options.readClaudeToken ?? (() => readClaudeOAuthToken());
+    this.fixedCodexAuth = options.fixedCodexAuth;
   }
 
-  /**
-   * Create shared auth manager (factory method).
-   */
-  static shared(
-    codexHome: string,
-    enableCodexApiKeyEnv: boolean,
-    authCredentialsStoreMode: AuthCredentialsStoreMode,
-  ): AuthManager {
-    return new AuthManager(
-      codexHome,
-      enableCodexApiKeyEnv,
-      authCredentialsStoreMode,
+  static fromAuthForTesting(auth: CodexAuth): AuthManager {
+    const config = createDefaultConfig(process.cwd(), process.cwd());
+    config.auth.method = "openai-api-key";
+    return new AuthManager(config, { fixedCodexAuth: auth });
+  }
+
+  getSelectedMethod(): AuthMethod {
+    return this.config.auth?.method ?? "openai-api-key";
+  }
+
+  async setMethod(method: AuthMethod): Promise<void> {
+    ensureAuthConfig(this.config).method = method;
+    if (this.options.saveAuthConfig) {
+      await this.options.saveAuthConfig(this.config.auth);
+    }
+  }
+
+  async getToken(provider: "openai" | "anthropic"): Promise<string> {
+    const method = this.getSelectedMethod();
+    switch (method) {
+      case "openai-api-key":
+        this.assertProvider("openai", provider, method);
+        return this.getApiKey("openai");
+      case "anthropic-api-key":
+        this.assertProvider("anthropic", provider, method);
+        return this.getApiKey("anthropic");
+      case "oauth-chatgpt":
+        this.assertProvider("openai", provider, method);
+        return await this.getChatGptOAuthToken();
+      case "oauth-claude":
+        this.assertProvider("anthropic", provider, method);
+        return await this.getClaudeOAuthToken();
+      default:
+        throw new AuthError(`Unknown auth method: ${method}`);
+    }
+  }
+
+  async getCodexAuthForProvider(
+    provider: "openai" | "anthropic",
+  ): Promise<CodexAuth> {
+    if (this.fixedCodexAuth) {
+      return this.fixedCodexAuth;
+    }
+    const method = this.getSelectedMethod();
+    const token = await this.getToken(provider);
+    if (method === "oauth-chatgpt") {
+      return CodexAuth.fromChatGPT(token);
+    }
+    return CodexAuth.fromApiKey(token);
+  }
+
+  private getApiKey(provider: "openai" | "anthropic"): string {
+    const auth = ensureAuthConfig(this.config);
+    const key =
+      provider === "openai" ? auth.openaiApiKey : auth.anthropicApiKey;
+    if (key && key.trim()) {
+      return key.trim();
+    }
+
+    const field =
+      provider === "openai" ? "openai_api_key" : "anthropic_api_key";
+    const command =
+      provider === "openai"
+        ? "cody set-auth openai-api-key"
+        : "cody set-auth anthropic-api-key";
+    throw new AuthError(
+      `Missing API key for ${provider}. Set in config: [auth]\n${field} = "sk-..."\nOr run: ${command}`,
     );
   }
 
-  /**
-   * Create test manager with specific auth.
-   */
-  static fromAuthForTesting(auth: CodexAuth): AuthManager {
-    const manager = new AuthManager("", false, AuthCredentialsStoreMode.File);
-    manager.cachedAuth = auth;
-    return manager;
-  }
-
-  /**
-   * Get current cached auth (may be undefined if not logged in).
-   */
-  auth(): CodexAuth | undefined {
-    return this.cachedAuth;
-  }
-
-  /**
-   * Force reload of auth from storage.
-   *
-   * @returns true if the auth value changed
-   */
-  reload(): boolean {
-    const newAuth = this.loadAuthSync();
-    const changed = !this.authsEqual(this.cachedAuth, newAuth);
-    this.cachedAuth = newAuth;
-    return changed;
-  }
-
-  /**
-   * Logout by deleting auth file and clearing cache.
-   *
-   * @returns true if a file was removed
-   */
-  async logout(): Promise<boolean> {
-    const removed = await logout(this.codexHome, this.authCredentialsStoreMode);
-    this.reload(); // Clear cache
-    return removed;
-  }
-
-  /**
-   * Load auth synchronously from environment and storage.
-   */
-  private loadAuthSync(): CodexAuth | undefined {
-    // Check environment first
-    if (this.enableCodexApiKeyEnv) {
-      const envApiKey = readCodexApiKeyFromEnv();
-      if (envApiKey) {
-        return CodexAuth.fromApiKey(envApiKey);
-      }
+  private assertProvider(
+    expected: "openai" | "anthropic",
+    actual: "openai" | "anthropic",
+    method: AuthMethod,
+  ): void {
+    if (expected === actual) {
+      return;
     }
+    const message = getProviderMismatchMessage(method);
+    const suggestion =
+      expected === "openai"
+        ? "Switch to OpenAI: cody set-provider openai"
+        : "Switch to Anthropic: cody set-provider anthropic";
+    throw new AuthError(
+      `${message} Current provider: ${actual}. ${suggestion}`,
+    );
+  }
 
-    // Load from storage (sync)
-    const authFile = getAuthFile(this.codexHome);
-    if (!existsSync(authFile)) {
-      return undefined;
+  private async getChatGptOAuthToken(): Promise<string> {
+    const token = await this.readChatGptTokenFn();
+    if (token && token.trim()) {
+      return token.trim();
     }
+    const searched = DEFAULT_CHATGPT_TOKEN_PATHS.map(renderPath)
+      .map((p) => `  - ${p}`)
+      .join("\n");
+    throw new AuthError(
+      `ChatGPT OAuth token not found. Log in via ChatGPT Pro CLI to refresh token.\nSearched:\n${searched}\nOr switch to API key: cody set-auth openai-api-key`,
+    );
+  }
 
+  private async getClaudeOAuthToken(): Promise<string> {
+    const token = await this.readClaudeTokenFn();
+    if (token && token.trim()) {
+      return token.trim();
+    }
+    const searched = CLAUDE_OAUTH_PATHS.map(renderPath)
+      .map((p) => `  - ${p}`)
+      .join("\n");
+    throw new AuthError(
+      `Claude OAuth token not found. Log in via Claude Code to refresh token.\nSearched:\n${searched}\nOr switch to API key: cody set-auth anthropic-api-key`,
+    );
+  }
+}
+
+function getProviderMismatchMessage(method: AuthMethod): string {
+  switch (method) {
+    case "openai-api-key":
+      return "OpenAI API key can only be used with OpenAI providers.";
+    case "anthropic-api-key":
+      return "Anthropic API key can only be used with Anthropic providers.";
+    case "oauth-chatgpt":
+      return "ChatGPT OAuth can only be used with OpenAI providers.";
+    case "oauth-claude":
+      return "Claude OAuth can only be used with Anthropic providers.";
+    default:
+      return "Authentication method does not match the selected provider.";
+  }
+}
+
+function ensureAuthConfig(config: Config): AuthConfig {
+  if (!config.auth) {
+    config.auth = {
+      method: "openai-api-key",
+    };
+  }
+  return config.auth;
+}
+
+function renderPath(path: string): string {
+  const home = homedir();
+  if (path.startsWith(home)) {
+    return path.replace(home, "~");
+  }
+  return path;
+}
+
+async function readChatGptOAuthToken(): Promise<string | undefined> {
+  for (const path of DEFAULT_CHATGPT_TOKEN_PATHS) {
     try {
-      const content = readFileSync(authFile, "utf-8");
-      const authData = JSON.parse(content);
-
-      // Parse date if present
-      if (authData.last_refresh) {
-        authData.last_refresh = new Date(authData.last_refresh);
+      const contents = await fs.readFile(path, "utf-8");
+      const parsed = JSON.parse(contents) as Record<string, unknown>;
+      const token = extractChatGptToken(parsed);
+      if (token) {
+        return token;
       }
-
-      const storage = createAuthStorage(
-        this.codexHome,
-        this.authCredentialsStoreMode,
-      );
-
-      // Prefer API key if set
-      if (authData.OPENAI_API_KEY) {
-        return new CodexAuth(
-          AuthMode.ApiKey,
-          authData.OPENAI_API_KEY,
-          authData,
-          storage,
-        );
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+        continue;
       }
-
-      // Otherwise use ChatGPT tokens
-      if (authData.tokens) {
-        return new CodexAuth(AuthMode.ChatGPT, undefined, authData, storage);
-      }
-
-      return undefined;
-    } catch (error) {
-      return undefined;
+      // Ignore malformed files and continue searching
+      continue;
     }
   }
+  return undefined;
+}
 
-  /**
-   * Compare two auth objects for equality.
-   */
-  private authsEqual(
-    a: CodexAuth | undefined,
-    b: CodexAuth | undefined,
-  ): boolean {
-    if (a === undefined && b === undefined) return true;
-    if (a === undefined || b === undefined) return false;
-    return a.mode === b.mode;
+function extractChatGptToken(
+  data: Record<string, unknown>,
+): string | undefined {
+  const fromRoot = pickToken(data);
+  if (fromRoot) {
+    return fromRoot;
   }
+  const nested = data.tokens;
+  if (nested && typeof nested === "object") {
+    return pickToken(nested as Record<string, unknown>);
+  }
+  return undefined;
+}
+
+function pickToken(data: Record<string, unknown>): string | undefined {
+  const candidates = [
+    data.access_token,
+    data.accessToken,
+    (data as { token?: string }).token,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return undefined;
 }

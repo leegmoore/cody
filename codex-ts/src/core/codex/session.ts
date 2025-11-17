@@ -13,7 +13,14 @@ import type {
   TurnAbortReason,
 } from "../../protocol/protocol.js";
 import type { UserInput } from "../../protocol/items.js";
-import type { RolloutItem, SessionSource } from "../rollout.js";
+import {
+  FileRolloutStore,
+  type RolloutItem,
+  type RolloutRecorder,
+  type RolloutRecorderParams,
+  type RolloutStore,
+  SessionSource,
+} from "../rollout.js";
 import type {
   SessionConfiguration,
   SessionState,
@@ -31,7 +38,6 @@ import type { ModelClient } from "../client/client.js";
 import type { Config } from "../config.js";
 import * as SessionStateHelpers from "./session-state.js";
 import * as TurnStateHelpers from "./turn-state.js";
-import { Features } from "../features/index.js";
 import { McpConnectionManager } from "../mcp/index.js";
 import type { BashShell } from "../shell/index.js";
 import type { Prompt } from "../client/client-common.js";
@@ -41,8 +47,33 @@ import type { ResponseItem } from "../../protocol/models.js";
 import type { ToolApprovalCallback } from "../../tools/types.js";
 import { toolRegistry } from "../../tools/registry.js";
 import { ToolRouter } from "../tools/tool-router.js";
+import { runCompactTask } from "./compact.js";
 
 const MAX_TOOL_ITERATIONS = 100;
+const DEFAULT_CONTEXT_WINDOW = 128_000;
+
+function systemMessage(text: string): ResponseItem {
+  return {
+    type: "message",
+    role: "system",
+    content: [{ type: "input_text", text }],
+  };
+}
+
+function pinnedUserMessage(text: string): ResponseItem {
+  return {
+    type: "message",
+    role: "user",
+    content: [{ type: "input_text", text }],
+  };
+}
+
+interface SessionCreateOptions {
+  conversationId?: ConversationId;
+  initialHistory?: ResponseItem[];
+  rolloutStore?: RolloutStore;
+  rolloutParams?: RolloutRecorderParams;
+}
 
 /**
  * Internal session state and orchestration.
@@ -56,12 +87,14 @@ export class Session {
   private readonly services: SessionServices;
   private readonly modelClient: ModelClient;
   private readonly toolRouter: ToolRouter;
+  private readonly rolloutRecorder: RolloutRecorder | null;
   private _nextInternalSubId = 0;
   private approvalPolicyOverride: AskForApproval | null = null;
 
   // Private state
   private _state: SessionState;
   private _activeTurn: ActiveTurn | null = null;
+  private rolloutPath: string | null = null;
 
   constructor(
     conversationId: ConversationId,
@@ -80,10 +113,12 @@ export class Session {
       registry: toolRegistry,
       approvalCallback,
     });
+    this.rolloutRecorder = this.services.rollout.value ?? null;
   }
 
-  async emitSessionConfiguredEvent(rolloutPath: string): Promise<void> {
+  async emitSessionConfiguredEvent(rolloutPath?: string): Promise<void> {
     const sessionConfig = this._state.sessionConfiguration;
+    const resolvedPath = rolloutPath ?? this.rolloutPath ?? "";
     const event: EventMsg = {
       type: "session_configured",
       session_id: this.conversationId.toString(),
@@ -91,7 +126,7 @@ export class Session {
       reasoning_effort: sessionConfig.modelReasoningEffort ?? undefined,
       history_log_id: 0,
       history_entry_count: 0,
-      rollout_path: rolloutPath,
+      rollout_path: resolvedPath,
     };
     await this.sendEvent(INITIAL_SUBMIT_ID, event);
   }
@@ -153,6 +188,92 @@ export class Session {
    */
   getTxEvent(): EventEmitter {
     return this.txEvent;
+  }
+
+  getRolloutPath(): string | null {
+    return this.rolloutPath;
+  }
+
+  getHistory(): ResponseItem[] {
+    return this._state.history.getHistory();
+  }
+
+  getInitialContext(): ResponseItem[] {
+    const items: ResponseItem[] = [];
+    const config = this._state.sessionConfiguration;
+    if (config.baseInstructions) {
+      items.push(systemMessage(config.baseInstructions));
+    }
+    if (config.developerInstructions) {
+      items.push(systemMessage(config.developerInstructions));
+    }
+    if (config.userInstructions) {
+      items.push(pinnedUserMessage(config.userInstructions));
+    }
+    return items;
+  }
+
+  replaceHistory(items: ResponseItem[]): void {
+    SessionStateHelpers.replaceHistory(this._state, items);
+  }
+
+  getModelClient(): ModelClient {
+    return this.modelClient;
+  }
+
+  getRolloutRecorder(): RolloutRecorder | null {
+    return this.rolloutRecorder;
+  }
+
+  getSessionConfiguration(): SessionConfiguration {
+    return this._state.sessionConfiguration;
+  }
+
+  private getHistoryLength(): number {
+    return this._state.history.getHistory().length;
+  }
+
+  private resolveContextWindow(): number {
+    const config = this._state.sessionConfiguration.originalConfigDoNotUse;
+    if (config?.modelAutoCompactTokenLimit) {
+      return config.modelAutoCompactTokenLimit;
+    }
+    if (config?.modelContextWindow) {
+      return config.modelContextWindow;
+    }
+    return DEFAULT_CONTEXT_WINDOW;
+  }
+
+  private createCompactTurnContext(subId: string): TurnContext {
+    const sessionConfiguration = this._state.sessionConfiguration;
+    return {
+      subId,
+      client: this.modelClient,
+      cwd: sessionConfiguration.cwd,
+      developerInstructions: sessionConfiguration.developerInstructions,
+      baseInstructions: sessionConfiguration.baseInstructions,
+      compactPrompt: sessionConfiguration.compactPrompt,
+      userInstructions: sessionConfiguration.userInstructions,
+      approvalPolicy: sessionConfiguration.approvalPolicy,
+      sandboxPolicy: sessionConfiguration.sandboxPolicy,
+      shellEnvironmentPolicy: { mode: "default" },
+      toolsConfig: {
+        modelFamily: sessionConfiguration.provider.name,
+        features: sessionConfiguration.features,
+      },
+      finalOutputJsonSchema: null,
+      codexLinuxSandboxExe: null,
+      toolCallGate: null,
+      modelContextWindow: this.resolveContextWindow(),
+    };
+  }
+
+  private async maybeCompact(turnContext: TurnContext): Promise<void> {
+    try {
+      await runCompactTask(this, turnContext);
+    } catch (error) {
+      console.warn("Failed to compact conversation history:", error);
+    }
   }
 
   /**
@@ -220,11 +341,12 @@ export class Session {
     ).sessionConfiguration;
     this._state.sessionConfiguration = sessionConfiguration;
 
+    const modelContextWindow = this.resolveContextWindow();
+
     // Create turn context
-    // TODO: Port make_turn_context - for now return minimal stub
     const turnContext: TurnContext = {
       subId,
-      client: null as unknown as ModelClient, // TODO: Create ModelClient
+      client: this.modelClient,
       cwd: sessionConfiguration.cwd,
       developerInstructions: sessionConfiguration.developerInstructions,
       baseInstructions: sessionConfiguration.baseInstructions,
@@ -234,18 +356,21 @@ export class Session {
       sandboxPolicy: sessionConfiguration.sandboxPolicy,
       shellEnvironmentPolicy: { mode: "default" }, // TODO: Proper policy
       toolsConfig: {
-        modelFamily: "unknown",
-        features: Features.withDefaults(),
+        modelFamily: sessionConfiguration.provider.name,
+        features: sessionConfiguration.features,
       },
       finalOutputJsonSchema: updates.finalOutputJsonSchema ?? null,
       codexLinuxSandboxExe: null,
       toolCallGate: null as unknown, // TODO: Port ReadinessFlag
+      modelContextWindow,
     };
 
     return turnContext;
   }
 
   async processUserTurn(subId: string, items: UserInput[]): Promise<void> {
+    const turnContext = this.createCompactTurnContext(subId);
+    const historyStartLength = this.getHistoryLength();
     this.resetApprovalPolicyOverride();
     if (items.length === 0) {
       await this.sendEvent(subId, {
@@ -339,6 +464,9 @@ export class Session {
       type: "task_complete",
       last_agent_message: lastAgentMessage ?? undefined,
     });
+
+    await this.persistTurn(historyStartLength);
+    await this.maybeCompact(turnContext);
   }
 
   private buildPrompt(): Prompt {
@@ -420,6 +548,37 @@ export class Session {
     }
 
     return this.toolRouter.executeFunctionCalls(functionCalls);
+  }
+
+  private async persistTurn(historyStartLength: number): Promise<void> {
+    const recorder = this.services.rollout.value;
+    if (!recorder) {
+      return;
+    }
+
+    const history = this._state.history.getHistory();
+    if (historyStartLength >= history.length) {
+      return;
+    }
+
+    const newItems = history.slice(historyStartLength);
+    if (newItems.length === 0) {
+      return;
+    }
+
+    try {
+      const sessionConfig = this._state.sessionConfiguration;
+      await recorder.appendTurn({
+        timestamp: Date.now(),
+        items: newItems,
+        metadata: {
+          provider: sessionConfig.originalConfigDoNotUse.modelProviderId,
+          model: sessionConfig.model,
+        },
+      });
+    } catch (error) {
+      console.warn("Failed to append turn to rollout:", error);
+    }
   }
 
   private getEffectiveApprovalPolicy(): AskForApproval {
@@ -817,16 +976,27 @@ export class Session {
    */
   static async create(
     sessionConfiguration: SessionConfiguration,
-    _config: Config,
+    config: Config,
     authManager: AuthManager,
     txEvent: EventEmitter,
-    _sessionSource: SessionSource | null,
+    sessionSource: SessionSource | null,
     modelClient: ModelClient,
     approvalCallback?: ToolApprovalCallback,
+    options?: SessionCreateOptions,
   ): Promise<Session> {
     // Generate conversation ID
-    // TODO: Handle resumed conversations
-    const conversationId = ConversationId.new();
+    const conversationId = options?.conversationId ?? ConversationId.new();
+
+    const rolloutStore = options?.rolloutStore ?? new FileRolloutStore();
+    const rolloutParams: RolloutRecorderParams = options?.rolloutParams ?? {
+      type: "create",
+      conversationId,
+      instructions:
+        sessionConfiguration.userInstructions ?? config.userInstructions,
+      source: sessionSource ?? SessionSource.CLI,
+    };
+
+    const recorder = await rolloutStore.createRecorder(config, rolloutParams);
 
     console.info(
       `Configuring session: model=${sessionConfiguration.model}; provider=${sessionConfiguration.provider.name}`,
@@ -853,8 +1023,10 @@ export class Session {
       toolApprovals: null as unknown,
     };
 
+    services.rollout.value = recorder;
+
     // Create session instance
-    return new Session(
+    const session = new Session(
       conversationId,
       sessionConfiguration,
       services,
@@ -862,6 +1034,17 @@ export class Session {
       modelClient,
       approvalCallback,
     );
+
+    session.rolloutPath = recorder.getRolloutPath();
+
+    if (options?.initialHistory && options.initialHistory.length > 0) {
+      SessionStateHelpers.replaceHistory(
+        session._state,
+        options.initialHistory,
+      );
+    }
+
+    return session;
   }
 
   // TODO: Port remaining Session methods in future sections:

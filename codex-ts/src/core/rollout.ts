@@ -18,9 +18,11 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import type { Config } from "./config.js";
 import type { ConversationId } from "../protocol/conversation-id/index.js";
+import type { ResponseItem } from "../protocol/models.js";
 
 /** Subdirectory under ~/.cody for active sessions */
-export const SESSIONS_SUBDIR = "sessions";
+export const CONVERSATIONS_SUBDIR = "conversations";
+export const SESSIONS_SUBDIR = "sessions"; // Legacy path for backward compatibility
 
 /** Subdirectory under ~/.cody for archived sessions */
 export const ARCHIVED_SESSIONS_SUBDIR = "archived_sessions";
@@ -52,15 +54,40 @@ export interface SessionMeta {
   source: SessionSource;
   /** Model provider ID */
   modelProvider?: string;
+  /** Model slug */
+  model?: string;
+  /** Wire API identifier */
+  modelProviderApi?: string;
 }
 
 /**
  * A single item in the rollout (simplified for Phase 2)
  */
-export interface RolloutItem {
-  type: "session_meta" | "message" | "response" | "event";
-  data: unknown;
+export interface RolloutTurnMetadata {
+  provider?: string;
+  model?: string;
+  tokens?: number;
 }
+
+export interface RolloutTurn {
+  timestamp: number;
+  items: ResponseItem[];
+  metadata?: RolloutTurnMetadata;
+}
+
+export interface RolloutCompactionEntry {
+  timestamp: number;
+  summary: string;
+  truncatedCount?: number;
+}
+
+export type RolloutItem =
+  | { type: "session_meta"; data: SessionMeta }
+  | { type: "message"; data: unknown }
+  | { type: "response"; data: unknown }
+  | { type: "event"; data: unknown }
+  | { type: "turn"; data: RolloutTurn }
+  | { type: "compacted"; data: RolloutCompactionEntry };
 
 /**
  * A line in the rollout JSONL file
@@ -111,6 +138,60 @@ export interface ConversationsPage {
   items: ConversationItem[];
   /** Whether there are more results */
   hasMore: boolean;
+}
+
+export interface RolloutConversation {
+  meta?: SessionMeta;
+  turns: RolloutTurn[];
+  compacted: RolloutCompactionEntry[];
+}
+
+export interface RolloutStore {
+  createRecorder(
+    config: Config,
+    params: RolloutRecorderParams,
+  ): Promise<RolloutRecorder>;
+  listConversations(
+    codexHome: string,
+    limit?: number,
+  ): Promise<ConversationsPage>;
+  findConversationPathById(
+    codexHome: string,
+    idStr: string,
+  ): Promise<string | undefined>;
+  readConversation(path: string): Promise<RolloutConversation>;
+}
+
+export class FileRolloutStore implements RolloutStore {
+  async createRecorder(
+    config: Config,
+    params: RolloutRecorderParams,
+  ): Promise<RolloutRecorder> {
+    return RolloutRecorder.create(config, params);
+  }
+
+  async listConversations(
+    codexHome: string,
+    limit?: number,
+  ): Promise<ConversationsPage> {
+    return RolloutRecorder.listConversations(codexHome, limit);
+  }
+
+  async findConversationPathById(
+    codexHome: string,
+    idStr: string,
+  ): Promise<string | undefined> {
+    return RolloutRecorder.findConversationPathById(codexHome, idStr);
+  }
+
+  async readConversation(path: string): Promise<RolloutConversation> {
+    const lines = await RolloutRecorder.readRolloutHistory(path);
+    return {
+      meta: extractSessionMeta(lines),
+      turns: extractRolloutTurns(lines),
+      compacted: extractCompactedEntries(lines),
+    };
+  }
 }
 
 /**
@@ -201,6 +282,32 @@ export class RolloutRecorder {
     }
   }
 
+  async appendTurn(turn: RolloutTurn): Promise<void> {
+    const payload: RolloutTurn = {
+      ...turn,
+      timestamp: turn.timestamp ?? Date.now(),
+    };
+    await this.recordItems([
+      {
+        type: "turn",
+        data: payload,
+      },
+    ]);
+  }
+
+  async appendCompacted(entry: RolloutCompactionEntry): Promise<void> {
+    const payload: RolloutCompactionEntry = {
+      ...entry,
+      timestamp: entry.timestamp ?? Date.now(),
+    };
+    await this.recordItems([
+      {
+        type: "compacted",
+        data: payload,
+      },
+    ]);
+  }
+
   /**
    * Write a single rollout line to the file.
    *
@@ -225,8 +332,9 @@ export class RolloutRecorder {
     }
 
     const lines: RolloutLine[] = [];
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
+    const rawLines = content.split("\n");
+    for (let i = 0; i < rawLines.length; i++) {
+      const trimmed = rawLines[i].trim();
       if (trimmed.length === 0) {
         continue;
       }
@@ -235,8 +343,8 @@ export class RolloutRecorder {
         const parsed = JSON.parse(trimmed) as RolloutLine;
         lines.push(parsed);
       } catch (error) {
-        // Skip invalid lines
-        console.warn(`Failed to parse rollout line: ${trimmed}`);
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to parse rollout line ${i + 1}: ${reason}`);
       }
     }
 
@@ -254,16 +362,13 @@ export class RolloutRecorder {
     codexHome: string,
     limit: number = 50,
   ): Promise<ConversationsPage> {
-    const sessionsDir = path.join(codexHome, SESSIONS_SUBDIR);
-
-    try {
-      await fs.access(sessionsDir);
-    } catch {
-      // Sessions directory doesn't exist
-      return { items: [], hasMore: false };
-    }
-
-    const conversations = await collectConversations(sessionsDir, limit);
+    const files = await gatherConversationFiles(codexHome, limit * 2);
+    const conversations = await collectConversationsFromFiles(files);
+    conversations.sort((a, b) => {
+      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      return bTime - aTime;
+    });
     return {
       items: conversations.slice(0, limit),
       hasMore: conversations.length > limit,
@@ -281,8 +386,19 @@ export class RolloutRecorder {
     codexHome: string,
     idStr: string,
   ): Promise<string | undefined> {
-    const sessionsDir = path.join(codexHome, SESSIONS_SUBDIR);
+    const conversationsDir = path.join(codexHome, CONVERSATIONS_SUBDIR);
+    const directPath = joinIfWithin(conversationsDir, `${idStr}.jsonl`);
+    if (!directPath) {
+      return undefined;
+    }
+    try {
+      await fs.access(directPath);
+      return directPath;
+    } catch {
+      // ignore, fallback to legacy structure
+    }
 
+    const sessionsDir = path.join(codexHome, SESSIONS_SUBDIR);
     try {
       await fs.access(sessionsDir);
     } catch {
@@ -363,22 +479,10 @@ async function createLogFile(
   source: SessionSource,
 ): Promise<LogFileInfo> {
   const now = new Date();
-
-  // Create directory structure: ~/.cody/sessions/YYYY/MM/DD
-  const year = now.getFullYear().toString();
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const day = now.getDate().toString().padStart(2, "0");
-
-  const dir = path.join(config.codexHome, SESSIONS_SUBDIR, year, month, day);
+  const dir = path.join(config.codexHome, CONVERSATIONS_SUBDIR);
   await fs.mkdir(dir, { recursive: true });
 
-  // Format timestamp for filename: YYYY-MM-DDThh-mm-ss
-  const hour = now.getHours().toString().padStart(2, "0");
-  const minute = now.getMinutes().toString().padStart(2, "0");
-  const second = now.getSeconds().toString().padStart(2, "0");
-  const timestamp = `${year}-${month}-${day}T${hour}-${minute}-${second}`;
-
-  const filename = `rollout-${timestamp}-${conversationId.toString()}.jsonl`;
+  const filename = `${conversationId.toString()}.jsonl`;
   const filePath = path.join(dir, filename);
 
   // Create the file
@@ -393,6 +497,8 @@ async function createLogFile(
     instructions,
     source,
     modelProvider: config.modelProviderId,
+    model: config.model,
+    modelProviderApi: config.modelProviderApi,
   };
 
   return { filePath, meta };
@@ -405,16 +511,15 @@ async function createLogFile(
  * @param limit - Maximum number to collect
  * @returns Array of conversation items
  */
-async function collectConversations(
-  sessionsDir: string,
-  limit: number,
+async function collectConversationsFromFiles(
+  files: string[],
 ): Promise<ConversationItem[]> {
   const conversations: ConversationItem[] = [];
-  const files = await collectRolloutFilesRecursive(sessionsDir, limit * 2);
+  const seen = new Set<string>();
 
   for (const file of files) {
     const conversationId = extractConversationIdFromPath(file);
-    if (!conversationId) {
+    if (!conversationId || seen.has(conversationId)) {
       continue;
     }
 
@@ -432,22 +537,12 @@ async function collectConversations(
         createdAt,
         updatedAt,
       });
-
-      // Collect one extra to know if there are more
-      if (conversations.length > limit) {
-        break;
-      }
+      seen.add(conversationId);
     } catch (error) {
       // Skip files that can't be read
       continue;
     }
   }
-
-  // Sort by creation time (newest first)
-  conversations.sort((a, b) => {
-    if (!a.createdAt || !b.createdAt) return 0;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
 
   return conversations;
 }
@@ -502,6 +597,39 @@ async function collectRolloutFilesRecursive(
   return files;
 }
 
+async function collectFlatConversationFiles(dir: string): Promise<string[]> {
+  const files: Array<{ path: string; mtime: number }> = [];
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".jsonl")) {
+        continue;
+      }
+      const fullPath = path.join(dir, entry.name);
+      const stats = await fs.stat(fullPath);
+      files.push({ path: fullPath, mtime: stats.mtimeMs });
+    }
+  } catch {
+    return [];
+  }
+
+  files.sort((a, b) => b.mtime - a.mtime);
+  return files.map((entry) => entry.path);
+}
+
+async function gatherConversationFiles(
+  codexHome: string,
+  limit: number,
+): Promise<string[]> {
+  const conversationDir = path.join(codexHome, CONVERSATIONS_SUBDIR);
+  const legacyDir = path.join(codexHome, SESSIONS_SUBDIR);
+
+  const flatFiles = await collectFlatConversationFiles(conversationDir);
+  const legacyFiles = await collectRolloutFilesRecursive(legacyDir, limit);
+
+  return [...flatFiles.slice(0, limit), ...legacyFiles];
+}
+
 /**
  * Find a conversation file by ID, searching recursively.
  *
@@ -545,6 +673,9 @@ async function findConversationRecursive(
  */
 function extractConversationIdFromPath(filePath: string): string | undefined {
   const filename = path.basename(filePath);
+  if (/^[0-9a-f-]{36}\.jsonl$/.test(filename)) {
+    return filename.replace(/\.jsonl$/, "");
+  }
   const match = filename.match(/rollout-.*?-([0-9a-f-]{36})\.jsonl$/);
   return match ? match[1] : undefined;
 }
@@ -560,6 +691,30 @@ function extractSessionMeta(lines: RolloutLine[]): SessionMeta | undefined {
     if (line.item.type === "session_meta") {
       return line.item.data as SessionMeta;
     }
+  }
+  return undefined;
+}
+
+function extractRolloutTurns(lines: RolloutLine[]): RolloutTurn[] {
+  return lines
+    .filter((line) => line.item.type === "turn")
+    .map((line) => line.item.data as RolloutTurn);
+}
+
+function extractCompactedEntries(
+  lines: RolloutLine[],
+): RolloutCompactionEntry[] {
+  return lines
+    .filter((line) => line.item.type === "compacted")
+    .map((line) => line.item.data as RolloutCompactionEntry);
+}
+
+function joinIfWithin(baseDir: string, fragment: string): string | undefined {
+  const candidate = path.join(baseDir, fragment);
+  const resolvedBase = path.resolve(baseDir);
+  const resolvedCandidate = path.resolve(candidate);
+  if (resolvedCandidate.startsWith(`${resolvedBase}${path.sep}`)) {
+    return candidate;
   }
   return undefined;
 }

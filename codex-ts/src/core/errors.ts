@@ -24,3 +24,26 @@ export class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+
+export class ConversationNotFoundError extends Error {
+  constructor(id: string) {
+    super(
+      `Conversation '${id}' not found. Run 'cody list' to see available IDs.`,
+    );
+    this.name = "ConversationNotFoundError";
+  }
+}
+
+export class CorruptedRolloutError extends Error {
+  constructor(id: string) {
+    super(`Conversation '${id}' has corrupted rollout data.`);
+    this.name = "CorruptedRolloutError";
+  }
+}
+
+export class EmptyRolloutError extends Error {
+  constructor(id: string) {
+    super(`Conversation '${id}' has no turns to resume.`);
+    this.name = "EmptyRolloutError";
+  }
+}

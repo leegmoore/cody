@@ -27,7 +27,10 @@ export function createRuntime(): CliRuntime {
         return manager;
       }
       const loaded = await this.loadConfig();
-      const authManager = createAuthManagerFromCliConfig(loaded.cli);
+      const authManager = createAuthManagerFromCliConfig(
+        loaded.cli,
+        loaded.core,
+      );
       const modelClientFactory = createCliModelClientFactory(loaded.cli);
       manager = getOrCreateManager({
         authManager,

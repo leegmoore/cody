@@ -78,11 +78,19 @@ export class WorkerPool {
   private nextWorkerId = 0;
   private initialized = false;
   private quickJS: Awaited<ReturnType<typeof getQuickJS>> | null = null;
+  private pending: PendingRequest[] = [];
 
   constructor(config: WorkerPoolConfig = {}) {
-    const cpuCount = os.cpus().length;
+    let cpuCount = 1;
+    try {
+      const cpus = os.cpus();
+      cpuCount = cpus && cpus.length > 0 ? cpus.length : 1;
+    } catch {
+      cpuCount = 1;
+    }
+    const safeCores = Math.max(cpuCount, 1);
     this.config = {
-      size: config.size ?? Math.min(2, cpuCount),
+      size: config.size ?? Math.max(1, Math.min(2, safeCores)),
       maxScriptsPerWorker: config.maxScriptsPerWorker ?? 100,
       enableReuse: config.enableReuse ?? true,
     };
@@ -150,40 +158,33 @@ export class WorkerPool {
       return await this.createWorker();
     }
 
-    const startTime = Date.now();
-
-    // Wait for available worker (poll with timeout)
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      // Find available worker
-      const available = this.workers.find((w) => !w.inUse && w.healthy);
-
-      if (available) {
-        // Check if worker needs recycling
-        if (available.executionCount >= this.config.maxScriptsPerWorker) {
-          // Recycle worker
-          available.context.dispose();
-          const replacement = await this.createWorker();
-          const index = this.workers.indexOf(available);
-          this.workers[index] = replacement;
-          replacement.inUse = true;
-          return replacement;
-        }
-
-        available.inUse = true;
-        return available;
-      }
-
-      // Check timeout
-      if (Date.now() - startTime > timeoutMs) {
-        throw new HarnessInternalError(
-          `Worker pool exhausted - no workers available after ${timeoutMs}ms`,
-        );
-      }
-
-      // Wait a bit before checking again
-      await new Promise((resolve) => setTimeout(resolve, 10));
+    const immediate = await this.checkoutAvailableWorker();
+    if (immediate) {
+      return immediate;
     }
+
+    return await new Promise<Worker>((resolve, reject) => {
+      const entry: PendingRequest = { resolve, reject };
+      const timer = setTimeout(() => {
+        this.pending = this.pending.filter((pending) => pending !== entry);
+        reject(
+          new HarnessInternalError(
+            `Worker pool exhausted - no workers available after ${timeoutMs}ms`,
+          ),
+        );
+      }, timeoutMs);
+
+      entry.resolve = (worker: Worker) => {
+        clearTimeout(timer);
+        resolve(worker);
+      };
+      entry.reject = (error: Error) => {
+        clearTimeout(timer);
+        reject(error);
+      };
+
+      this.pending.push(entry);
+    });
   }
 
   /**
@@ -198,18 +199,13 @@ export class WorkerPool {
       return;
     }
 
-    // Dispose the old context and create a fresh one to ensure isolation
-    // This prevents globals from one execution leaking into the next
-    worker.context.dispose();
-
-    if (!this.quickJS) {
-      throw new HarnessInternalError("Worker pool not initialized");
-    }
-
-    worker.context = this.quickJS.newContext();
+    await this.resetWorkerContext(worker);
 
     // Increment execution count
     worker.executionCount++;
+    if (this.dispatchPendingWorker(worker)) {
+      return;
+    }
     worker.inUse = false;
   }
 
@@ -270,6 +266,11 @@ export class WorkerPool {
    * Dispose the worker pool and cleanup all workers
    */
   async dispose(): Promise<void> {
+    for (const pending of this.pending.splice(0)) {
+      pending.reject(
+        new HarnessInternalError("Worker pool disposed before fulfillment"),
+      );
+    }
     for (const worker of this.workers) {
       worker.context.dispose();
     }
@@ -277,4 +278,55 @@ export class WorkerPool {
     this.initialized = false;
     this.quickJS = null;
   }
+
+  private async checkoutAvailableWorker(): Promise<Worker | undefined> {
+    const available = this.workers.find((w) => !w.inUse && w.healthy);
+    if (!available) {
+      return undefined;
+    }
+
+    if (available.executionCount >= this.config.maxScriptsPerWorker) {
+      await this.recycleWorker(available);
+      return this.checkoutAvailableWorker();
+    }
+
+    available.inUse = true;
+    return available;
+  }
+
+  private async recycleWorker(worker: Worker): Promise<void> {
+    worker.context.dispose();
+    const replacement = await this.createWorker();
+    const index = this.workers.indexOf(worker);
+    if (index >= 0) {
+      this.workers[index] = replacement;
+    } else {
+      this.workers.push(replacement);
+    }
+  }
+
+  private async resetWorkerContext(worker: Worker): Promise<void> {
+    worker.context.dispose();
+
+    if (!this.quickJS) {
+      throw new HarnessInternalError("Worker pool not initialized");
+    }
+
+    worker.context = this.quickJS.newContext();
+  }
+
+  private dispatchPendingWorker(worker: Worker): boolean {
+    const pending = this.pending.shift();
+    if (!pending) {
+      return false;
+    }
+    worker.inUse = true;
+    pending.resolve(worker);
+    return true;
+  }
+}
+
+interface PendingRequest {
+  resolve: (worker: Worker) => void;
+  reject: (error: Error) => void;
 }

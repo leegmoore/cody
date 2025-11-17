@@ -254,6 +254,9 @@ export interface TurnContext {
 
   /** Tool call gate (readiness flag) */
   toolCallGate: unknown; // TODO: Port ReadinessFlag
+
+  /** Model context window in tokens */
+  modelContextWindow: number;
 }
 
 /**

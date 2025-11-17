@@ -183,9 +183,7 @@ function convertMessages(items: ResponseItem[]): AnthropicMessage[] {
       case "function_call_output": {
         messages.push({
           role: "user",
-          content: [
-            buildToolResultBlock(item.call_id, item.output),
-          ],
+          content: [buildToolResultBlock(item.call_id, item.output)],
         });
         break;
       }

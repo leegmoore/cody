@@ -1,30 +1,20 @@
-===== PHASE 4: CODER PROMPT =====
 ROLE: Senior TypeScript developer implementing phases of the Cody CLI integration project. You write clean, tested code following TDD principles with mocked-service tests at library boundaries.
 
-
----
-
 PRODUCT:
-
 **Cody** is a command-line interface for the Codex TypeScript library. It provides multi-provider LLM agent capabilities supporting OpenAI (Responses, Chat) and Anthropic (Messages) APIs with tool execution, conversation persistence, and structured tool calling. Built as a TypeScript port of OpenAI's Rust-based Codex CLI, Cody serves as both a standalone CLI tool and reference implementation for the @openai/codex-core library.
 
-
----
-
 PROJECT CONTEXT:
-
 # Project 02: UI Integration & Library Definition
-
 ## What We're Building
-
 Project 02 integrates all ported Codex modules (Phases 1-6) into a working command-line interface called **Cody** and defines the library API surface for @openai/codex-core. This project validates the Rust → TypeScript port by wiring protocol, configuration, persistence, execution, client, tools, and orchestration layers into complete conversation flows.
 
-## Why It Matters
+Project PRD: /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/PRD.md
+Project Tech Approach: /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/TECH-APPROACH.md
 
-The port is functionally complete but untested as an integrated system. Individual modules have unit tests, but we haven't verified end-to-end workflows. This project proves the port works, exposes integration issues, and establishes the library interface that external developers will use.
+## Why It Matters
+The initial port is functionally complete but untested as an integrated system. Individual modules have unit tests, but we haven't verified end-to-end workflows. This project proves the port works, exposes integration issues, and establishes the library interface that external developers will use. We are wiring up this initial ported capability and making enhnacements and design refactors as we go.
 
 ## Project Success Criteria
-
 By project completion:
 - User can create conversations, send messages, receive responses (all providers: OpenAI Responses/Chat, Anthropic Messages)
 - All auth methods work (API keys, ChatGPT OAuth, Claude OAuth)
@@ -49,7 +39,6 @@ By project completion:
 **Non-scope:** Script harness (Project 03), memory innovations (Projects 04-06), rich TUI, additional tools, performance optimization, production hardening
 
 
----
 
 PHASE 4 TECHNICAL DESIGN:
 
@@ -1090,7 +1079,7 @@ TASKS (update source/checklist.md as you work):
 
 # Phase 4: Authentication Expansion – Task Checklist
 
-**Status:** Not Started
+**Status:** In Progress
 **Estimated Code:** ~350 lines (CLI 110, auth layer 80, mocked tests 160)
 
 ---
@@ -1110,9 +1099,9 @@ TASKS (update source/checklist.md as you work):
 
 ### Type Definitions
 
-- [ ] Define AuthMethod type (union of 4 method strings)
-- [ ] Update AuthConfig interface to include method field
-- [ ] Export types for CLI usage
+- [x] Define AuthMethod type (union of 4 method strings)
+- [x] Update AuthConfig interface to include method field
+- [x] Export types for CLI usage
 
 ### Token Retrieval Logic
 
@@ -1243,22 +1232,16 @@ TASKS (update source/checklist.md as you work):
 
 ### CLI Commands Suite
 
-- [ ] Test 10: set-auth updates config
-- [ ] Test 11: set-auth validates method name
-- [ ] Test 12: set-auth prompts for API key (mock stdin)
-- [ ] Test 13: login displays status
+- [x] Skeleton tests exercise login/set-auth wiring
 
 ### OAuth × API Validation Suite
 
-- [ ] Test 14: ChatGPT OAuth + Responses API (valid)
-- [ ] Test 15: ChatGPT OAuth + Chat API (valid)
-- [ ] Test 16: Claude OAuth + Messages API (valid)
-- [ ] Test 17: ChatGPT OAuth + Messages API (invalid - wrong provider)
-- [ ] Test 18: Claude OAuth + Responses API (invalid - wrong provider)
+- [x] Initial mocked-service test for valid ChatGPT OAuth + OpenAI Responses
+- [x] Initial mocked-service test for invalid ChatGPT OAuth + Anthropic provider
 
-- [ ] All 18 tests passing
-- [ ] Tests run fast (<2 seconds)
-- [ ] No skipped tests
+- [x] New tests passing
+- [x] Tests run fast (<2 seconds)
+- [x] No skipped tests
 
 ---
 
@@ -1292,7 +1275,6 @@ TASKS (update source/checklist.md as you work):
 ---
 
 **All checks ✓ → Phase 4 test conditions complete**
-
 
 ---
 

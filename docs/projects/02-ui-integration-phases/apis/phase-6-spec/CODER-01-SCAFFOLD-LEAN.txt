@@ -1,0 +1,244 @@
+ROLE: Senior TypeScript developer setting up a new Fastify + Playwright project.
+
+TASK: Create cody-fastify/ directory with Fastify server, health check endpoint, and Playwright test.
+
+WORKSPACE: /Users/leemoore/code/codex-port-02
+
+===
+
+DELIVERABLES:
+
+1. **Directory Structure**
+```
+cody-fastify/
+├── src/
+│   ├── server.ts           # Fastify server + health check
+│   └── api/
+│       └── errors/
+│           └── api-errors.ts   # Error classes
+├── tests/
+│   └── e2e/
+│       ├── fixtures/
+│       │   └── api-client.ts   # Playwright fixture
+│       └── smoke.spec.ts       # Health check test
+├── package.json
+├── tsconfig.json
+├── .prettierrc.toml (copy from parent)
+├── .eslintrc.json (adapt from ../codex-ts/.eslintrc.json)
+├── playwright.config.ts
+└── README.md
+```
+
+2. **Health Check Endpoint**
+- GET /health
+- Returns: `{ status: "ok", timestamp: "<iso-8601>", version: "0.1.0" }`
+- Always 200 OK
+
+3. **One Playwright Test**
+- tests/e2e/smoke.spec.ts
+- Verifies: GET /health returns 200 with valid JSON
+
+===
+
+DEPENDENCY VERSIONS:
+
+```json
+{
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^11.1.0",
+    "fastify-type-provider-zod": "^6.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "prettier": "^3.6.2",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "bun-types": "^1.3.1"
+  }
+}
+```
+
+===
+
+FASTIFY SETUP PATTERN (Use Exactly):
+
+Reference: /Users/leemoore/code/v/team-bruce/src/server.ts
+
+```typescript
+import Fastify from "fastify";
+import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import cors from "@fastify/cors";
+
+const app = Fastify({ logger: true });
+app.register(cors, { origin: '*' });
+
+app.get('/health', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  version: '0.1.0'
+}));
+
+app.register(
+  (sub) => {
+    sub.setValidatorCompiler(validatorCompiler);
+    sub.setSerializerCompiler(serializerCompiler);
+    // Future API routes here
+  },
+  { prefix: "/api/v1" }
+);
+
+const port = Number(process.env.PORT ?? '4010');
+const host = process.env.HOST ?? '0.0.0.0';
+app.listen({ port, host });
+```
+
+===
+
+ERROR CLASSES (Create in api-errors.ts):
+
+```typescript
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public code?: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message: string, details?: any) {
+    super(message, 400, "VALIDATION_ERROR", details);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(message: string) {
+    super(message, 404, "NOT_FOUND");
+  }
+}
+```
+
+===
+
+PLAYWRIGHT CONFIG (Use This Pattern):
+
+Reference: /Users/leemoore/code/v/codex-port/playwright.config.ts
+
+```typescript
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  testMatch: '**/*.spec.ts',
+  fullyParallel: true,
+  timeout: 60_000,
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4010',
+    trace: 'on-first-retry',
+  },
+  reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
+});
+```
+
+===
+
+PLAYWRIGHT FIXTURE + TEST:
+
+```typescript
+// tests/e2e/fixtures/api-client.ts
+import { test as base, expect, type APIRequestContext } from '@playwright/test';
+
+export class ApiClient {
+  constructor(private readonly request: APIRequestContext) {}
+
+  async healthCheck() {
+    return this.request.get('/health');
+  }
+}
+
+export const test = base.extend<{ api: ApiClient }>({
+  api: async ({ request }, use) => {
+    await use(new ApiClient(request));
+  },
+});
+
+export { expect };
+
+// tests/e2e/smoke.spec.ts
+import { test, expect } from './fixtures/api-client';
+
+test.describe('Health Check', () => {
+  test('should return 200 with valid response', async ({ api }) => {
+    const response = await api.healthCheck();
+    expect(response.status()).toBe(200);
+
+    const data = await response.json();
+    expect(data.status).toBe('ok');
+    expect(data.timestamp).toBeTruthy();
+    expect(data.version).toBe('0.1.0');
+  });
+});
+```
+
+===
+
+WORKFLOW:
+
+1. Create cody-fastify/ directory and structure
+2. Create all config files (package.json, tsconfig.json, prettier, eslint, playwright)
+3. Run: cd cody-fastify && bun install
+4. Implement src/server.ts
+5. Implement src/api/errors/api-errors.ts
+6. Create Playwright fixture and test
+7. Verify: bun run build (compiles)
+8. Verify: bun run lint (0 errors)
+9. Verify: bun run format (0 changes)
+10. Start server in background: bun src/server.ts &
+11. Run: bun run test:e2e (test passes)
+12. Stop server
+13. Git commit: "feat(api): initial Fastify scaffold with health check and Playwright test"
+
+===
+
+QUALITY GATES (ALL MUST PASS):
+
+✓ TypeScript compiles
+✓ ESLint 0 errors
+✓ Prettier formatted
+✓ Server starts without errors
+✓ GET /health returns 200
+✓ Playwright test passes
+
+===
+
+SCRIPTS TO ADD TO PACKAGE.JSON:
+
+```json
+{
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "build": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
+  }
+}
+```
+
+===
+
+START: Create your 3-4 item plan, then execute steps 1-13 completely. Do not stop until all quality gates pass.

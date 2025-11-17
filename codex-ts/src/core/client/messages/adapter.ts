@@ -171,20 +171,21 @@ function* processEvent(
         // Emit reasoning summary part added
         yield { type: "reasoning_summary_part_added" };
       } else if (completedBlock.type === "tool_use") {
-        // Emit tool call item that matches function_call pipeline
+        // Emit tool call item following custom_tool_call contract
         let toolInput = "{}";
         if (
           completedBlock.toolInputFragments &&
           completedBlock.toolInputFragments.length > 0
         ) {
-          toolInput = completedBlock.toolInputFragments.join("");
+          const joined = completedBlock.toolInputFragments.join("");
+          toolInput = joined.trim() ? joined : "{}";
         }
 
         const item: ResponseItem = {
-          type: "function_call",
+          type: "custom_tool_call",
           call_id: completedBlock.toolUseId || "",
           name: completedBlock.toolName || "",
-          arguments: toolInput,
+          input: toolInput,
         };
         yield { type: "output_item_added", item };
       }

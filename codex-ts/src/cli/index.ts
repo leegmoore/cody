@@ -12,6 +12,10 @@ import {
   registerSetApiCommand,
   registerSetProviderCommand,
 } from "./commands/providers.js";
+import { registerLoginCommand } from "./commands/login.js";
+import { registerSetAuthCommand } from "./commands/set-auth.js";
+import { registerListCommand } from "./commands/list.js";
+import { registerResumeCommand } from "./commands/resume.js";
 import { createRuntime, type CliRuntime } from "./runtime.js";
 import {
   ConfigurationError,
@@ -45,9 +49,13 @@ function buildProgram(runtime: CliRuntime): Command {
   registerNewCommand(program, runtime);
   registerChatCommand(program, runtime);
   registerReplCommand(program, runtime);
+  registerListCommand(program, runtime);
+  registerResumeCommand(program, runtime);
   registerSetProviderCommand(program);
   registerSetApiCommand(program);
   registerListProvidersCommand(program);
+  registerLoginCommand(program);
+  registerSetAuthCommand(program);
 
   return program;
 }

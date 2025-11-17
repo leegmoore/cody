@@ -56,6 +56,19 @@ export function clearActiveConversation(): void {
   activeConversation = null;
 }
 
+export function getActiveConversation(): {
+  conversationId: ConversationId;
+  conversation: Conversation;
+} | null {
+  if (!activeConversation) {
+    return null;
+  }
+  return {
+    conversationId: activeConversation.id,
+    conversation: activeConversation.conversation,
+  };
+}
+
 export function resetStateForTesting(): void {
   manager = null;
   activeConversation = null;

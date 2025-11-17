@@ -21,3 +21,21 @@ export class NotFoundError extends AppError {
     super(message, 404, "NOT_FOUND");
   }
 }
+
+export class ConflictError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super(message, 409, "CONFLICT", details);
+  }
+}
+
+export class NotImplementedError extends AppError {
+  constructor(message: string) {
+    super(message, 501, "NOT_IMPLEMENTED");
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string) {
+    super(message, 503, "SERVICE_UNAVAILABLE");
+  }
+}

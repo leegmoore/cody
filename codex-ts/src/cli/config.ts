@@ -8,9 +8,10 @@ import {
   OPENAI_DEFAULT_MODEL,
   createDefaultConfig,
   type Config,
+  type AuthMethod,
 } from "../core/config.js";
 import { ConfigurationError } from "../core/errors.js";
-import { AuthManager, CodexAuth } from "../core/auth/index.js";
+import { AuthManager, type AuthManagerOptions } from "../core/auth/index.js";
 import type { AskForApproval, SandboxPolicy } from "../protocol/protocol.js";
 import { ReasoningEffort, ReasoningSummary } from "../protocol/config-types.js";
 import {
@@ -37,8 +38,10 @@ export interface CliProviderConfig {
   temperature?: number;
 }
 
+export type CliAuthMethod = AuthMethod | "api-key";
+
 export interface CliAuthConfig {
-  method: "api-key" | string;
+  method: CliAuthMethod;
   openai_key?: string;
   anthropic_key?: string;
   openrouter_key?: string;
@@ -115,6 +118,7 @@ export async function loadCliConfig(
   core.modelProviderId = provider.name;
   core.modelProviderApi = provider.api;
   core.modelTemperature = provider.temperature ?? undefined;
+  applyCliAuthToCore(core, auth);
 
   // Apply config values to core config
   if (rawConfig) {
@@ -177,33 +181,17 @@ export async function writeRawCliConfig(
 
 export function createAuthManagerFromCliConfig(
   cliConfig: CliConfig,
+  coreConfig?: Config,
+  options?: AuthManagerOptions,
 ): AuthManager {
-  if (cliConfig.auth.method !== "api-key") {
-    throw new ConfigurationError(
-      `Auth method ${cliConfig.auth.method} is not supported in Phase 1`,
-    );
-  }
-
-  const apiKey = getApiKeyForProvider(cliConfig);
-  if (!apiKey) {
-    throw new ConfigurationError(
-      `API key for provider ${cliConfig.provider.name} is required. Set it in ~/.cody/config.toml or export the appropriate environment variable.`,
-    );
-  }
-
-  const auth = CodexAuth.fromApiKey(apiKey);
-  return AuthManager.fromAuthForTesting(auth);
-}
-
-function getApiKeyForProvider(cliConfig: CliConfig): string | undefined {
-  switch (cliConfig.provider.name) {
-    case "openai":
-      return cliConfig.auth.openai_key;
-    case "anthropic":
-      return cliConfig.auth.anthropic_key;
-    case "openrouter":
-      return cliConfig.auth.openrouter_key;
-  }
+  const resolvedCore =
+    coreConfig ?? createDefaultConfig(defaultCodexHome(), process.cwd());
+  resolvedCore.modelProviderId = cliConfig.provider.name;
+  resolvedCore.modelProviderApi = cliConfig.provider.api;
+  resolvedCore.model = cliConfig.provider.model;
+  resolvedCore.modelTemperature = cliConfig.provider.temperature;
+  applyCliAuthToCore(resolvedCore, cliConfig.auth);
+  return new AuthManager(resolvedCore, options);
 }
 
 function defaultCodexHome(): string {
@@ -308,18 +296,20 @@ function normalizeAuth(value: unknown): CliAuthConfig {
   }
 
   const table = value as Record<string, unknown>;
-  const method = getString(table.method) ?? "api-key";
+  const rawMethod = getString(table.method) ?? "api-key";
+  const method = normalizeAuthMethod(rawMethod);
   const resolvedOpenai = getString(table.openai_key) ?? envOpenai;
   const resolvedAnthropic = getString(table.anthropic_key) ?? envAnthropic;
   const resolvedOpenRouter = getString(table.openrouter_key) ?? envOpenRouter;
 
-  if (method !== "api-key") {
-    throw new ConfigurationError(
-      `Auth method ${method} not supported in Phase 1`,
-    );
-  }
-
-  if (!resolvedOpenai && !resolvedAnthropic && !resolvedOpenRouter) {
+  if (
+    (method === "api-key" ||
+      method === "openai-api-key" ||
+      method === "anthropic-api-key") &&
+    !resolvedOpenai &&
+    !resolvedAnthropic &&
+    !resolvedOpenRouter
+  ) {
     throw new ConfigurationError(
       "No API keys configured. Provide at least one provider key in auth section or environment variables.",
     );
@@ -331,6 +321,23 @@ function normalizeAuth(value: unknown): CliAuthConfig {
     anthropic_key: resolvedAnthropic?.trim(),
     openrouter_key: resolvedOpenRouter?.trim(),
   };
+}
+
+export function normalizeAuthMethod(value: string): CliAuthMethod {
+  const normalized = value.trim();
+  if (
+    normalized === "api-key" ||
+    normalized === "openai-api-key" ||
+    normalized === "anthropic-api-key" ||
+    normalized === "oauth-chatgpt" ||
+    normalized === "oauth-claude"
+  ) {
+    return normalized as CliAuthMethod;
+  }
+
+  throw new ConfigurationError(
+    `Auth method ${value} is not supported. Valid methods are: api-key, openai-api-key, anthropic-api-key, oauth-chatgpt, oauth-claude`,
+  );
 }
 
 function getString(value: unknown): string | undefined {
@@ -364,6 +371,24 @@ function parseTemperatureValue(value: unknown): number | undefined {
     );
   }
   return temperature;
+}
+
+function mapCliMethodToCore(
+  method: CliAuthMethod,
+  providerId: string,
+): AuthMethod {
+  if (method !== "api-key") {
+    return method;
+  }
+  return providerId === "anthropic" ? "anthropic-api-key" : "openai-api-key";
+}
+
+function applyCliAuthToCore(coreConfig: Config, cliAuth: CliAuthConfig): void {
+  coreConfig.auth = {
+    method: mapCliMethodToCore(cliAuth.method, coreConfig.modelProviderId),
+    openaiApiKey: cliAuth.openai_key,
+    anthropicApiKey: cliAuth.anthropic_key,
+  };
 }
 
 /**

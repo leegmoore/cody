@@ -19,6 +19,18 @@ import {
   Verbosity,
   ForcedLoginMethod,
 } from "../protocol/config-types.js";
+
+export type AuthMethod =
+  | "openai-api-key"
+  | "anthropic-api-key"
+  | "oauth-chatgpt"
+  | "oauth-claude";
+
+export interface AuthConfig {
+  method: AuthMethod;
+  openaiApiKey?: string;
+  anthropicApiKey?: string;
+}
 import type { ModelProviderApi } from "./model-provider-types.js";
 
 function normalizedEnv(value: string | undefined): string | undefined {
@@ -224,6 +236,9 @@ export interface Config {
 
   /** Enable web search tool */
   toolsWebSearchRequest: boolean;
+
+  /** Authentication configuration */
+  auth: AuthConfig;
 }
 
 /**
@@ -264,6 +279,11 @@ export function createDefaultConfig(codexHome: string, cwd: string): Config {
   config.chatgptBaseUrl = "https://chatgpt.com/backend-api/";
   config.includeApplyPatchTool = false;
   config.toolsWebSearchRequest = false;
+  config.auth = {
+    method: "openai-api-key",
+    openaiApiKey: process.env.OPENAI_API_KEY?.trim(),
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim(),
+  };
 
   return config;
 }

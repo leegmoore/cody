@@ -114,6 +114,9 @@ describe("Config", () => {
 
       expect(config.projectDocMaxBytes).toBe(32 * 1024); // 32 KiB
       expect(config.projectDocFallbackFilenames).toEqual([]);
+      expect(config.auth.method).toBe("openai-api-key");
+      expect(config.auth.openaiApiKey).toBeUndefined();
+      expect(config.auth.anthropicApiKey).toBeUndefined();
     });
   });
 

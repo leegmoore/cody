@@ -1,0 +1,404 @@
+ROLE: You are a senior TypeScript/Node.js developer implementing the foundation for the Cody REST API (Phase 6). You have deep expertise in Fastify, Playwright testing, and modern TypeScript development.
+
+PROJECT CONTEXT:
+Cody is an AI coding agent platform. We've completed a solid TypeScript port of the core library (1,950+ tests, multi-provider support, tool execution). Phase 6 adds a REST API layer to transform Cody from a CLI tool into a platform. This is the first step: scaffold the project structure and establish the foundation.
+
+CURRENT PHASE: Phase 6.0 - Initial Scaffold
+Sub-Task: Setup project structure, Fastify server, health check, and first Playwright test
+
+===
+
+PREREQUISITES:
+
+Before starting, read these documents to understand the full context:
+1. /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/apis/phase-6-spec/01-cody-api-prd.md
+2. /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/apis/phase-6-spec/03-cody-api-technical-architecture.md
+3. /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/apis/phase-6-spec/04-proven-patterns-from-previous-builds.md
+
+Also review the reference implementation:
+4. /Users/leemoore/code/v/codex-port/src/server.ts (Fastify setup pattern)
+5. /Users/leemoore/code/v/team-bruce/src/server.ts (Zod integration pattern)
+
+===
+
+WORKSPACE:
+- Root: /Users/leemoore/code/codex-port-02
+- You will create: /Users/leemoore/code/codex-port-02/cody-fastify/
+- Reference library: /Users/leemoore/code/codex-port-02/codex-ts/ (do not modify)
+
+===
+
+YOUR TASK:
+
+Create a new cody-fastify/ directory with complete project structure, Fastify server with health check endpoint, and Playwright test infrastructure.
+
+DELIVERABLES:
+
+1. **Project Structure**
+   - cody-fastify/ root directory
+   - package.json with all dependencies
+   - tsconfig.json for TypeScript
+   - .prettierrc.toml (copy from parent)
+   - .eslintrc.json (adapt from codex-ts with any Fastify-specific rules)
+   - playwright.config.ts (based on v/codex-port pattern)
+   - README.md with setup instructions
+
+2. **Source Code Structure**
+   - src/server.ts - Main Fastify server with health check
+   - src/api/errors/api-errors.ts - Error class hierarchy
+   - tests/e2e/fixtures/api-client.ts - Playwright fixture
+   - tests/e2e/smoke.spec.ts - Health check test
+
+3. **Fastify Server Implementation**
+   - Health check endpoint: GET /health
+   - Zod validator/serializer compiler setup (from team-bruce pattern)
+   - Global error handler
+   - CORS enabled
+   - Logger configured
+   - Server starts on port 4010 (configurable via PORT env var)
+
+4. **Health Check Endpoint**
+   - Returns: { status: "ok", timestamp: ISO-8601, version: "0.1.0" }
+   - Status code: 200
+   - Always succeeds (basic liveness check)
+
+5. **Playwright Test**
+   - tests/e2e/smoke.spec.ts
+   - Test: Health check returns 200 and valid JSON
+   - Uses api fixture pattern
+
+===
+
+DEPENDENCY VERSIONS (Use These Exact Versions):
+
+```json
+{
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^11.1.0",
+    "fastify-type-provider-zod": "^6.0.0",
+    "zod": "^3.23.8",
+    "ioredis": "^5.8.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "prettier": "^3.6.2",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "bun-types": "^1.3.1"
+  }
+}
+```
+
+===
+
+TECHNICAL REQUIREMENTS:
+
+**TypeScript:**
+- Strict mode enabled
+- ES2022 target
+- ESM modules (type: "module" in package.json)
+- Paths configured for clean imports
+
+**Prettier:**
+- Copy configuration from /Users/leemoore/code/codex-port-02/.prettierrc.toml
+- Integrate with ESLint (eslint-config-prettier)
+- Format fixes many lint issues automatically
+
+**ESLint:**
+- Adapt from codex-ts/.eslintrc.json
+- Include @typescript-eslint rules
+- No explicit-any errors
+- Unused vars with _ prefix allowed
+- Prettier integration (no formatting rules)
+
+**Fastify Pattern (CRITICAL - Use This Exact Pattern):**
+
+Reference: team-bruce /src/server.ts lines 1-46
+
+```typescript
+import Fastify from "fastify";
+import {
+  serializerCompiler,
+  validatorCompiler
+} from "fastify-type-provider-zod";
+import cors from "@fastify/cors";
+
+const app = Fastify({ logger: true });
+
+// CORS
+app.register(cors, { origin: '*' });
+
+// Health check (before API routes)
+app.get('/health', async () => {
+  return {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '0.1.0'
+  };
+});
+
+// API routes with Zod validation
+app.register(
+  (sub) => {
+    // KEY: Set compilers at group level
+    sub.setValidatorCompiler(validatorCompiler);
+    sub.setSerializerCompiler(serializerCompiler);
+
+    // Register route groups here (future)
+    // registerConversationRoutes(sub);
+  },
+  { prefix: "/api/v1" }
+);
+
+// Start server
+const port = Number(process.env.PORT ?? '4010');
+const host = process.env.HOST ?? '0.0.0.0';
+
+app.listen({ port, host }, (err, address) => {
+  if (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+  app.log.info(`Server listening on ${address}`);
+});
+```
+
+**Error Hierarchy Pattern:**
+
+Reference: team-bruce /src/errors.ts
+
+```typescript
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public code?: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message: string, details?: any) {
+    super(message, 400, "VALIDATION_ERROR", details);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(message: string) {
+    super(message, 404, "NOT_FOUND");
+  }
+}
+
+// Add global error handler in server.ts
+app.setErrorHandler((err, req, reply) => {
+  if (err instanceof ZodError) {
+    const message = err.issues
+      .map((i) => `${i.path.join(".") || "body"}: ${i.message}`)
+      .join("; ");
+    reply.code(400).send({
+      error: { code: "VALIDATION_ERROR", message }
+    });
+    return;
+  }
+
+  if (err instanceof AppError) {
+    reply.code(err.statusCode).send({
+      error: { code: err.code, message: err.message, details: err.details }
+    });
+    return;
+  }
+
+  app.log.error({ err, req: req.id }, "Unexpected error");
+  reply.code(500).send({
+    error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred" }
+  });
+});
+```
+
+**Playwright Configuration Pattern:**
+
+Reference: v/codex-port/playwright.config.ts
+
+```typescript
+import { defineConfig } from '@playwright/test';
+
+const PORT = process.env.PORT ?? '4010';
+const HOST = process.env.HOST ?? '127.0.0.1';
+const baseURL = `http://${HOST}:${PORT}`;
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  testMatch: '**/*.spec.ts',
+  fullyParallel: true,
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 2 : undefined,
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
+  use: {
+    baseURL,
+    trace: 'on-first-retry',
+  },
+  reporter: [
+    ['list'],
+    ['html', { outputFolder: 'playwright-report' }],
+  ],
+});
+```
+
+**Playwright Fixture Pattern:**
+
+```typescript
+import { test as base, expect, type APIRequestContext } from '@playwright/test';
+
+export class ApiClient {
+  constructor(private readonly request: APIRequestContext) {}
+
+  async healthCheck() {
+    return this.request.get('/health');
+  }
+}
+
+type Fixtures = {
+  api: ApiClient;
+};
+
+export const test = base.extend<Fixtures>({
+  api: async ({ request }, use) => {
+    await use(new ApiClient(request));
+  },
+});
+
+export { expect };
+```
+
+===
+
+WORKFLOW:
+
+1. Create directory structure for cody-fastify
+2. Initialize package.json with exact dependency versions specified above
+3. Create tsconfig.json (ES2022, strict mode, ESM)
+4. Copy .prettierrc.toml from parent directory
+5. Create .eslintrc.json (adapt from codex-ts)
+6. Create playwright.config.ts
+7. Implement src/server.ts with Fastify + health check
+8. Implement src/api/errors/api-errors.ts (error classes)
+9. Create tests/e2e/fixtures/api-client.ts (Playwright fixture)
+10. Create tests/e2e/smoke.spec.ts (health check test)
+11. Create README.md with setup/run instructions
+12. Run: bun install
+13. Verify: bun run build (TypeScript compiles)
+14. Verify: bun run format && bun run lint (both pass)
+15. Start server: bun run dev (or bun src/server.ts)
+16. Run test: bun run test:e2e (Playwright test passes)
+17. Commit all changes with clear message
+
+===
+
+SOLUTION PERSISTENCE (CRITICAL):
+
+- Treat yourself as an autonomous senior developer. Once given this directive, complete ALL steps 1-17 without stopping for confirmation.
+- Persist until the entire scaffold is working end-to-end: directory created, dependencies installed, server running, test passing, all quality gates green.
+- Be extremely biased for action. Do not stop at "I've created the structure" - continue through installation, verification, testing, and commit.
+- If you encounter any errors (TypeScript, ESLint, test failures), fix them immediately in the same session.
+- Do NOT end your turn until you can demonstrate: server starts successfully, health check returns 200, Playwright test passes.
+
+===
+
+USER UPDATES:
+
+- Post an initial 2-3 sentence plan before your first action
+- Send brief updates (1-2 sentences) every 6-8 tool calls with concrete outcomes
+- If you hit a longer stretch (fixing errors, debugging), post a "heads-down" note explaining why
+- End with a recap showing all 17 steps completed with checkmarks
+
+===
+
+PLAN TOOL USAGE:
+
+For this medium-sized scaffolding task, create a plan with 3-5 milestone items:
+- Setup project structure and dependencies
+- Implement Fastify server with health check
+- Create Playwright test infrastructure
+- Verify all quality gates passing
+
+Maintain exactly one item in_progress at a time. Mark complete when done. Update plan if scope changes. End with all items completed.
+
+===
+
+QUALITY GATES (ALL MUST PASS):
+
+Before ending session:
+1. TypeScript compiles: `bun run build` (or `tsc --noEmit`)
+2. ESLint passes: `bun run lint` (0 errors)
+3. Prettier formatted: `bun run format` (no changes)
+4. Server starts: `bun src/server.ts` (no errors, listening on port 4010)
+5. Health check works: `curl http://localhost:4010/health` returns 200
+6. Playwright test passes: `bun run test:e2e` (1 test, 0 failures)
+
+===
+
+OUTPUT FORMATTING:
+
+- Keep responses concise (this is a straightforward scaffolding task)
+- Code snippets only if debugging or clarifying ambiguity
+- Reference file paths instead of showing full code
+- Final recap: brief checklist of 17 steps with status (Done/Closed)
+
+===
+
+REFERENCE FILES (Study These First):
+
+**Fastify Setup:**
+- /Users/leemoore/code/v/team-bruce/src/server.ts (lines 1-50)
+- /Users/leemoore/code/v/codex-port/src/server.ts (lines 1-130)
+
+**Error Handling:**
+- /Users/leemoore/code/v/team-bruce/src/errors.ts (complete pattern)
+
+**Playwright Config:**
+- /Users/leemoore/code/v/codex-port/playwright.config.ts (enterprise pattern)
+
+**Playwright Fixtures:**
+- /Users/leemoore/code/v/codex-port/tests/e2e/fixtures/api-client.ts (class-based fixture)
+
+**Existing Code Quality:**
+- /Users/leemoore/code/codex-port-02/codex-ts/.eslintrc.json (adapt this)
+- /Users/leemoore/code/codex-port-02/.prettierrc.toml (use this exactly)
+
+===
+
+GUARDRAILS:
+
+**IN SCOPE:**
+- Create cody-fastify/ directory and all subdirectories
+- Setup package.json, tsconfig.json, config files
+- Implement minimal Fastify server with health check ONLY
+- Implement error classes (foundation for future endpoints)
+- Create Playwright fixture and health check test
+- Verify all quality gates pass
+
+**OUT OF SCOPE (Do NOT Implement):**
+- Any conversation endpoints (POST /conversations, etc.) - future phase
+- Redis integration - future phase
+- SSE streaming - future phase
+- Message submission - future phase
+- Any business logic beyond health check - future phase
+
+If you're tempted to implement more than the health check, STOP. This phase is purely scaffolding. Future phases will add endpoints one by one.
+
+===
+
+STARTING POINT:
+
+Begin by reading the three specification documents listed in PREREQUISITES. Then review the reference implementations. Then create your plan using the plan tool. Then execute steps 1-17 from the WORKFLOW section.
+
+Your first update should acknowledge the task and present your 3-5 item plan.

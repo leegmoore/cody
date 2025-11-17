@@ -1,0 +1,146 @@
+ROLE: Senior TypeScript developer implementing REST API handlers.
+
+TASK: Implement all conversation, message, and turn handlers to make the 56 Playwright tests pass.
+
+WORKSPACE: /Users/leemoore/code/codex-port-02/cody-fastify
+
+===
+
+CONTEXT:
+
+You just built:
+1. The skeleton (routes, handlers with NotImplementedError, schemas)
+2. The complete Playwright test suite (56 tests, all passing with 501 responses)
+
+Now implement the handlers to make tests pass with real status codes (201, 200, 404, etc.)
+
+===
+
+SPECIFICATIONS:
+
+Reference these documents:
+1. /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/apis/conversation-endpoints.md (API spec)
+2. /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/apis/phase-6-spec/test-conditions.md (test requirements)
+3. /Users/leemoore/code/codex-port-02/docs/projects/02-ui-integration-phases/apis/phase-6-spec/04-proven-patterns-from-previous-builds.md (reference patterns)
+
+===
+
+IMPLEMENTATION STRATEGY:
+
+**Phase 2.0:** Shell out to CLI commands (simplest path)
+**Phase 2.1:** Direct library calls (cleaner, done later)
+
+For Phase 2.0, handlers call existing `cody` CLI commands via exec:
+
+```typescript
+// Example: create handler
+async create(req, reply): Promise<void> {
+  const { stdout } = await exec(
+    `cody new --provider ${req.body.modelProviderId} --api ${req.body.modelProviderApi} --model ${req.body.model}`
+  );
+
+  const conversationId = parseConversationIdFromOutput(stdout);
+
+  reply.code(201).send({
+    conversationId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...req.body
+  });
+}
+```
+
+===
+
+HANDLERS TO IMPLEMENT:
+
+**Conversation Handlers (src/api/handlers/conversation-handlers.ts):**
+1. create() - Call: `cody new`
+2. list() - Call: `cody list`
+3. get() - Call: `cody resume <id>` or read conversation file
+4. update() - Update conversation metadata (modify JSONL file)
+5. delete() - Call: `cody delete <id>` or delete conversation file
+
+**Message Handlers (src/api/handlers/message-handlers.ts):**
+1. submit() - Call: `cody chat "message"` with conversation context
+   - Generate turnId
+   - Fire async execution
+   - Return 202 with turnId + URLs immediately
+
+**Turn Handlers (src/api/handlers/turn-handlers.ts):**
+1. getStatus() - Check turn status (for now, return mock data)
+2. streamEvents() - SSE endpoint (for now, return mock events)
+
+===
+
+CURRENT CLI COMMANDS:
+
+Available commands in codex-ts:
+- `cody new` - Create conversation
+- `cody list` - List conversations
+- `cody chat "message"` - Send message
+- `cody resume <id>` - Resume conversation
+
+Location: /Users/leemoore/code/codex-port-02/codex-ts/dist/cli/index.js
+
+===
+
+FILE LOCATIONS:
+
+**Conversations stored:**
+- ~/.cody/conversations/{conversationId}.jsonl
+- Format: First line = SessionMeta, subsequent lines = RolloutTurn
+
+**SessionMeta structure:**
+```json
+{
+  "id": "uuid",
+  "timestamp": "iso-8601",
+  "modelProvider": "openai",
+  "modelProviderApi": "responses",
+  "model": "gpt-5-codex",
+  "cwd": "/path",
+  "cliVersion": "0.0.0",
+  "source": "api"
+}
+```
+
+===
+
+IMPLEMENTATION PRIORITY:
+
+**Start with these (make tests pass):**
+1. POST /conversations (create)
+2. GET /conversations (list)
+3. GET /conversations/:id (get)
+4. DELETE /conversations/:id (delete)
+5. PATCH /conversations/:id (update)
+
+**Defer for now (mock responses):**
+- POST /conversations/:id/messages (return 202 with mock turnId)
+- GET /turns/:id (return mock status)
+- GET /turns/:id/stream-events (return mock SSE)
+
+===
+
+QUALITY GATES:
+
+After implementation:
+- [ ] bun run build (0 errors)
+- [ ] bun run lint (0 errors)
+- [ ] bun run test:e2e (56 tests pass)
+- [ ] Tests for conversation CRUD return 200/201/204 (not 501)
+- [ ] Message submission returns 202 (mock turnId ok)
+- [ ] Turn endpoints return 200 (mock data ok)
+
+===
+
+SOLUTION PERSISTENCE:
+
+Implement all conversation handlers (TC-1 through TC-5) completely. Make those ~25 tests pass with real status codes. Message and turn handlers can return mocks for now (202/200 responses with placeholder data).
+
+Do not stop until conversation CRUD is fully functional with tests passing.
+
+===
+
+START: Implement conversation handlers (create, list, get, update, delete) to make TC-1 through TC-5 tests pass.

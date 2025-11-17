@@ -136,9 +136,15 @@ async function handleErrorResponse(response: Response): Promise<never> {
   // Map error types to user-friendly messages
   let message: string;
   switch (errorType) {
-    case "authentication_error":
+    case "authentication_error": {
+      const hint =
+        "If you're using Claude OAuth, export a fresh CLAUDE_OAUTH_ACCESS_TOKEN (via Claude Code) or switch to `cody set-auth anthropic-api-key`.";
       message = `Authentication failed: ${errorMessage}`;
+      if (statusCode === 401) {
+        message += ` ${hint}`;
+      }
       break;
+    }
     case "rate_limit_error": {
       const retryAfter = response.headers.get("retry-after");
       message = `Rate limit exceeded: ${errorMessage}`;

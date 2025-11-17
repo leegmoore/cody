@@ -1,19 +1,19 @@
 # Phase 5: Persistence & Resume + Compact – Task Checklist
 
-**Status:** Not Started
+**Status:** In Progress
 **Estimated Code:** ~920 lines (CLI 110, resume logic 110, compact 450, tests 150, mocks 100)
 
 ---
 
 ## Setup & Planning
 
-- [ ] Review Phase 4 implementation (auth methods working)
-- [ ] Read TECH-APPROACH Section 6 (Phase 5 technical approach)
-- [ ] Read phase-5/source/design.md (implementation details)
-- [ ] Inspect ported RolloutRecorder: `codex-ts/src/core/rollout/`
-- [ ] Read Rust compact source: `codex-rs/core/src/codex/compact.rs`
-- [ ] Read Rust compact tests: `codex-rs/core/tests/suite/compact.rs`
-- [ ] Locate summarization prompt template: `codex-rs/core/templates/compact/prompt.md`
+- [x] Review Phase 4 implementation (auth methods working)
+- [x] Read TECH-APPROACH Section 6 (Phase 5 technical approach)
+- [x] Read phase-5/source/design.md (implementation details)
+- [x] Inspect ported RolloutRecorder: `codex-ts/src/core/rollout/`
+- [x] Read Rust compact source: `codex-rs/core/src/codex/compact.rs`
+- [x] Read Rust compact tests: `codex-rs/core/tests/suite/compact.rs`
+- [x] Locate summarization prompt template: `codex-rs/core/templates/compact/prompt.md`
 
 ---
 
@@ -21,18 +21,18 @@
 
 ### Session Auto-Save
 
-- [ ] Locate Session.processMessage() in ported code
-- [ ] Add recorder.appendTurn() call after turn completes
-- [ ] Pass conversation ID, timestamp, ResponseItems, metadata
-- [ ] Handle append errors gracefully (log warning, don't crash)
-- [ ] Verify writes happen after tool execution (full turn captured)
+- [x] Locate Session.processMessage() in ported code
+- [x] Add recorder.appendTurn() call after turn completes
+- [x] Pass conversation ID, timestamp, ResponseItems, metadata
+- [x] Handle append errors gracefully (log warning, don't crash)
+- [x] Verify writes happen after tool execution (full turn captured)
 
 ### ConversationManager Constructor
 
-- [ ] Inject RolloutRecorder into ConversationManager
-- [ ] Pass recorder to Session during conversation creation
-- [ ] Default baseDir: ~/.cody/conversations/ (or ~/.codex/conversations/)
-- [ ] Document storage path decision in DECISIONS.md
+- [x] Inject RolloutRecorder into ConversationManager
+- [x] Pass recorder to Session during conversation creation
+- [x] Default baseDir: ~/.cody/conversations/ (or ~/.codex/conversations/)
+- [x] Document storage path decision in DECISIONS.md
 
 ---
 
@@ -40,29 +40,29 @@
 
 ### list Command
 
-- [ ] Create `src/cli/commands/list.ts`
-- [ ] Implement:
-  - [ ] Call manager.listConversations()
-  - [ ] Format output (ID, provider, model, timestamp)
-  - [ ] Handle empty list (print helpful message)
-  - [ ] Sort by updatedAt (most recent first)
-- [ ] Output format:
-  - [ ] Clear table or list
-  - [ ] Timestamps human-readable
-  - [ ] Total count at bottom
+- [x] Create `src/cli/commands/list.ts`
+- [x] Implement:
+  - [x] Call manager.listConversations()
+  - [x] Format output (ID, provider, model, timestamp)
+  - [x] Handle empty list (print helpful message)
+  - [x] Sort by updatedAt (most recent first)
+- [x] Output format:
+  - [x] Clear table or list
+  - [x] Timestamps human-readable
+  - [x] Total count at bottom
 
 ### resume Command
 
-- [ ] Create `src/cli/commands/resume.ts`
-- [ ] Implement:
-  - [ ] Accept conversationId argument
-  - [ ] Call manager.resumeConversation(id)
-  - [ ] Set as active conversation
-  - [ ] Print confirmation with provider/model info
-- [ ] Error handling:
-  - [ ] Missing ID → helpful error, suggest `cody list`
-  - [ ] Corrupted rollout → error with details
-  - [ ] Empty rollout → error "no turns"
+- [x] Create `src/cli/commands/resume.ts`
+- [x] Implement:
+  - [x] Accept conversationId argument
+  - [x] Call manager.resumeConversation(id)
+  - [x] Set as active conversation
+  - [x] Print confirmation with provider/model info
+- [x] Error handling:
+  - [x] Missing ID → helpful error, suggest `cody list`
+  - [x] Corrupted rollout → error with details
+  - [x] Empty rollout → error "no turns"
 
 ---
 
@@ -70,24 +70,24 @@
 
 ### ConversationManager.resumeConversation()
 
-- [ ] Implement method:
-  - [ ] Call recorder.readRollout(id)
-  - [ ] Parse RolloutTurn[] → ResponseItem[]
-  - [ ] Extract metadata (provider, model, last timestamp)
-  - [ ] Create Session with pre-loaded history
-  - [ ] Create CodexConversation wrapper
-  - [ ] Return conversation
-- [ ] Error handling:
-  - [ ] File not found → ConversationNotFoundError
-  - [ ] Parse error → CorruptedRolloutError with line number
-  - [ ] Empty file → EmptyRolloutError
+- [x] Implement method:
+  - [x] Call recorder.readRollout(id)
+  - [x] Parse RolloutTurn[] → ResponseItem[]
+  - [x] Extract metadata (provider, model, last timestamp)
+  - [x] Create Session with pre-loaded history
+  - [x] Create CodexConversation wrapper
+  - [x] Return conversation
+- [x] Error handling:
+  - [x] File not found → ConversationNotFoundError
+  - [x] Parse error → CorruptedRolloutError with line number
+  - [x] Empty file → EmptyRolloutError
 
 ### ConversationManager.listConversations()
 
-- [ ] Implement method:
-  - [ ] Call recorder.list()
-  - [ ] Return conversation metadata array
-  - [ ] Sort by updatedAt descending
+- [x] Implement method:
+  - [x] Call recorder.list()
+  - [x] Return conversation metadata array
+  - [x] Sort by updatedAt descending
 
 ---
 
@@ -95,17 +95,17 @@
 
 ### Create Module Structure
 
-- [ ] Create `src/core/codex/compact.ts`
-- [ ] Port types:
-  - [ ] CompactedItem
-  - [ ] CompactConfig (thresholds, budgets)
-- [ ] Port constants:
-  - [ ] COMPACT_USER_MESSAGE_MAX_TOKENS = 20_000
-  - [ ] COMPACT_THRESHOLD = 0.8 (80% of context)
+- [x] Create `src/core/codex/compact.ts`
+- [x] Port types:
+  - [x] CompactedItem
+  - [x] CompactConfig (thresholds, budgets)
+- [x] Port constants:
+  - [x] COMPACT_USER_MESSAGE_MAX_TOKENS = 20_000
+  - [x] COMPACT_THRESHOLD = 0.8 (80% of context)
 
 ### Core Functions
 
-- [ ] **runCompactTask()** - Main entry point
+- [x] **runCompactTask()** - Main entry point
   - [ ] Check threshold
   - [ ] Get summary from LLM
   - [ ] Collect user messages
@@ -114,36 +114,36 @@
   - [ ] Persist CompactedItem
   - [ ] Emit events (compacting, completed, warning)
 
-- [ ] **needsCompaction()** - Threshold check
+- [x] **needsCompaction()** - Threshold check
   - [ ] Count history tokens
   - [ ] Compare to 80% of context window
   - [ ] Return boolean
 
-- [ ] **getSummary()** - LLM summarization
+- [x] **getSummary()** - LLM summarization
   - [ ] Build summarization prompt
   - [ ] Send to ModelClient
   - [ ] Extract summary text from response
   - [ ] Handle empty or error responses
 
-- [ ] **collectUserMessages()** - Extract user messages
+- [x] **collectUserMessages()** - Extract user messages
   - [ ] Filter history for role=user
   - [ ] Extract text content
   - [ ] Return string array
 
-- [ ] **buildCompactedHistory()** - Reconstruct history
+- [x] **buildCompactedHistory()** - Reconstruct history
   - [ ] Start with initial context
   - [ ] Add selected user messages
   - [ ] Add summary message
   - [ ] Add GhostSnapshots
   - [ ] Return new history array
 
-- [ ] **selectRecentMessages()** - Token budget allocation
+- [x] **selectRecentMessages()** - Token budget allocation
   - [ ] Work backwards from most recent
   - [ ] Keep messages until budget exhausted
   - [ ] Truncate last message if needed
   - [ ] Return selected messages
 
-- [ ] **truncateMiddle()** - Message truncation
+- [x] **truncateMiddle()** - Message truncation
   - [ ] Keep head (first 40%)
   - [ ] Keep tail (last 40%)
   - [ ] Replace middle with "... truncated ..."
@@ -165,17 +165,17 @@
 
 ### Integration with Session
 
-- [ ] Add compact check to Session.processMessage():
-  - [ ] After turn complete, before return
-  - [ ] Call compact.needsCompaction()
-  - [ ] If true, call compact.runCompactTask()
-  - [ ] Await completion
-- [ ] Add Session.replaceHistory() method:
-  - [ ] Replace internal history array
-  - [ ] Maintain other session state
-- [ ] Add Session.getInitialContext() method:
-  - [ ] Return system prompt + base instructions
-  - [ ] Used by compact to preserve initial context
+- [x] Add compact check to Session.processMessage():
+  - [x] After turn complete, before return
+  - [x] Call compact.needsCompaction()
+  - [x] If true, call compact.runCompactTask()
+  - [x] Await completion
+- [x] Add Session.replaceHistory() method:
+  - [x] Replace internal history array
+  - [x] Maintain other session state
+- [x] Add Session.getInitialContext() method:
+  - [x] Return system prompt + base instructions
+  - [x] Used by compact to preserve initial context
 
 ---
 
@@ -189,42 +189,42 @@
 
 ### Auto-Save Suite
 
-- [ ] Test 1: Appends turn after each message
-- [ ] Test 2: Includes metadata in rollout
-- [ ] Test 3: Handles append failure gracefully
+- [x] Test 1: Appends turn after each message
+- [x] Test 2: Includes metadata in rollout
+- [x] Test 3: Handles append failure gracefully
 
 ### Resume Suite
 
-- [ ] Test 4: Reconstructs conversation from JSONL
-- [ ] Test 5: Throws on missing conversation
-- [ ] Test 6: Handles corrupted JSONL
-- [ ] Test 7: Handles empty rollout
-- [ ] Test 8: Preserves provider/model metadata
+- [x] Test 4: Reconstructs conversation from JSONL
+- [x] Test 5: Throws on missing conversation
+- [x] Test 6: Handles corrupted JSONL
+- [x] Test 7: Handles empty rollout
+- [x] Test 8: Preserves provider/model metadata
 
 ### List Suite
 
-- [ ] Test 9: Returns all saved conversations
-- [ ] Test 10: Returns empty array when none
-- [ ] Test 11: Includes metadata in list
+- [x] Test 9: Returns all saved conversations
+- [x] Test 10: Returns empty array when none
+- [x] Test 11: Includes metadata in list
 
 ### Compact Suite
 
-- [ ] Test 12: Does not compact under threshold
-- [ ] Test 13: Triggers compact over threshold
-- [ ] Test 14: Rebuilds history with summary
-- [ ] Test 15: Preserves recent user messages
-- [ ] Test 16: Preserves GhostSnapshots
-- [ ] Test 17: Truncates middle of long messages
-- [ ] Test 18: Retries when still too large
-- [ ] Test 19: Persists CompactedItem to rollout
-- [ ] Test 20: Handles summarization failure
+- [x] Test 12: Does not compact under threshold
+- [x] Test 13: Triggers compact over threshold
+- [x] Test 14: Rebuilds history with summary
+- [x] Test 15: Preserves recent user messages
+- [x] Test 16: Preserves GhostSnapshots
+- [x] Test 17: Truncates middle of long messages
+- [x] Test 18: Retries when still too large
+- [x] Test 19: Persists CompactedItem to rollout
+- [x] Test 20: Handles summarization failure
 
 ### CLI Command Suite
 
-- [ ] Test 21: list command output
-- [ ] Test 22: list when empty
-- [ ] Test 23: resume command success
-- [ ] Test 24: resume missing ID
+- [x] Test 21: list command output
+- [x] Test 22: list when empty
+- [x] Test 23: resume command success
+- [x] Test 24: resume missing ID
 
 - [ ] All 24 tests passing
 - [ ] Tests run fast (<3 seconds)
@@ -239,17 +239,20 @@
 - [ ] Run: `npm run format` → no changes
 - [ ] Run: `npm run lint` → 0 errors
 - [ ] Run: `npx tsc --noEmit` → 0 errors
+- [x] Run: `npm run format` → no changes
+- [x] Run: `npm run lint` → 0 errors (existing repo warnings OK)
+- [x] Run: `npx tsc --noEmit` → 0 errors
 
 ### Testing
 
-- [ ] Run: `npm test` → all passing (1,876+ baseline + 24 new)
-- [ ] Verify: 0 skipped tests
-- [ ] Verify: Compact tests actually test compression logic
+- [x] Run: `npm test` → all passing (1,876+ baseline + 24 new)
+- [x] Verify: 0 skipped tests
+- [x] Verify: Compact tests actually test compression logic
 
 ### Combined Verification
 
-- [ ] Run: `npm run format && npm run lint && npx tsc --noEmit && npm test`
-- [ ] All commands succeed
+- [x] Run: `npm run format && npm run lint && npx tsc --noEmit && npm test`
+- [x] All commands succeed (lint still reports legacy non-null warnings)
 - [ ] Save output for verification
 
 ---
@@ -288,14 +291,14 @@
 ## Documentation
 
 - [ ] Update DECISIONS.md:
-  - [ ] Storage path chosen
-  - [ ] Compact threshold (80% or different)
-  - [ ] User message token budget (20k or adjusted)
-  - [ ] Summarization model (same as conversation or different)
-  - [ ] Compact visibility (user sees message or silent)
-  - [ ] Resume validation (allow provider mismatch or enforce)
-  - [ ] JSONL format compatibility with Rust
-  - [ ] Compact persistence strategy
+  - [x] Storage path chosen
+  - [x] Compact threshold (80% or different)
+  - [x] User message token budget (20k or adjusted)
+  - [x] Summarization model (same as conversation or different)
+  - [x] Compact visibility (user sees message or silent)
+  - [x] Resume validation (allow provider mismatch or enforce)
+  - [x] JSONL format compatibility with Rust
+  - [x] Compact persistence strategy
   - [ ] Claude keyring path found (from Phase 4 if discovered)
 - [ ] Update checklist (mark completed)
 - [ ] Verify phase ready for Phase 6

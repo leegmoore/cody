@@ -14,6 +14,7 @@ import {
   SessionSource,
   SESSIONS_SUBDIR,
   ARCHIVED_SESSIONS_SUBDIR,
+  CONVERSATIONS_SUBDIR,
   type RolloutRecorderParams,
   type RolloutItem,
   type SessionMeta,
@@ -71,7 +72,7 @@ describe("rollout", () => {
       expect(exists).toBe(true);
     });
 
-    it("should create directory structure YYYY/MM/DD", async () => {
+    it("should create file in conversations directory", async () => {
       const conversationId = ConversationId.new();
       const params: RolloutRecorderParams = {
         type: "create",
@@ -81,14 +82,8 @@ describe("rollout", () => {
 
       const recorder = await RolloutRecorder.create(testConfig, params);
       const rolloutPath = recorder.getRolloutPath();
-
-      const now = new Date();
-      const year = now.getFullYear().toString();
-      const month = (now.getMonth() + 1).toString().padStart(2, "0");
-      const day = now.getDate().toString().padStart(2, "0");
-
       expect(rolloutPath).toContain(
-        path.join(SESSIONS_SUBDIR, year, month, day),
+        path.join(CONVERSATIONS_SUBDIR, `${conversationId.toString()}.jsonl`),
       );
     });
 
@@ -257,7 +252,7 @@ describe("rollout", () => {
       expect(lines).toEqual([]);
     });
 
-    it("should skip invalid JSON lines", async () => {
+    it("should throw when encountering invalid JSON", async () => {
       const testFile = path.join(testCodexHome, "mixed.jsonl");
       await fs.writeFile(
         testFile,
@@ -267,10 +262,9 @@ describe("rollout", () => {
         "utf8",
       );
 
-      const lines = await RolloutRecorder.readRolloutHistory(testFile);
-      expect(lines).toHaveLength(2);
-      expect(lines[0].item.data.text).toBe("valid");
-      expect(lines[1].item.data.text).toBe("also valid");
+      await expect(
+        RolloutRecorder.readRolloutHistory(testFile),
+      ).rejects.toThrow(/Failed to parse rollout line/);
     });
 
     it("should include timestamps in each line", async () => {
@@ -428,22 +422,41 @@ describe("rollout", () => {
       expect(foundPath).toBeUndefined();
     });
 
-    it("should find conversation in nested directories", async () => {
+    it("should locate legacy conversations in nested directories", async () => {
       const conversationId = ConversationId.new();
-      await RolloutRecorder.create(testConfig, {
-        type: "create",
-        conversationId,
-        source: SessionSource.CLI,
-      });
+      const year = "2025";
+      const month = "01";
+      const day = "02";
+      const legacyDir = path.join(
+        testCodexHome,
+        SESSIONS_SUBDIR,
+        year,
+        month,
+        day,
+      );
+      await fs.mkdir(legacyDir, { recursive: true });
+      const legacyPath = path.join(
+        legacyDir,
+        `rollout-${year}-${month}-${day}T00-00-00-${conversationId.toString()}.jsonl`,
+      );
+      await fs.writeFile(
+        legacyPath,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          item: {
+            type: "session_meta",
+            data: { id: conversationId.toString() },
+          },
+        }) + "\n",
+        "utf8",
+      );
 
-      // Should find it even though it's nested in YYYY/MM/DD
       const foundPath = await RolloutRecorder.findConversationPathById(
         testCodexHome,
         conversationId.toString(),
       );
 
-      expect(foundPath).toBeDefined();
-      expect(foundPath).toContain(conversationId.toString());
+      expect(foundPath).toBe(legacyPath);
     });
   });
 

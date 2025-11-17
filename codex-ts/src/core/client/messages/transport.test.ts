@@ -183,7 +183,7 @@ describe("Transport Layer - Stage 7", () => {
           messages: [],
           stream: true,
         }),
-      ).rejects.toThrow(/authentication/i);
+      ).rejects.toThrow(/CLAUDE_OAUTH_ACCESS_TOKEN/);
     });
 
     it("should throw error on 429 rate limit", async () => {

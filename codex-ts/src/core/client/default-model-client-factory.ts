@@ -7,14 +7,12 @@ import {
 import type { ModelClientFactory } from "./model-client-factory.js";
 import type { Config } from "../config.js";
 import type { AuthManager } from "../auth/index.js";
-import type { CodexAuth as RuntimeCodexAuth } from "../auth/index.js";
-import { CodexAuth as StubCodexAuth } from "../auth/stub-auth.js";
 import { ConfigurationError } from "../errors.js";
 
 export function createDefaultModelClientFactory(): ModelClientFactory {
-  return ({ config, authManager }) => {
+  return async ({ config, authManager }) => {
     const provider = resolveProviderInfo(config);
-    const auth = getAuthForProvider(authManager, config);
+    const auth = await getAuthForProvider(authManager, config);
 
     return new ModelClient({
       provider,
@@ -68,12 +66,16 @@ function resolveProviderInfo(config: Config): ModelProviderInfo {
   );
 }
 
-function getAuthForProvider(authManager: AuthManager, config: Config) {
-  const auth = authManager.auth() as RuntimeCodexAuth | undefined;
-  if (!auth) {
+async function getAuthForProvider(authManager: AuthManager, config: Config) {
+  const provider =
+    config.modelProviderId === "anthropic" ? "anthropic" : "openai";
+  try {
+    return await authManager.getCodexAuthForProvider(provider);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown authentication error";
     throw new ConfigurationError(
-      `No credentials configured for provider "${config.modelProviderId}". Run 'cody login' or set an API key.`,
+      `No credentials configured for provider "${config.modelProviderId}": ${message}`,
     );
   }
-  return auth as unknown as StubCodexAuth;
 }
