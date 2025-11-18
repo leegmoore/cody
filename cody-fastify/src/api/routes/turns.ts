@@ -6,7 +6,8 @@ import { TurnQuerySchema, TurnStatusResponseSchema } from "../schemas/turn.js";
 export function registerTurnRoutes(app: FastifyInstance): void {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-  const handlers = buildTurnHandlers();
+  const codexRuntime = app.codexRuntime;
+  const handlers = buildTurnHandlers(codexRuntime);
 
   typedApp.get(
     "/turns/:id",

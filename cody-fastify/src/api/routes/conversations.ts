@@ -8,14 +8,20 @@ import {
   ConversationResponseSchema,
   ListConversationsResponseSchema,
 } from "../schemas/conversation.js";
+import type { CodexRuntime } from "../services/codex-runtime.js";
+
+// Extend FastifyInstance to include codexRuntime
+declare module "fastify" {
+  interface FastifyInstance {
+    codexRuntime: CodexRuntime;
+  }
+}
 
 export function registerConversationRoutes(app: FastifyInstance): void {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-  // TODO: Initialize ConversationManager (needs config, auth, etc.)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const manager = null as any; // Placeholder for now
-  const handlers = buildConversationHandlers(manager);
+  const codexRuntime = app.codexRuntime;
+  const handlers = buildConversationHandlers(codexRuntime);
 
   typedApp.post(
     "/conversations",

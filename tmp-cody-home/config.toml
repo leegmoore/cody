@@ -1,8 +1,0 @@
-[provider]
-name = "openai"
-api = "responses"
-model = "gpt-4o-mini"
-
-[auth]
-method = "api-key"
-openai_key = "sk-placeholder"

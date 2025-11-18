@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cody Agent Harness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tan: {
+                            50: "#fdf8f3",
+                            100: "#f5f0ea",
+                            200: "#eadfce",
+                            300: "#d8c3ae",
+                            400: "#c8a789",
+                            500: "#b78969",
+                            600: "#9f6d4f"
+                        },
+                        brown: {
+                            50: "#f8f1ea",
+                            100: "#eddecf",
+                            600: "#7a4b2f",
+                            700: "#613623",
+                            800: "#4a2717",
+                            900: "#2f180e"
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .message-content {
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .tool-card {
+            transition: all 0.2s ease;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .composer-textarea {
+            resize: none;
+            transition: height 0.2s ease;
+        }
+        
+        .sidebar {
+            transition: margin-left 0.3s ease, margin-right 0.3s ease;
+        }
+        
+        .file-tree-item {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .file-tree-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .nav-item {
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .nav-item:hover {
+            background-color: rgba(234, 88, 12, 0.1);
+        }
+        
+        .nav-item.active {
+            background-color: rgba(234, 88, 12, 0.15);
+            border-left: 3px solid #ea580c;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f5f0ea;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c19a7d;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a97c5d;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        /* Modal backdrop */
+        .modal-backdrop {
+            background-color: rgba(67, 48, 43, 0.75);
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Diagonal stacking of tool cards */
+        .tool-stack {
+            position: relative;
+        }
+        
+        .tool-card-stacked {
+            margin-top: -2rem;
+            margin-left: 1.5rem;
+        }
+
+        /* Tool call stack + cards */
+        .tool-call-stack {
+            pointer-events: none;
+        }
+
+        .tool-call-card {
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(87, 65, 54, 0.15);
+            box-shadow: 0 15px 35px rgba(32, 18, 9, 0.25);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .tool-call-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 45px rgba(32, 18, 9, 0.35);
+        }
+
+        .tool-status-progress {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.9), rgba(245, 158, 11, 0.25));
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: progressShimmer 1.25s linear infinite;
+        }
+
+        @keyframes progressShimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+
+        .tool-modal-pre {
+            @apply font-mono;
+        }
+
+        .tool-modal-pre {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.8rem;
+            background-color: #fdf8f3;
+            border: 1px solid #e6d5c2;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 30vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-tan-100 h-screen overflow-hidden">
+    <!-- Main Container -->
+    <div class="flex h-screen">
+        <!-- Left Sidebar - File Tree -->
+        <div id="leftSidebar" class="sidebar w-64 bg-brown-900 text-tan-100 flex flex-col shadow-lg">
+            <!-- Header -->
+            <div class="p-4 border-b border-brown-800 flex items-center justify-between">
+                <h2 class="font-semibold text-lg flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                    </svg>
+                    Project
+                </h2>
+                <button onclick="toggleLeftSidebar()" class="text-tan-300 hover:text-tan-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- File Tree -->
+            <div class="flex-1 overflow-y-auto p-2">
+                <div class="space-y-1">
+                    <!-- Mock file structure -->
+                    <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        src
+                    </div>
+                    <div class="ml-4 space-y-1">
+                        <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            server.ts
+                        </div>
+                        <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            agent.ts
+                        </div>
+                        <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            tools.ts
+                        </div>
+                    </div>
+                    
+                    <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        tests
+                    </div>
+                    <div class="ml-4 space-y-1">
+                        <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            agent.test.ts
+                        </div>
+                    </div>
+                    
+                    <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        package.json
+                    </div>
+                    <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        README.md
+                    </div>
+                    <div class="file-tree-item px-2 py-1 rounded text-sm flex items-center text-tan-300">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        tsconfig.json
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toggle button when sidebar is collapsed -->
+        <button id="leftSidebarToggle" class="hidden fixed left-0 top-1/2 transform -translate-y-1/2 bg-brown-900 text-tan-100 p-2 rounded-r-lg shadow-lg z-10" onclick="toggleLeftSidebar()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+            </svg>
+        </button>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col bg-tan-50">
+            <!-- Header -->
+            <div class="bg-brown-800 text-tan-100 px-6 py-3 shadow-md flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center font-bold text-white">
+                        C
+                    </div>
+                    <div>
+                        <h1 class="font-semibold text-lg">Cody Agent</h1>
+                        <p class="text-xs text-tan-300" id="conversationTitle">Ready to help</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-tan-300" id="statusIndicator">
+                        <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                        Connected
+                    </span>
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div id="chatHistory" class="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                <div class="flex items-center justify-center h-full text-tan-600">
+                    <div class="text-center">
+                        <p class="text-lg">Start a conversation</p>
+                        <p class="text-sm mt-2">Type a message below to begin</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Composer -->
+            <div class="bg-white border-t border-tan-300 px-6 py-4">
+                <div class="max-w-4xl mx-auto">
+                    <div class="relative">
+                        <textarea 
+                            id="messageInput" 
+                            class="composer-textarea w-full px-4 py-3 pr-12 border-2 border-tan-400 rounded-lg focus:outline-none focus:border-orange-500 bg-tan-50 text-brown-900 placeholder-tan-500"
+                            placeholder="Send a message to Cody..."
+                            rows="3"
+                            style="max-height: 168px;"
+                        ></textarea>
+                        <button 
+                            id="sendButton"
+                            onclick="sendMessage()"
+                            class="absolute right-2 bottom-2 bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 text-xs text-tan-600">
+                        <span>Press Enter to send, Shift+Enter for new line</span>
+                        <span id="charCount">0 / 4000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Conversations List -->
+        <div id="rightSidebar" class="sidebar w-64 bg-brown-50 border-l border-tan-300 flex flex-col shadow-lg">
+            <!-- Header -->
+            <div class="p-4 border-b border-tan-300 flex items-center justify-between bg-brown-100">
+                <h2 class="font-semibold text-brown-900 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                    </svg>
+                    Conversations
+                </h2>
+                <button onclick="toggleRightSidebar()" class="text-brown-700 hover:text-brown-900">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- New Conversation Button -->
+            <div class="p-3 border-b border-tan-300">
+                <button class="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm font-medium">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    New Chat
+                </button>
+            </div>
+            
+            <!-- Conversations List -->
+            <div id="conversationsList" class="flex-1 overflow-y-auto">
+                <div class="flex items-center justify-center h-full text-tan-600">
+                    <div class="text-center">
+                        <p class="text-sm">Loading conversations...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toggle button when right sidebar is collapsed -->
+        <button id="rightSidebarToggle" class="hidden fixed right-0 top-1/2 transform -translate-y-1/2 bg-brown-100 text-brown-900 p-2 rounded-l-lg shadow-lg z-10" onclick="toggleRightSidebar()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Tool Detail Modal -->
+    <script>
+        // State management
+        let currentConversationId = null;
+        let eventSource = null;
+        let messageHistory = [];
+        let currentTurnId = null;
+        const API_BASE = 'http://localhost:4010/api/v1';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        async function initializeApp() {
+            try {
+                // Load existing conversations first
+                await loadConversations();
+                
+                // Create new conversation
+                const response = await fetch(`${API_BASE}/conversations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        modelProviderId: 'openai',
+                        modelProviderApi: 'responses',
+                        model: 'gpt-5-mini'
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Failed to create conversation: ${errorData.error?.message || 'Unknown error'}`);
+                }
+
+                const data = await response.json();
+                currentConversationId = data.conversationId;
+                updateStatus('Connected', 'green');
+
+                console.log('Conversation created:', currentConversationId);
+            
+                // Reload conversations to show the new one
+                await loadConversations();
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                updateStatus('Connection Failed', 'red');
+                addSystemMessage('Failed to connect to Cody API. Check console for details.');
+            }
+        }
+
+        async function loadConversations() {
+            try {
+                const response = await fetch(`${API_BASE}/conversations`);
+                if (!response.ok) {
+                    console.error('Failed to load conversations');
+                    return;
+                }
+                
+                const data = await response.json();
+                const conversations = data.conversations || [];
+                
+                const conversationsList = document.getElementById('conversationsList');
+                if (!conversationsList) return;
+                
+                // Clear existing list (except the "New Chat" button area)
+                conversationsList.innerHTML = '';
+                
+                // Add each conversation
+                conversations.slice(0, 20).forEach(conv => {
+                    const convDiv = document.createElement('div');
+                    const isActive = conv.conversationId === currentConversationId;
+                    convDiv.className = `p-3 border-l-4 ${isActive ? 'border-orange-600 bg-orange-50' : 'border-transparent'} hover:border-tan-400 hover:bg-tan-100 cursor-pointer transition-colors`;
+                    convDiv.onclick = () => switchConversation(conv.conversationId);
+                    
+                    const title = conv.title || conv.summary || 'New Conversation';
+                    const date = new Date(conv.updatedAt || conv.createdAt);
+                    const timeAgo = getTimeAgo(date);
+                    
+                    convDiv.innerHTML = `
+                        <div class="flex items-start justify-between mb-1">
+                            <h3 class="font-medium text-brown-900 text-sm truncate flex-1">${escapeHtml(title)}</h3>
+                            <span class="text-xs text-brown-600">${timeAgo}</span>
+                        </div>
+                        <p class="text-xs text-brown-600 truncate">${escapeHtml(conv.summary || 'No messages yet')}</p>
+                    `;
+                    
+                    conversationsList.appendChild(convDiv);
+                });
+            } catch (error) {
+                console.error('Failed to load conversations:', error);
+            }
+        }
+
+        function switchConversation(conversationId) {
+            if (conversationId === currentConversationId) return;
+            
+            // Close any existing SSE connection
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            
+            currentConversationId = conversationId;
+            
+            // Clear chat history
+            const chatHistory = document.getElementById('chatHistory');
+            chatHistory.innerHTML = `
+                <div class="flex items-center justify-center h-full text-tan-600">
+                    <div class="text-center">
+                        <p class="text-lg">Loading conversation...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Load conversation messages
+            loadConversationMessages(conversationId);
+            
+            // Reload conversations list to highlight active one
+            loadConversations();
+        }
+
+        async function loadConversationMessages(conversationId) {
+            try {
+                const response = await fetch(`${API_BASE}/conversations/${conversationId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load conversation');
+                }
+                
+                const data = await response.json();
+                const history = data.history || [];
+                
+                const chatHistory = document.getElementById('chatHistory');
+                chatHistory.innerHTML = '';
+                
+                if (history.length === 0) {
+                    chatHistory.innerHTML = `
+                        <div class="flex items-center justify-center h-full text-tan-600">
+                            <div class="text-center">
+                                <p class="text-lg">Start a conversation</p>
+                                <p class="text-sm mt-2">Type a message below to begin</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render messages
+                history.forEach(msg => {
+                    if (msg.role === 'user') {
+                        addUserMessage(msg.content);
+                    } else if (msg.role === 'assistant') {
+                        addAgentMessage(msg.content);
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load conversation messages:', error);
+                addSystemMessage('Failed to load conversation. Please try again.');
+            }
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        async function createNewConversation() {
+            try {
+                // Close any existing SSE connection
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                
+                // Create new conversation
+                const response = await fetch(`${API_BASE}/conversations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        modelProviderId: 'openai',
+                        modelProviderApi: 'responses',
+                        model: 'gpt-5-mini'
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Failed to create conversation: ${errorData.error?.message || 'Unknown error'}`);
+                }
+
+                const data = await response.json();
+                currentConversationId = data.conversationId;
+                
+                // Clear chat history
+                const chatHistory = document.getElementById('chatHistory');
+                chatHistory.innerHTML = `
+                    <div class="flex items-center justify-center h-full text-tan-600">
+                        <div class="text-center">
+                            <p class="text-lg">Start a conversation</p>
+                            <p class="text-sm mt-2">Type a message below to begin</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Reload conversations list
+                await loadConversations();
+                
+                updateStatus('Connected', 'green');
+                console.log('New conversation created:', currentConversationId);
+            } catch (error) {
+                console.error('Failed to create new conversation:', error);
+                addSystemMessage('Failed to create new conversation. Please try again.');
+            }
+        }
+
+        function setupEventListeners() {
+            const textarea = document.getElementById('messageInput');
+            
+            // Auto-expand textarea
+            textarea.addEventListener('input', (e) => {
+                e.target.style.height = 'auto';
+                const newHeight = Math.min(e.target.scrollHeight, 168);
+                e.target.style.height = newHeight + 'px';
+                
+                // Update character count
+                const charCount = e.target.value.length;
+                document.getElementById('charCount').textContent = `${charCount} / 4000`;
+            });
+
+            // Handle Enter key
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        async function sendMessage() {
+            const textarea = document.getElementById('messageInput');
+            const message = textarea.value.trim();
+            
+            if (!message || !currentConversationId) return;
+
+            // Clear input and reset height
+            textarea.value = '';
+            textarea.style.height = 'auto';
+            document.getElementById('charCount').textContent = '0 / 4000';
+
+            // Add user message to UI
+            addUserMessage(message);
+
+            // Disable send button
+            const sendButton = document.getElementById('sendButton');
+            sendButton.disabled = true;
+
+            try {
+                // Send message to API
+                const response = await fetch(`${API_BASE}/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+
+                const data = await response.json();
+                currentTurnId = data.turnId;
+
+                // Start streaming
+                streamTurn(data.turnId);
+
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                addSystemMessage('Failed to send message. Please try again.');
+                sendButton.disabled = false;
+            }
+        }
+
+        function streamTurn(turnId) {
+            // Close existing connection if any
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const streamUrl = `${API_BASE}/turns/${turnId}/stream-events?thinkingLevel=full`;
+            console.log('Connecting to SSE stream:', streamUrl);
+            eventSource = new EventSource(streamUrl);
+
+            let currentAgentMessageId = null;
+            let agentMessageText = '';
+
+            eventSource.addEventListener('task_started', (e) => {
+                console.log('Task started:', e.data);
+                updateStatus('Processing...', 'yellow');
+            });
+
+            eventSource.addEventListener('agent_message', (e) => {
+                console.log('Agent message event received:', e.data);
+                try {
+                const data = JSON.parse(e.data);
+                    console.log('Parsed agent message data:', data);
+                
+                if (!currentAgentMessageId) {
+                    currentAgentMessageId = addAgentMessage('');
+                    agentMessageText = '';
+                }
+                
+                    const messageText = data.message || data.text || '';
+                    console.log('Adding message text:', messageText);
+                    agentMessageText += messageText;
+                updateAgentMessage(currentAgentMessageId, agentMessageText);
+                } catch (error) {
+                    console.error('Error parsing agent_message:', error, e.data);
+                }
+            });
+
+            eventSource.addEventListener('agent_reasoning', (e) => {
+                const data = JSON.parse(e.data);
+                addReasoningMessage(data.text || data.message || '');
+            });
+
+            eventSource.addEventListener('task_complete', (e) => {
+                console.log('Task complete:', e.data);
+                updateStatus('Connected', 'green');
+                document.getElementById('sendButton').disabled = false;
+                
+                if (currentAgentMessageId) {
+                    finalizeAgentMessage(currentAgentMessageId);
+                }
+                
+                // Reload conversations to update the list
+                loadConversations();
+                
+                eventSource.close();
+                eventSource = null;
+            });
+
+            eventSource.addEventListener('turn_aborted', (e) => {
+                const data = JSON.parse(e.data);
+                console.log('Turn aborted:', data);
+                addSystemMessage('Turn was aborted: ' + (data.reason || 'Unknown reason'));
+                updateStatus('Connected', 'green');
+                document.getElementById('sendButton').disabled = false;
+                eventSource.close();
+                eventSource = null;
+            });
+
+            eventSource.addEventListener('error', (e) => {
+                console.error('Stream error:', e);
+                updateStatus('Error', 'red');
+                document.getElementById('sendButton').disabled = false;
+                
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+            });
+
+            eventSource.onerror = (e) => {
+                console.error('EventSource error:', e);
+                console.error('EventSource readyState:', eventSource?.readyState);
+                console.error('EventSource url:', eventSource?.url);
+                
+                // Check if connection was closed by server (readyState 2)
+                if (eventSource?.readyState === EventSource.CLOSED) {
+                    console.log('SSE connection closed by server');
+                    updateStatus('Connected', 'green');
+                } else {
+                updateStatus('Connection Error', 'red');
+                }
+                
+                document.getElementById('sendButton').disabled = false;
+                
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+            };
+            
+            // Log when connection opens
+            eventSource.onopen = () => {
+                console.log('SSE connection opened');
+            };
+        }
+
+        function addUserMessage(text) {
+            const chatHistory = document.getElementById('chatHistory');
+            
+            // Clear empty state if present (check for the specific empty state message)
+            const emptyState = chatHistory.querySelector('.flex.items-center.justify-center');
+            if (emptyState && emptyState.textContent.includes('Start a conversation')) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-end';
+            messageDiv.innerHTML = `
+                <div class="max-w-3xl">
+                    <div class="bg-orange-600 text-white rounded-lg px-4 py-3 shadow">
+                        <div class="message-content">${escapeHtml(text)}</div>
+                    </div>
+                </div>
+            `;
+            
+            chatHistory.appendChild(messageDiv);
+            scrollToBottom();
+            
+            // Add to thread navigator
+            addToThreadNav('user', text);
+            
+            messageHistory.push({ role: 'user', content: text, element: messageDiv });
+        }
+
+        function addAgentMessage(text) {
+            const chatHistory = document.getElementById('chatHistory');
+            
+            // Clear empty state if present (check for the specific empty state message)
+            const emptyState = chatHistory.querySelector('.flex.items-center.justify-center');
+            if (emptyState && emptyState.textContent.includes('Start a conversation')) {
+                emptyState.remove();
+            }
+            
+            const messageId = 'agent-' + Date.now();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.className = 'flex justify-start';
+            messageDiv.innerHTML = `
+                <div class="max-w-3xl">
+                    <div class="bg-white border-2 border-tan-300 rounded-lg px-4 py-3 shadow">
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 bg-orange-600 rounded flex items-center justify-center text-white text-xs font-bold mr-2">C</div>
+                            <span class="text-sm font-semibold text-brown-800">Cody</span>
+                        </div>
+                        <div class="message-content text-brown-900">${escapeHtml(text)}</div>
+                    </div>
+                </div>
+            `;
+            
+            chatHistory.appendChild(messageDiv);
+            scrollToBottom();
+            
+            messageHistory.push({ role: 'assistant', content: text, element: messageDiv, id: messageId });
+            return messageId;
+        }
+
+        function updateAgentMessage(messageId, text) {
+            const messageDiv = document.getElementById(messageId);
+            if (!messageDiv) {
+                console.error('Message div not found for ID:', messageId);
+                return;
+            }
+                const contentDiv = messageDiv.querySelector('.message-content');
+            if (!contentDiv) {
+                console.error('Content div not found in message:', messageId);
+                return;
+            }
+                contentDiv.textContent = text;
+                scrollToBottom();
+        }
+
+        function finalizeAgentMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            if (messageDiv) {
+                const text = messageDiv.querySelector('.message-content').textContent;
+                addToThreadNav('assistant', text);
+            }
+        }
+
+        function addReasoningMessage(text) {
+            const chatHistory = document.getElementById('chatHistory');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-start';
+            messageDiv.innerHTML = `
+                <div class="max-w-3xl">
+                    <div class="bg-tan-200 border border-tan-400 rounded-lg px-4 py-2 shadow-sm">
+                        <div class="flex items-center mb-1">
+                            <svg class="w-4 h-4 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            <span class="text-xs font-semibold text-brown-700">Thinking</span>
+                        </div>
+                        <div class="text-sm text-brown-700 italic">${escapeHtml(text)}</div>
+                    </div>
+                </div>
+            `;
+            
+            chatHistory.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addSystemMessage(text) {
+            const chatHistory = document.getElementById('chatHistory');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-center';
+            messageDiv.innerHTML = `
+                <div class="max-w-2xl">
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm">
+                        ${escapeHtml(text)}
+                    </div>
+                </div>
+            `;
+            
+            chatHistory.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addToThreadNav(role, content) {
+            const threadNav = document.getElementById('threadNav');
+            if (!threadNav) return; // Thread nav doesn't exist, skip
+            
+            // Remove empty state
+            if (threadNav.querySelector('.text-center')) {
+                threadNav.innerHTML = '';
+            }
+            
+            const preview = content.substring(0, 50) + (content.length > 50 ? '...' : '');
+            const icon = role === 'user' ? '👤' : '🤖';
+            const bgColor = role === 'user' ? 'bg-orange-100 hover:bg-orange-200' : 'bg-tan-200 hover:bg-tan-300';
+            
+            const navItem = document.createElement('div');
+            navItem.className = `nav-item ${bgColor} rounded-lg p-2 mb-2 cursor-pointer transition-colors`;
+            navItem.innerHTML = `
+                <div class="flex items-start">
+                    <span class="mr-2 text-sm">${icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-brown-600 font-medium mb-1">${role === 'user' ? 'You' : 'Cody'}</div>
+                        <div class="text-xs text-brown-700 truncate">${escapeHtml(preview)}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Scroll to message on click
+            navItem.onclick = () => {
+                const messageElements = messageHistory.filter(m => m.role === role && m.content.startsWith(content.substring(0, 30)));
+                if (messageElements.length > 0) {
+                    messageElements[messageElements.length - 1].element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            };
+            
+            threadNav.appendChild(navItem);
+        }
+
+        function updateStatus(text, color) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const colors = {
+                'green': 'bg-green-500',
+                'yellow': 'bg-yellow-500',
+                'red': 'bg-red-500'
+            };
+            
+            statusIndicator.innerHTML = `
+                <span class="inline-block w-2 h-2 ${colors[color]} rounded-full mr-1"></span>
+                ${text}
+            `;
+        }
+
+        function toggleLeftSidebar() {
+            const sidebar = document.getElementById('leftSidebar');
+            const toggle = document.getElementById('leftSidebarToggle');
+            
+            if (sidebar.classList.contains('-ml-64')) {
+                sidebar.classList.remove('-ml-64');
+                toggle.classList.add('hidden');
+            } else {
+                sidebar.classList.add('-ml-64');
+                toggle.classList.remove('hidden');
+            }
+        }
+
+        function toggleRightSidebar() {
+            const sidebar = document.getElementById('rightSidebar');
+            const toggle = document.getElementById('rightSidebarToggle');
+            
+            if (sidebar.classList.contains('-mr-64')) {
+                sidebar.classList.remove('-mr-64');
+                toggle.classList.add('hidden');
+            } else {
+                sidebar.classList.add('-mr-64');
+                toggle.classList.remove('hidden');
+            }
+        }
+
+        function scrollToMessage(messageId) {
+            const element = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Flash highlight
+                element.classList.add('ring-2', 'ring-orange-500', 'ring-opacity-50');
+                setTimeout(() => {
+                    element.classList.remove('ring-2', 'ring-orange-500', 'ring-opacity-50');
+                }, 1000);
+            }
+        }
+
+        function scrollToBottom() {
+            const chatHistory = document.getElementById('chatHistory');
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -9,9 +9,8 @@ import {
 export function registerMessageRoutes(app: FastifyInstance): void {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const manager = null as any; // Placeholder
-  const handlers = buildMessageHandlers(manager);
+  const codexRuntime = app.codexRuntime;
+  const handlers = buildMessageHandlers(codexRuntime);
 
   typedApp.post(
     "/conversations/:id/messages",

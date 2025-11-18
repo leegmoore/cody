@@ -41,6 +41,12 @@ export const ConversationResponseSchema = z.object({
   parent: z.string().nullable(),
   tags: z.array(z.string()),
   agentRole: z.string().nullable(),
+  history: z.array(
+    z.object({
+      role: z.string(),
+      content: z.string(),
+    }),
+  ),
 });
 
 export const ListConversationsResponseSchema = z.object({

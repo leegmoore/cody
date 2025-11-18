@@ -303,8 +303,12 @@ test.describe("Conversations - List (TC-2)", () => {
     expect(nextCursor).not.toBeNull();
     expect(firstData.conversations.length).toBe(1);
 
+    if (!nextCursor) {
+      throw new Error("Expected nextCursor to be present");
+    }
+
     const secondResponse = await api.listConversations({
-      cursor: nextCursor!,
+      cursor: nextCursor,
       limit: 1,
     });
     expect(secondResponse.status()).toBe(200);

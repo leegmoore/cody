@@ -4,16 +4,42 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
 import { ZodError } from "zod";
+import { join } from "node:path";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { mkdir } from "node:fs/promises";
 import { registerConversationRoutes } from "./api/routes/conversations.js";
 import { registerMessageRoutes } from "./api/routes/messages.js";
 import { registerTurnRoutes } from "./api/routes/turns.js";
 import { AppError } from "./api/errors/api-errors.js";
+import { CodexRuntime } from "./api/services/codex-runtime.js";
 
 export async function createServer() {
   const app = Fastify({ logger: true });
 
   await app.register(cors, { origin: "*" });
+
+  // Serve static files from public directory
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
+  await app.register(fastifyStatic, {
+    root: join(__dirname, "..", "public"),
+    prefix: "/"
+  });
+
+  // Initialize Codex runtime
+  const codexHome =
+    process.env.CODY_HOME ?? join(process.cwd(), "..", "tmp-cody-home");
+  await mkdir(codexHome, { recursive: true });
+  process.env.CODY_HOME ??= codexHome;
+  const cwd = process.cwd();
+  const codexRuntime = new CodexRuntime({ codexHome, cwd });
+
+  // Store runtime in app instance for access in routes
+  app.decorate("codexRuntime", codexRuntime);
 
   app.get("/health", async () => ({
     status: "ok",
@@ -103,8 +129,24 @@ async function start() {
   const port = Number(process.env.PORT ?? "4010");
   const host = process.env.HOST ?? "0.0.0.0";
 
+  // Graceful shutdown handlers
+  const shutdown = async (signal: string) => {
+    app.log.info({ signal }, "Shutting down server");
+    try {
+      await app.close();
+      process.exit(0);
+    } catch (error) {
+      app.log.error({ err: error }, "Error during shutdown");
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+
   try {
     await app.listen({ port, host });
+    app.log.info({ port, host }, "Server started");
   } catch (error) {
     app.log.error(error);
     process.exit(1);

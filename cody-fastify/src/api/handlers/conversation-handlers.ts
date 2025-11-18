@@ -3,6 +3,7 @@ import {
   ValidationError,
   NotFoundError,
 } from "../errors/api-errors.js";
+import { ConfigurationError } from "codex-ts/src/core/errors.ts";
 import type {
   CreateConversationBody,
   UpdateConversationBody,
@@ -14,21 +15,32 @@ import {
   getConversation,
   updateConversation,
   deleteConversation,
-} from "../services/conversation-service.js";
+} from "../services/conversation-service-codex.js";
+import type { CodexRuntime } from "../services/codex-runtime.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function buildConversationHandlers(_manager: any) {
+export function buildConversationHandlers(codexRuntime: CodexRuntime) {
   return {
     async create(
       req: FastifyRequest<{ Body: CreateConversationBody }>,
       reply: FastifyReply,
     ): Promise<void> {
       try {
-        const conversation = await createConversation(req.body);
+        const conversation = await createConversation(codexRuntime, req.body);
         reply.code(201).send(conversation);
       } catch (error) {
         // Log the error for debugging
         req.log?.error({ err: error }, "Error in create conversation handler");
+        
+        if (error instanceof ValidationError || error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        // Handle ConfigurationError (missing API keys, etc.) as validation error
+        if (error instanceof ConfigurationError) {
+          throw new ValidationError(
+            `Configuration error: ${error.message}. Please ensure API keys are configured.`,
+          );
+        }
         
         if (error instanceof Error) {
           if (error.message.includes("does not support")) {
@@ -37,19 +49,10 @@ export function buildConversationHandlers(_manager: any) {
           if (error.message.includes("Unsupported provider")) {
             throw new ValidationError(error.message);
           }
-          // Re-throw AppError instances
-          if (error instanceof ValidationError) {
-            throw error;
-          }
-          // For file system errors, wrap as internal error but don't expose details
-          if (
-            error.message.includes("Failed to create conversation") ||
-            error.message.includes("Failed to create conversations directory") ||
-            error.message.includes("Failed to write conversation file")
-          ) {
-            // Log the actual error but return a generic message
-            req.log?.error(error, "File system error creating conversation");
-            throw new Error("Failed to create conversation");
+          if (error.message.includes("Missing API key") || error.message.includes("No credentials")) {
+            throw new ValidationError(
+              `Missing API key: ${error.message}. Please set the required API key environment variable.`,
+            );
           }
         }
         // For any other error, log and re-throw (will be caught by global error handler)
@@ -61,14 +64,9 @@ export function buildConversationHandlers(_manager: any) {
       req: FastifyRequest<{ Querystring: ListConversationsQuery }>,
       reply: FastifyReply,
     ): Promise<void> {
-      const limit =
-        typeof req.query.limit === "string"
-          ? parseInt(req.query.limit, 10)
-          : req.query.limit;
-
-      const result = await listConversations({
+      const result = await listConversations(codexRuntime, {
         cursor: req.query.cursor,
-        limit,
+        limit: req.query.limit,
       });
 
       reply.code(200).send(result);
@@ -78,7 +76,7 @@ export function buildConversationHandlers(_manager: any) {
       req: FastifyRequest<{ Params: { id: string } }>,
       reply: FastifyReply,
     ): Promise<void> {
-      const conversation = await getConversation(req.params.id);
+      const conversation = await getConversation(codexRuntime, req.params.id);
       if (!conversation) {
         throw new NotFoundError(`Conversation ${req.params.id} not found`);
       }
@@ -95,11 +93,15 @@ export function buildConversationHandlers(_manager: any) {
     ): Promise<void> {
       try {
         const conversation = await updateConversation(
+          codexRuntime,
           req.params.id,
           req.body,
         );
         reply.code(200).send(conversation);
       } catch (error) {
+        if (error instanceof NotFoundError || error instanceof ValidationError) {
+          throw error;
+        }
         if (
           error instanceof Error &&
           error.message === "Conversation not found"
@@ -117,12 +119,21 @@ export function buildConversationHandlers(_manager: any) {
       req: FastifyRequest<{ Params: { id: string } }>,
       reply: FastifyReply,
     ): Promise<void> {
-      const deleted = await deleteConversation(req.params.id);
-      if (!deleted) {
-        throw new NotFoundError(`Conversation ${req.params.id} not found`);
+      try {
+        const deleted = await deleteConversation(codexRuntime, req.params.id);
+        if (!deleted) {
+          throw new NotFoundError(`Conversation ${req.params.id} not found`);
+        }
+        reply.code(204).send();
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        if (error instanceof Error && error.message.includes("not found")) {
+          throw new NotFoundError(`Conversation ${req.params.id} not found`);
+        }
+        throw error;
       }
-
-      reply.code(204).send();
     },
   };
 }

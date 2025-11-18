@@ -1,0 +1,133 @@
+# Test Results Summary
+
+**Date:** 2025-01-17  
+**Total Tests:** 56  
+**Passed:** 39 (69.6%)  
+**Failed:** 12 (21.4%)  
+**Skipped:** 5 (8.9%) - Intentionally skipped
+
+## ✅ Passing Tests (39)
+
+### Conversations
+- ✅ TC-1.1: Create with minimal config
+- ✅ TC-1.3-1.10: All validation tests (missing fields, invalid providers, unsupported combos)
+- ✅ TC-2.1: Empty List
+- ✅ TC-2.3-2.5: Pagination tests
+- ✅ TC-3.1: Get Existing Conversation
+- ✅ TC-3.2: Conversation Not Found
+- ✅ TC-4.1: Delete Existing
+- ✅ TC-5.1-5.9: All Update tests
+
+### Messages
+- ✅ TC-6.1: Submit Message (Basic)
+- ✅ TC-6.3: Empty Message
+- ✅ TC-6.5-6.6: Override validation
+
+### Turns
+- ✅ TC-7.1-7.2: Turn Status (defaults, thinkingLevel)
+- ✅ TC-7.4-7.5: Running Turn, Turn Not Found
+- ✅ TC-8.3: Stream with thinkingLevel=none
+- ✅ TC-8.6-8.7: Turn Not Found, Keepalive
+
+### Lifecycle
+- ✅ TC-L2: Multi-Turn Conversation
+- ✅ TC-L5: Metadata Lifecycle
+
+### Other
+- ✅ Health Check
+
+## ❌ Failing Tests (12)
+
+### 1. TC-1.2: Create with full metadata (Anthropic)
+- **Status:** 400 instead of 201
+- **Issue:** Missing `ANTHROPIC_API_KEY` or API key validation issue
+- **Impact:** Low (test requires Anthropic key, which may not be set)
+- **Fix:** Ensure `ANTHROPIC_API_KEY` is in `.env` file
+
+### 2. TC-2.2: Multiple Conversations
+- **Status:** Expected 3, got 2
+- **Issue:** Cascading failure from TC-1.2 (one conversation creation failed)
+- **Impact:** Low (will fix when TC-1.2 is fixed)
+- **Fix:** Depends on TC-1.2
+
+### 3. TC-4.2: Delete Non-Existent Conversation
+- **Status:** 500 instead of 404
+- **Issue:** Error handling in delete handler - exception not caught properly
+- **Impact:** Medium
+- **Fix:** Improve error handling in delete handler
+
+### 4. TC-4.3: Verify Deleted
+- **Status:** Conversation still exists after delete
+- **Issue:** Delete operation not actually removing conversation from list
+- **Impact:** Medium
+- **Fix:** Ensure delete removes conversation from ConversationManager
+
+### 5. TC-6.2: Conversation Not Found (Message)
+- **Status:** 500 instead of 404
+- **Issue:** Error handling - exception not caught before sendMessage call
+- **Impact:** Medium
+- **Fix:** Add try-catch around sendMessage call
+
+### 6. TC-L7: Concurrent Conversations
+- **Status:** One conversation creation returns 400
+- **Issue:** Likely same as TC-1.2 (Anthropic API key)
+- **Impact:** Low (depends on API keys)
+- **Fix:** Ensure API keys are set
+
+### 7-12. Streaming Issues (TC-8.1, TC-8.2, TC-8.8, TC-L1, TC-L3, TC-7.3)
+- **Status:** Missing `task_started` events and tool execution events
+- **Issue:** Events not being captured/stored from Codex, or not being sent in SSE stream
+- **Impact:** High (core functionality)
+- **Root Cause:** Events from `conversation.nextEvent()` may not be getting stored in turn-store, or timing issue where stream is consumed before events arrive
+
+## ⏭️ Skipped Tests (5) - Intentionally
+
+- TC-6.4: Model Override (per-turn overrides not implemented)
+- TC-8.4: Client Disconnect and Reconnect (Playwright limitation)
+- TC-8.5: Multiple Subscribers (not supported)
+- TC-L4: Provider Override Workflow (per-turn overrides not implemented)
+- TC-L6: Stream Reconnection (Playwright limitation)
+
+## 🔍 Analysis
+
+### Critical Issues (High Priority)
+1. **Streaming Events Missing** - `task_started` events not appearing in streams
+   - Affects: TC-8.1, TC-8.2, TC-8.8, TC-L1
+   - Likely cause: Events not being stored before stream is consumed, or event processing timing issue
+
+2. **Tool Execution Events Missing** - Tool calls not being captured
+   - Affects: TC-7.3, TC-8.2, TC-L3
+   - Likely cause: Tool events (`exec_command_begin`, `exec_command_end`) not being processed/stored
+
+### Medium Priority Issues
+3. **Error Handling** - 500 instead of 404 for not found cases
+   - Affects: TC-4.2, TC-6.2
+   - Fix: Add proper error handling
+
+4. **Delete Not Working** - Conversations not actually deleted
+   - Affects: TC-4.3
+   - Fix: Ensure ConversationManager.removeConversation works correctly
+
+### Low Priority Issues
+5. **Anthropic API Key** - Tests requiring Anthropic fail if key not set
+   - Affects: TC-1.2, TC-L7 (partially)
+   - Note: Expected behavior if key not configured
+
+## 📊 Test Categories Breakdown
+
+| Category | Total | Passed | Failed | Skipped |
+|----------|-------|--------|--------|---------|
+| Conversations | 29 | 25 | 4 | 0 |
+| Messages | 6 | 4 | 1 | 1 |
+| Turns | 13 | 7 | 3 | 3 |
+| Lifecycle | 7 | 2 | 3 | 2 |
+| Smoke | 1 | 1 | 0 | 0 |
+
+## 🎯 Next Steps
+
+1. **Fix streaming events** - Investigate why `task_started` events aren't appearing
+2. **Fix tool execution** - Ensure tool events are captured and stored
+3. **Fix error handling** - Return 404 instead of 500 for not found cases
+4. **Fix delete operation** - Ensure conversations are actually removed
+5. **Verify API keys** - Ensure all required keys are in `.env` file
+
