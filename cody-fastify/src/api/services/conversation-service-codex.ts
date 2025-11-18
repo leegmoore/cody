@@ -15,32 +15,89 @@ import {
   FileRolloutStore,
   RolloutRecorder,
   type SessionMeta,
+  type RolloutTurn,
 } from "codex-ts/src/core/rollout.ts";
 import type { ResponseItem } from "codex-ts/src/protocol/models.ts";
 import { NotFoundError, ValidationError } from "../errors/api-errors.js";
 
 /**
- * Convert ResponseItem[] to history array format expected by API.
+ * Convert RolloutTurn[] to history array format expected by API.
  */
-function responseItemsToHistory(items: ResponseItem[]): Array<{
-  role: string;
-  content: string;
-}> {
-  const history: Array<{ role: string; content: string }> = [];
+function responseItemsToHistory(turns: RolloutTurn[]): Array<any> {
+  const history: Array<any> = [];
 
-  for (const item of items) {
-    if (item.type === "message") {
-      // Extract text content from content array
-      const textParts: string[] = [];
-      for (const contentItem of item.content) {
-        if (contentItem.type === "input_text" || contentItem.type === "output_text") {
-          textParts.push(contentItem.text);
+  for (let i = 0; i < turns.length; i++) {
+    const turn = turns[i];
+    const turnId = String(i + 1);
+
+    for (const item of turn.items) {
+      if (item.type === "message") {
+        // Extract text content from content array
+        const textParts: string[] = [];
+        for (const contentItem of item.content) {
+          if (contentItem.type === "input_text" || contentItem.type === "output_text") {
+            textParts.push(contentItem.text);
+          }
         }
-      }
-      if (textParts.length > 0) {
+        if (textParts.length > 0) {
+          history.push({
+            type: "message",
+            role: item.role,
+            content: textParts.join("\n"),
+            turnId,
+          });
+        }
+      } else if (item.type === "local_shell_call") {
         history.push({
-          role: item.role,
-          content: textParts.join("\n"),
+          type: "tool_call",
+          callId: item.call_id || item.id,
+          toolName: "exec",
+          arguments: { command: item.action.command },
+          status: item.status,
+          turnId,
+        });
+      } else if (item.type === "function_call") {
+        let args = item.arguments;
+        try {
+          args = JSON.parse(item.arguments);
+        } catch {}
+        
+        history.push({
+          type: "tool_call",
+          callId: item.call_id,
+          toolName: item.name,
+          arguments: args,
+          turnId,
+        });
+      } else if (item.type === "custom_tool_call") {
+        let args = item.input;
+        try {
+          args = JSON.parse(item.input);
+        } catch {}
+        
+        history.push({
+          type: "tool_call",
+          callId: item.call_id,
+          toolName: item.name,
+          arguments: args,
+          turnId,
+        });
+      } else if (item.type === "function_call_output") {
+        let output = item.output;
+        history.push({
+          type: "tool_output",
+          callId: item.call_id,
+          output: output,
+          status: "completed",
+          turnId,
+        });
+      } else if (item.type === "custom_tool_call_output") {
+        history.push({
+          type: "tool_output",
+          callId: item.call_id,
+          output: item.output,
+          status: "completed",
+          turnId,
         });
       }
     }
@@ -81,6 +138,7 @@ export async function createConversation(
     summary: body.summary,
     tags: body.tags,
     agentRole: body.agentRole,
+    reasoningEffort: body.reasoningEffort as any, // Type assertion needed until schema types are regenerated/aligned
   });
 
   // Update rollout file with extended metadata if provided
@@ -173,11 +231,20 @@ export async function listConversations(
       );
 
       let sessionMeta: ExtendedSessionMeta | undefined;
+      let messageCount = 0;
+      let firstMessage: string | undefined;
 
       if (path) {
         const rollout = await rolloutStore.readConversation(path);
         if (rollout.meta) {
           sessionMeta = rollout.meta as ExtendedSessionMeta;
+        }
+
+        const history = responseItemsToHistory(rollout.turns);
+        messageCount = history.length;
+        const firstUserMsg = history.find((h: any) => h.role === 'user' && h.type === 'message');
+        if (firstUserMsg) {
+          firstMessage = firstUserMsg.content;
         }
       }
 
@@ -194,6 +261,8 @@ export async function listConversations(
         parent: null,
         tags: sessionMeta?.tags ?? [],
         agentRole: sessionMeta?.agentRole ?? null,
+        messageCount,
+        firstMessage,
         history: [], // History loaded separately in getConversation
       };
     }),
@@ -231,11 +300,7 @@ export async function getConversation(
   }
 
   // Build history from turns
-  const historyItems: ResponseItem[] = [];
-  for (const turn of rollout.turns) {
-    historyItems.push(...turn.items);
-  }
-  const history = responseItemsToHistory(historyItems);
+  const history = responseItemsToHistory(rollout.turns);
 
   return {
     conversationId: meta.id,
@@ -333,11 +398,7 @@ export async function updateConversation(
   const updatedRollout = await rolloutStore.readConversation(path);
   
   // Build history
-  const historyItems: ResponseItem[] = [];
-  for (const turn of updatedRollout.turns) {
-    historyItems.push(...turn.items);
-  }
-  const history = responseItemsToHistory(historyItems);
+  const history = responseItemsToHistory(updatedRollout.turns);
 
   const now = new Date().toISOString();
 

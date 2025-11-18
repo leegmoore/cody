@@ -8,6 +8,7 @@ export const CreateConversationSchema = z.object({
   summary: z.string().optional(),
   tags: z.array(z.string()).optional(),
   agentRole: z.string().optional(),
+  reasoningEffort: z.enum(["minimal", "low", "medium", "high"]).optional(),
 });
 
 export const ListConversationsQuerySchema = z.object({
@@ -41,11 +42,20 @@ export const ConversationResponseSchema = z.object({
   parent: z.string().nullable(),
   tags: z.array(z.string()),
   agentRole: z.string().nullable(),
+  messageCount: z.number().optional(),
+  firstMessage: z.string().optional(),
   history: z.array(
     z.object({
-      role: z.string(),
-      content: z.string(),
-    }),
+      role: z.string().optional(),
+      content: z.string().optional(),
+      type: z.string().optional(),
+      callId: z.string().optional(),
+      toolName: z.string().optional(),
+      arguments: z.any().optional(),
+      output: z.any().optional(),
+      status: z.string().optional(),
+      turnId: z.string().optional(),
+    }).passthrough(),
   ),
 });
 

@@ -13,6 +13,7 @@ import { ConversationId } from "codex-ts/src/protocol/conversation-id/index.ts";
 import type { Conversation } from "codex-ts/src/core/conversation.ts";
 import type { ConversationMetadata } from "codex-ts/src/core/conversation-manager.ts";
 import type { ModelProviderApi } from "codex-ts/src/core/model-provider-types.ts";
+import type { ReasoningEffort } from "codex-ts/src/protocol/config-types.ts";
 
 export interface CreateConversationOptions {
   modelProviderId: string;
@@ -22,6 +23,7 @@ export interface CreateConversationOptions {
   summary?: string;
   tags?: string[];
   agentRole?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface CodexRuntimeOptions {
@@ -68,6 +70,7 @@ export class CodexRuntime {
       modelProviderId: options.modelProviderId,
       modelProviderApi: options.modelProviderApi as ModelProviderApi,
       model: options.model,
+      modelReasoningEffort: options.reasoningEffort,
     };
 
     // Create conversation via Codex
@@ -97,7 +100,22 @@ export class CodexRuntime {
 
     // Try to load from manager
     const id = ConversationId.fromString(conversationId);
-    const conversation = await this.manager.getConversation(id);
+    let conversation = await this.manager.getConversation(id);
+
+    // If not in memory, try to resume from disk
+    if (!conversation) {
+      try {
+        const result = await this.manager.resumeConversation(
+          this.config,
+          conversationId,
+        );
+        conversation = result.conversation;
+      } catch {
+        // If resume fails (e.g. not found on disk), return undefined
+        return undefined;
+      }
+    }
+
     if (conversation) {
       this.conversations.set(conversationId, conversation);
       return conversation;
