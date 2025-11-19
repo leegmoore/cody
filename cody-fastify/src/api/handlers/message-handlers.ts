@@ -9,6 +9,8 @@ import { randomUUID } from "node:crypto";
 import type { CodexRuntime } from "../services/codex-runtime.js";
 import { clientStreamManager } from "../client-stream/client-stream-manager.js";
 import { processMessage } from "../services/message-processor.js";
+import { convexClient } from "../services/convex-client.js";
+import { api } from "../../../convex/_generated/api.js";
 
 export function buildMessageHandlers(codexRuntime: CodexRuntime) {
   return {
@@ -35,6 +37,18 @@ export function buildMessageHandlers(codexRuntime: CodexRuntime) {
       if (!req.body.message || req.body.message.trim().length === 0) {
         throw new ValidationError("Message cannot be empty");
       }
+
+      // Sync User Message to Convex immediately
+      // Use fire-and-forget to not block the turn creation, but handle errors
+      convexClient
+        .mutation(api.messages.add, {
+          conversationId: req.params.id, // externalId
+          role: "user",
+          content: req.body.message,
+        })
+        .catch((err) => {
+          req.log?.error({ err, conversationId: req.params.id }, "Failed to sync user message to Convex");
+        });
 
       // Load conversation metadata for defaults
       const conversationMetadata =

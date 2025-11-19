@@ -2,6 +2,10 @@ import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { mkdirSync, rmSync } from "node:fs";
+import dotenv from "dotenv";
+
+// Load environment variables from .env.local
+dotenv.config({ path: ".env.local" });
 
 const workspaceRoot = fileURLToPath(new URL("..", import.meta.url));
 const defaultCodyHome =

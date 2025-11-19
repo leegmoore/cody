@@ -1,16 +1,9 @@
-/**
- * Message Processor
- * 
- * Processes messages asynchronously by consuming Codex events and storing them.
- * 
- * Note: This implementation assumes events are consumed in order. For concurrent
- * submissions to the same conversation, events are filtered by submission ID.
- */
-
 import type { Conversation } from "codex-ts/src/core/conversation.ts";
 import type { Event } from "codex-ts/src/protocol/protocol.ts";
 import type { EventMsg } from "codex-ts/src/protocol/protocol.ts";
 import { clientStreamManager } from "../client-stream/client-stream-manager.js";
+import { convexClient } from "./convex-client.js";
+import { api } from "../../../convex/_generated/api.js";
 
 /**
  * Process a message submission by consuming events until completion.
@@ -22,12 +15,14 @@ export async function processMessage(
   conversation: Conversation,
   submissionId: string,
   turnId: string,
-  _conversationId: string,
+  conversationId: string,
 ): Promise<void> {
   // Consume events until we get task_complete or turn_aborted for this submission
   let eventsProcessed = 0;
   const maxEvents = 1000; // Safety limit
   let foundCompletionEvent = false;
+  let accumulatedMessage = "";
+  let capturedError = "";
 
   while (eventsProcessed < maxEvents && !foundCompletionEvent) {
     try {
@@ -36,41 +31,117 @@ export async function processMessage(
 
       // Only process events for this submission
       if (event.id !== submissionId) {
-        // This event belongs to a different submission
-        // In a production system, we'd need a more sophisticated event router
-        // For now, we'll skip it and continue waiting for our submission's events
-        // Note: This means if multiple submissions are concurrent, events might
-        // be processed out of order, but each turn will only get its own events
         continue;
       }
 
-      // Add event to turn store FIRST, before checking if we should break
-      // This ensures all events (including tool events and errors) are stored
-      await clientStreamManager.addEvent(turnId, event.msg);
-      await handleToolFailureEvent(turnId, event.msg);
+      const msg = event.msg;
+
+      // Accumulate assistant message
+      if (msg.type === "agent_message") {
+        accumulatedMessage += msg.message;
+      } else if (msg.type === "agent_message_delta") {
+        accumulatedMessage += msg.delta;
+      } else if (msg.type === "agent_message_content_delta") {
+        accumulatedMessage += msg.delta;
+      }
+
+      // Capture error messages
+      if (msg.type === "error") {
+        capturedError = msg.message || "An unknown error occurred.";
+      }
+
+      // Sync Tool Calls/Outputs to Convex
+      if (msg.type === "raw_response_item" && msg.item) {
+        const item = msg.item;
+        if (item.type === "function_call") {
+          await convexClient.mutation(api.messages.add, {
+            conversationId,
+            role: "assistant",
+            content: "",
+            turnId,
+            type: "tool_call",
+            callId: item.call_id ?? item.id,
+            toolName: item.name,
+            toolArgs: item.arguments,
+          }).catch(e => console.error("Failed to sync tool call to Convex", e));
+        } else if (item.type === "function_call_output") {
+          // Check for failure in output
+          if (item.output?.success === false) {
+             const errorDetail = typeof item.output.content === "string" 
+                ? item.output.content 
+                : JSON.stringify(item.output.content);
+             capturedError = `Tool execution failed: ${errorDetail}`;
+          }
+
+          await convexClient.mutation(api.messages.add, {
+            conversationId,
+            role: "tool",
+            content: "",
+            turnId,
+            type: "tool_output",
+            callId: item.call_id,
+            toolOutput: item.output,
+          }).catch(e => console.error("Failed to sync tool output to Convex", e));
+        }
+      }
+
+      // Add event to turn store FIRST
+      await clientStreamManager.addEvent(turnId, msg);
+      await handleToolFailureEvent(turnId, msg);
 
       // Update turn status for error events
-      if (event.msg.type === "error") {
+      if (msg.type === "error") {
         await clientStreamManager.updateTurnStatus(turnId, "error");
       }
 
-      // Check if turn is complete - break AFTER storing the event
+      // Check if turn is complete
       if (
-        event.msg.type === "task_complete" ||
-        event.msg.type === "turn_aborted"
+        msg.type === "task_complete" ||
+        msg.type === "turn_aborted"
       ) {
         foundCompletionEvent = true;
-        // Don't break immediately - let the loop check foundCompletionEvent
-        // This ensures we've fully processed the completion event
+        
+        // Sync final Assistant Message to Convex
+        if (accumulatedMessage.trim()) {
+            await convexClient.mutation(api.messages.add, {
+                conversationId,
+                role: "assistant",
+                content: accumulatedMessage,
+                turnId,
+            }).catch(e => console.error("Failed to sync assistant message to Convex", e));
+        } else if (capturedError) {
+            // Fallback: Write error message if no text was generated
+            await convexClient.mutation(api.messages.add, {
+                conversationId,
+                role: "assistant",
+                content: `I encountered an error and could not complete the request.\n\nError details: ${capturedError}`,
+                turnId,
+                status: "failed"
+            }).catch(e => console.error("Failed to sync error message to Convex", e));
+        }
       }
     } catch (error) {
       // Handle errors - store error event before breaking
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      capturedError = errorMessage; // Capture for fallback write
+      
       await clientStreamManager.addEvent(turnId, {
         type: "error",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: errorMessage,
       });
       await clientStreamManager.updateTurnStatus(turnId, "error");
       foundCompletionEvent = true;
+      
+      // Attempt to write fallback message immediately on crash
+      if (!accumulatedMessage.trim()) {
+          await convexClient.mutation(api.messages.add, {
+            conversationId,
+            role: "assistant",
+            content: `System Error: ${errorMessage}`,
+            turnId,
+            status: "failed"
+        }).catch(e => console.error("Failed to sync crash message to Convex", e));
+      }
     }
   }
 
@@ -106,15 +177,21 @@ async function handleToolFailureEvent(
         ? msg.item.output.content
         : JSON.stringify(msg.item.output.content);
 
+    // Do NOT emit a generic 'error' event here.
+    // Doing so causes client-stream-manager to set turn.status = 'error' and close the stream immediately.
+    // We want the agent to see the tool failure and respond naturally.
+    
+    /*
     await clientStreamManager.addEvent(turnId, {
       type: "error",
       message: errorMessage,
     });
+    */
 
-    await clientStreamManager.addEvent(turnId, {
-      type: "turn_aborted",
-      reason: "replaced",
-    });
+    // Do NOT abort the turn here. Let the model see the error and respond.
+    // await clientStreamManager.addEvent(turnId, {
+    //   type: "turn_aborted",
+    //   reason: "replaced",
+    // });
   }
 }
-

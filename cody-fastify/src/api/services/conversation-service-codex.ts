@@ -1,7 +1,5 @@
 /**
- * Conversation Service using Codex
- * 
- * Provides conversation CRUD operations using CodexRuntime and RolloutStore.
+ * Conversation Service using Convex (migrated from FileRolloutStore)
  */
 
 import type { CodexRuntime } from "./codex-runtime.js";
@@ -11,111 +9,41 @@ import type {
   ListConversationsQuery,
   UpdateConversationBody,
 } from "../schemas/conversation.js";
-import {
-  FileRolloutStore,
-  RolloutRecorder,
-  type SessionMeta,
-  type RolloutTurn,
-} from "codex-ts/src/core/rollout.ts";
-import type { ResponseItem } from "codex-ts/src/protocol/models.ts";
 import { NotFoundError, ValidationError } from "../errors/api-errors.js";
+import { convexClient } from "./convex-client.js";
+import { api } from "../../../convex/_generated/api.js";
 
-/**
- * Convert RolloutTurn[] to history array format expected by API.
- */
-function responseItemsToHistory(turns: RolloutTurn[]): Array<any> {
-  const history: Array<any> = [];
-
-  for (let i = 0; i < turns.length; i++) {
-    const turn = turns[i];
-    const turnId = String(i + 1);
-
-    for (const item of turn.items) {
-      if (item.type === "message") {
-        // Extract text content from content array
-        const textParts: string[] = [];
-        for (const contentItem of item.content) {
-          if (contentItem.type === "input_text" || contentItem.type === "output_text") {
-            textParts.push(contentItem.text);
-          }
-        }
-        if (textParts.length > 0) {
-          history.push({
-            type: "message",
-            role: item.role,
-            content: textParts.join("\n"),
-            turnId,
-          });
-        }
-      } else if (item.type === "local_shell_call") {
-        history.push({
-          type: "tool_call",
-          callId: item.call_id || item.id,
-          toolName: "exec",
-          arguments: { command: item.action.command },
-          status: item.status,
-          turnId,
-        });
-      } else if (item.type === "function_call") {
-        let args = item.arguments;
-        try {
-          args = JSON.parse(item.arguments);
-        } catch {}
-        
-        history.push({
-          type: "tool_call",
-          callId: item.call_id,
-          toolName: item.name,
-          arguments: args,
-          turnId,
-        });
-      } else if (item.type === "custom_tool_call") {
-        let args = item.input;
-        try {
-          args = JSON.parse(item.input);
-        } catch {}
-        
-        history.push({
-          type: "tool_call",
-          callId: item.call_id,
-          toolName: item.name,
-          arguments: args,
-          turnId,
-        });
-      } else if (item.type === "function_call_output") {
-        let output = item.output;
-        history.push({
-          type: "tool_output",
-          callId: item.call_id,
-          output: output,
-          status: "completed",
-          turnId,
-        });
-      } else if (item.type === "custom_tool_call_output") {
-        history.push({
-          type: "tool_output",
-          callId: item.call_id,
-          output: item.output,
-          status: "completed",
-          turnId,
-        });
-      }
-    }
+// Helper to map Convex message to API history format
+function mapConvexMessageToHistory(msg: any): any {
+  if (msg.type === "tool_call") {
+    return {
+      type: "tool_call",
+      callId: msg.callId,
+      toolName: msg.toolName,
+      arguments: msg.toolArgs,
+      status: msg.status || "in_progress",
+      turnId: msg.turnId,
+    };
   }
-
-  return history;
+  if (msg.type === "tool_output") {
+    return {
+      type: "tool_output",
+      callId: msg.callId,
+      output: msg.toolOutput,
+      status: "completed",
+      turnId: msg.turnId,
+    };
+  }
+  return {
+    role: msg.role,
+    content: msg.content,
+    turnId: msg.turnId,
+  };
 }
 
-type ExtendedSessionMeta = SessionMeta & {
-  title?: string;
-  summary?: string;
-  tags?: string[];
-  agentRole?: string;
-  parent?: string;
-};
-
 /**
- * Create a new conversation using Codex.
+ * Create a new conversation.
+ * MIGRATION NOTE: Creates both a legacy Codex file-based conversation AND a Convex thread.
  */
 export async function createConversation(
   codexRuntime: CodexRuntime,
@@ -130,6 +58,7 @@ export async function createConversation(
     throw new ValidationError(validation.error || "Invalid provider/API combination");
   }
 
+  // 1. Create Legacy Conversation (File-based) - Required for CodexRuntime execution
   const result = await codexRuntime.createConversation({
     modelProviderId: body.modelProviderId,
     modelProviderApi: body.modelProviderApi,
@@ -138,48 +67,20 @@ export async function createConversation(
     summary: body.summary,
     tags: body.tags,
     agentRole: body.agentRole,
-    reasoningEffort: body.reasoningEffort as any, // Type assertion needed until schema types are regenerated/aligned
+    reasoningEffort: body.reasoningEffort as any,
   });
 
-  // Update rollout file with extended metadata if provided
-  if (body.title || body.summary || body.tags || body.agentRole) {
-    const rolloutStore = new FileRolloutStore();
-    const codexHome = codexRuntime.getConfig().codexHome;
-    const path = await rolloutStore.findConversationPathById(
-      codexHome,
-      result.conversationId,
-    );
-
-    if (path) {
-      // Read existing rollout
-      const lines = await RolloutRecorder.readRolloutHistory(path);
-      
-      // Find and update session_meta line
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].item.type === "session_meta") {
-          const meta = lines[i].item.data as ExtendedSessionMeta;
-          if (body.title !== undefined) meta.title = body.title;
-          if (body.summary !== undefined) meta.summary = body.summary;
-          if (body.tags !== undefined) meta.tags = body.tags;
-          if (body.agentRole !== undefined) meta.agentRole = body.agentRole;
-          
-          // Rewrite the file with updated metadata
-          const { writeFile } = await import("node:fs/promises");
-          const updatedLines = lines.map((line, idx) => {
-            if (idx === i) {
-              return JSON.stringify({
-                timestamp: line.timestamp,
-                item: { type: "session_meta", data: meta },
-              });
-            }
-            return JSON.stringify(line);
-          });
-          await writeFile(path, updatedLines.join("\n") + "\n", "utf-8");
-          break;
-        }
-      }
-    }
-  }
+  // 2. Sync to Convex
+  await convexClient.mutation(api.threads.create, {
+    externalId: result.conversationId,
+    modelProviderId: body.modelProviderId,
+    modelProviderApi: body.modelProviderApi,
+    model: body.model,
+    title: body.title,
+    summary: body.summary,
+    tags: body.tags,
+    agentRole: body.agentRole,
+  });
 
   const now = new Date().toISOString();
 
@@ -195,152 +96,115 @@ export async function createConversation(
     parent: null,
     tags: body.tags ?? [],
     agentRole: body.agentRole ?? null,
-    history: [], // Empty for new conversation
+    history: [],
   };
 }
 
 /**
- * List conversations with pagination.
+ * List conversations from Convex.
  */
 export async function listConversations(
-  codexRuntime: CodexRuntime,
+  _codexRuntime: CodexRuntime,
   options?: ListConversationsQuery,
 ): Promise<{
   conversations: ConversationResponse[];
   nextCursor: string | null;
 }> {
-  const limit =
-    typeof options?.limit === "string"
-      ? parseInt(options.limit, 10)
-      : options?.limit;
-
-  const result = await codexRuntime.listConversations({
-    cursor: options?.cursor,
-    limit,
+  const limit = typeof options?.limit === "string" ? parseInt(options.limit, 10) : options?.limit;
+  
+  const result = await convexClient.query(api.threads.list, {
+    paginationOpts: {
+      numItems: limit || 20,
+      cursor: options?.cursor ?? null,
+    }
   });
 
-  // Convert ConversationMetadata[] to ConversationResponse[]
-  const conversations: ConversationResponse[] = await Promise.all(
-    result.conversations.map(async (meta) => {
-      // Try to load full conversation to get metadata
-      const rolloutStore = new FileRolloutStore();
-      const codexHome = codexRuntime.getConfig().codexHome;
-      const path = await rolloutStore.findConversationPathById(
-        codexHome,
-        meta.id,
+  // Fetch stats for each thread (inefficient N+1, but okay for local pod)
+  const conversations = await Promise.all(
+    result.page.map(async (thread) => {
+      const messages = await convexClient.query(api.messages.list, {
+        threadId: thread._id,
+      });
+      
+      const firstUserMsg = messages.find(
+        (m) => m.role === "user" && (!m.type || m.type === "message")
       );
 
-      let sessionMeta: ExtendedSessionMeta | undefined;
-      let messageCount = 0;
-      let firstMessage: string | undefined;
-
-      if (path) {
-        const rollout = await rolloutStore.readConversation(path);
-        if (rollout.meta) {
-          sessionMeta = rollout.meta as ExtendedSessionMeta;
-        }
-
-        const history = responseItemsToHistory(rollout.turns);
-        messageCount = history.length;
-        const firstUserMsg = history.find((h: any) => h.role === 'user' && h.type === 'message');
-        if (firstUserMsg) {
-          firstMessage = firstUserMsg.content;
-        }
-      }
-
       return {
-        conversationId: meta.id,
-        createdAt:
-          sessionMeta?.timestamp || new Date(meta.updatedAt).toISOString(),
-        updatedAt: new Date(meta.updatedAt).toISOString(),
-        modelProviderId: sessionMeta?.modelProvider || meta.provider || "",
-        modelProviderApi: sessionMeta?.modelProviderApi || "",
-        model: sessionMeta?.model || meta.model || "",
-        title: sessionMeta?.title ?? null,
-        summary: sessionMeta?.summary ?? null,
+        conversationId: thread.externalId,
+        createdAt: new Date(thread.createdAt).toISOString(),
+        updatedAt: new Date(thread.updatedAt).toISOString(),
+        modelProviderId: thread.modelProviderId || "",
+        modelProviderApi: thread.modelProviderApi || "",
+        model: thread.model || "",
+        title: thread.title ?? null,
+        summary: thread.summary ?? null,
         parent: null,
-        tags: sessionMeta?.tags ?? [],
-        agentRole: sessionMeta?.agentRole ?? null,
-        messageCount,
-        firstMessage,
-        history: [], // History loaded separately in getConversation
+        tags: thread.tags ?? [],
+        agentRole: thread.agentRole ?? null,
+        messageCount: messages.length,
+        firstMessage: firstUserMsg?.content,
+        history: [],
       };
-    }),
+    })
   );
 
   return {
     conversations,
-    nextCursor: result.nextCursor,
+    nextCursor: result.continueCursor === result.isDone ? null : result.continueCursor,
   };
 }
 
 /**
- * Get a single conversation by ID.
+ * Get a single conversation by ID from Convex.
  */
 export async function getConversation(
-  codexRuntime: CodexRuntime,
+  _codexRuntime: CodexRuntime,
   conversationId: string,
 ): Promise<ConversationResponse | null> {
-  const rolloutStore = new FileRolloutStore();
-  const codexHome = codexRuntime.getConfig().codexHome;
-  const path = await rolloutStore.findConversationPathById(
-    codexHome,
-    conversationId,
-  );
+  const thread = await convexClient.query(api.threads.get, {
+    externalId: conversationId,
+  });
 
-  if (!path) {
+  if (!thread) {
     return null;
   }
 
-  const rollout = await rolloutStore.readConversation(path);
-  const meta = rollout.meta as ExtendedSessionMeta | undefined;
+  const messages = await convexClient.query(api.messages.list, {
+    threadId: thread._id,
+  });
 
-  if (!meta) {
-    return null;
-  }
-
-  // Build history from turns
-  const history = responseItemsToHistory(rollout.turns);
+  const history = messages.map(mapConvexMessageToHistory);
 
   return {
-    conversationId: meta.id,
-    createdAt: meta.timestamp,
-    updatedAt: meta.timestamp, // TODO: Track updatedAt separately
-    modelProviderId: meta.modelProvider || "",
-    modelProviderApi: meta.modelProviderApi || "",
-    model: meta.model || "",
-    title: meta.title ?? null,
-    summary: meta.summary ?? null,
-    parent: meta.parent ?? null,
-    tags: meta.tags ?? [],
-    agentRole: meta.agentRole ?? null,
+    conversationId: thread.externalId,
+    createdAt: new Date(thread.createdAt).toISOString(),
+    updatedAt: new Date(thread.updatedAt).toISOString(),
+    modelProviderId: thread.modelProviderId || "",
+    modelProviderApi: thread.modelProviderApi || "",
+    model: thread.model || "",
+    title: thread.title ?? null,
+    summary: thread.summary ?? null,
+    parent: null,
+    tags: thread.tags ?? [],
+    agentRole: thread.agentRole ?? null,
     history,
   };
 }
 
 /**
- * Update conversation metadata.
+ * Update conversation metadata in Convex.
  */
 export async function updateConversation(
-  codexRuntime: CodexRuntime,
+  _codexRuntime: CodexRuntime,
   conversationId: string,
   updates: UpdateConversationBody,
 ): Promise<ConversationResponse> {
-  const rolloutStore = new FileRolloutStore();
-  const codexHome = codexRuntime.getConfig().codexHome;
-  const path = await rolloutStore.findConversationPathById(
-    codexHome,
-    conversationId,
-  );
+  const thread = await convexClient.query(api.threads.get, {
+    externalId: conversationId,
+  });
 
-  if (!path) {
-    throw new NotFoundError(`Conversation ${conversationId} not found`);
-  }
-
-  const rollout = await rolloutStore.readConversation(path);
-  const meta = rollout.meta;
-
-  if (!meta) {
+  if (!thread) {
     throw new NotFoundError(`Conversation ${conversationId} not found`);
   }
 
@@ -350,8 +214,8 @@ export async function updateConversation(
     updates.modelProviderApi ||
     updates.model
   ) {
-    const providerId = updates.modelProviderId ?? meta.modelProvider ?? "";
-    const api = updates.modelProviderApi ?? meta.modelProviderApi ?? "";
+    const providerId = updates.modelProviderId ?? thread.modelProviderId ?? "";
+    const api = updates.modelProviderApi ?? thread.modelProviderApi ?? "";
 
     const validation = validateProviderApi(providerId, api);
     if (!validation.valid) {
@@ -359,63 +223,18 @@ export async function updateConversation(
     }
   }
 
-  // Update metadata in rollout file
-  const lines = await RolloutRecorder.readRolloutHistory(path);
-  let updatedMeta: ExtendedSessionMeta = { ...meta };
-  
-  // Find and update session_meta line
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].item.type === "session_meta") {
-      const metaData = lines[i].item.data as ExtendedSessionMeta;
-      updatedMeta = {
-        ...meta,
-        modelProvider: updates.modelProviderId ?? meta.modelProvider,
-        modelProviderApi: updates.modelProviderApi ?? meta.modelProviderApi,
-        model: updates.model ?? meta.model,
-        title: updates.title !== undefined ? updates.title : metaData.title,
-        summary: updates.summary !== undefined ? updates.summary : metaData.summary,
-        tags: updates.tags !== undefined ? updates.tags : metaData.tags,
-        agentRole: updates.agentRole !== undefined ? updates.agentRole : metaData.agentRole,
-      };
-      
-      // Write updated metadata back to file
-      const { writeFile } = await import("node:fs/promises");
-      const updatedLines = lines.map((line, idx) => {
-        if (idx === i) {
-          return JSON.stringify({
-            timestamp: line.timestamp,
-            item: { type: "session_meta", data: updatedMeta },
-          });
-        }
-        return JSON.stringify(line);
-      });
-      await writeFile(path, updatedLines.join("\n") + "\n", "utf-8");
-      break;
-    }
-  }
+  await convexClient.mutation(api.threads.update, {
+    id: thread._id,
+    title: updates.title,
+    model: updates.model,
+    summary: updates.summary,
+    tags: updates.tags,
+    agentRole: updates.agentRole,
+    modelProviderId: updates.modelProviderId,
+    modelProviderApi: updates.modelProviderApi,
+  });
 
-  // Re-read rollout to get updated data
-  const updatedRollout = await rolloutStore.readConversation(path);
-  
-  // Build history
-  const history = responseItemsToHistory(updatedRollout.turns);
-
-  const now = new Date().toISOString();
-
-  return {
-    conversationId: updatedMeta.id,
-    createdAt: updatedMeta.timestamp,
-    updatedAt: now,
-    modelProviderId: updatedMeta.modelProvider || "",
-    modelProviderApi: updatedMeta.modelProviderApi || "",
-    model: updatedMeta.model || "",
-    title: updatedMeta.title ?? null,
-    summary: updatedMeta.summary ?? null,
-    parent: null,
-    tags: updatedMeta.tags ?? [],
-    agentRole: updatedMeta.agentRole ?? null,
-    history,
-  };
+  return (await getConversation(_codexRuntime, conversationId))!;
 }
 
 /**
@@ -425,68 +244,42 @@ export async function deleteConversation(
   codexRuntime: CodexRuntime,
   conversationId: string,
 ): Promise<boolean> {
-  // Attempt to remove via manager; if this fails (invalid ID, etc.), fall back to file deletion
-  let removedByManager = false;
-  try {
-    removedByManager = await codexRuntime.removeConversation(conversationId);
-  } catch {
-    removedByManager = false;
+  // Delete from Convex
+  const deleted = await convexClient.mutation(api.threads.remove, {
+    externalId: conversationId
+  });
+  
+  // Delete from Legacy File Store (for cleanup)
+  if (deleted) {
+    await codexRuntime.removeConversation(conversationId);
   }
-
-  // Always attempt to delete the rollout file if present to ensure it is removed from listings
-  const rolloutStore = new FileRolloutStore();
-  const codexHome = codexRuntime.getConfig().codexHome;
-  const path = await rolloutStore.findConversationPathById(
-    codexHome,
-    conversationId,
-  );
-
-  let removedByFile = false;
-  if (path) {
-    const { unlink } = await import("node:fs/promises");
-    try {
-      await unlink(path);
-      removedByFile = true;
-    } catch {
-      removedByFile = false;
-    }
-  }
-
-  return removedByManager || removedByFile;
+  
+  return deleted;
 }
 
 /**
- * Get minimal metadata for a conversation (provider/model info).
+ * Get minimal metadata for a conversation.
  */
 export async function getConversationMetadataSummary(
-  codexRuntime: CodexRuntime,
+  _codexRuntime: CodexRuntime,
   conversationId: string,
 ): Promise<{
   modelProviderId: string;
   modelProviderApi: string;
   model: string;
 } | null> {
-  const rolloutStore = new FileRolloutStore();
-  const codexHome = codexRuntime.getConfig().codexHome;
-  const path = await rolloutStore.findConversationPathById(
-    codexHome,
-    conversationId,
-  );
+  const thread = await convexClient.query(api.threads.get, {
+    externalId: conversationId,
+  });
 
-  if (!path) {
-    return null;
-  }
-
-  const rollout = await rolloutStore.readConversation(path);
-  const meta = rollout.meta;
-  if (!meta) {
+  if (!thread) {
     return null;
   }
 
   return {
-    modelProviderId: meta.modelProvider || "",
-    modelProviderApi: meta.modelProviderApi || "",
-    model: meta.model || "",
+    modelProviderId: thread.modelProviderId || "",
+    modelProviderApi: thread.modelProviderApi || "",
+    model: thread.model || "",
   };
 }
 
@@ -523,4 +316,3 @@ export function validateProviderApi(
 
   return { valid: true };
 }
-

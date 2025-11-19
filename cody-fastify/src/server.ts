@@ -17,7 +17,15 @@ import { AppError } from "./api/errors/api-errors.js";
 import { CodexRuntime } from "./api/services/codex-runtime.js";
 
 export async function createServer() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({
+    logger: {
+      level: "debug",
+      transport: {
+        target: "pino/file",
+        options: { destination: "./logs/debug.log", mkdir: true },
+      },
+    },
+  });
 
   await app.register(cors, { origin: "*" });
 
