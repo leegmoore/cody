@@ -36,7 +36,13 @@ export async function createServer() {
 
   await app.register(fastifyStatic, {
     root: join(__dirname, "..", "public"),
-    prefix: "/"
+    prefix: "/",
+    maxAge: 0, // Disable cache for development
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    },
   });
 
   // Initialize Codex runtime
