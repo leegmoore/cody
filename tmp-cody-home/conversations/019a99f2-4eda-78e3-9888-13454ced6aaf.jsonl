@@ -1,4 +1,0 @@
-{"timestamp":"2025-11-19T02:29:45.306Z","item":{"type":"session_meta","data":{"id":"019a99f2-4eda-78e3-9888-13454ced6aaf","timestamp":"2025-11-19T02:29:45.306Z","cwd":"/Users/leemoore/code/codex-port-02/cody-fastify","cliVersion":"0.0.1","source":"api","modelProvider":"anthropic","model":"claude-sonnet-4","modelProviderApi":"messages"}}}
-{"timestamp":"2025-11-19T02:29:45.306Z","item":{"type":"event","data":{"type":"session_configured","session_id":"019a99f2-4eda-78e3-9888-13454ced6aaf","model":"claude-sonnet-4","history_log_id":0,"history_entry_count":0,"rollout_path":"/Users/leemoore/code/codex-port-02/tmp-cody-home/conversations/019a99f2-4eda-78e3-9888-13454ced6aaf.jsonl"}}}
-{"timestamp":"2025-11-19T02:29:45.457Z","item":{"type":"event","data":{"type":"error","message":"Resource not found: model: claude-sonnet-4"}}}
-{"timestamp":"2025-11-19T02:29:45.457Z","item":{"type":"event","data":{"type":"task_complete"}}}
