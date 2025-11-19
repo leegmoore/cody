@@ -167,7 +167,7 @@ body {
         #78350f 60%, 
         #78350f 100%
     );
-    background-size: 200% auto;
+    background-size: 300% auto;
     background-repeat: no-repeat;
     
     color: #78350f;
@@ -192,7 +192,7 @@ body {
         #78350f 60%, 
         #78350f 100%
     );
-    background-size: 200% auto;
+    background-size: 300% auto;
     background-repeat: no-repeat;
     color: #78350f;
     background-clip: text;
@@ -206,10 +206,10 @@ body {
 
 @keyframes textShimmerWave {
     from {
-        background-position: 0% center;
+        background-position: 100% center;
     }
     to {
-        background-position: -200% center;
+        background-position: 0% center;
     }
 }
 

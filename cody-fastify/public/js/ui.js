@@ -67,21 +67,21 @@ export function getToolStatusMeta(status) {
         return {
             className: 'text-red-600',
             text: 'Failed',
-            icon: "
-                <svg class=\"w-4 h-4 text-red-600\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
-                    <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path>
+            icon: `
+                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
-            "
+            `
         };
     }
     return {
         className: 'text-green-700',
         text: 'Completed',
-        icon: "
-            <svg class=\"w-4 h-4 text-green-600\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
-                <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 13l4 4L19 7\"></path>
+        icon: `
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>
-        "
+        `
     };
 }
 
@@ -125,16 +125,16 @@ export function updateToolCallStack(turnId) {
         card.style.setProperty('--stack-index', index);
         card.style.zIndex = `${index + 1}`;
         card.dataset.callId = call.callId || '';
-        card.innerHTML = "
+        card.innerHTML = `
             ${tooltipHtml}
-            <div class=\"w-full\">
-                <p class=\"text-xs font-mono ${titleColorClass} truncate w-full\" title=\"${escapeHtml(signature)}\">${escapeHtml(signature)}</p>
-                <div class=\"tool-card-status mt-1 flex items-center gap-2 text-[10px] font-semibold ${statusMeta.className}\">
+            <div class="w-full">
+                <p class="text-xs font-mono ${titleColorClass} truncate w-full" title="${escapeHtml(signature)}">${escapeHtml(signature)}</p>
+                <div class="tool-card-status mt-1 flex items-center gap-2 text-[10px] font-semibold ${statusMeta.className}">
                     ${statusMeta.icon}
                     <span>${statusMeta.text}</span>
                 </div>
             </div>
-        ";
+        `;
 
         card.onclick = () => openToolCallModal(call.callId);
         timeline.cardsContainer.appendChild(card);
@@ -319,9 +319,9 @@ export function showThinkingPlaceholder() {
     const thinkingPlaceholder = document.createElement('div');
     thinkingPlaceholder.id = 'temp-thinking-placeholder';
     thinkingPlaceholder.className = 'flex justify-start mt-1 mb-2 animate-fade-in';
-    thinkingPlaceholder.innerHTML = "
-        <div class=\"status-shimmer ml-2\">Doing important ai stuff...</div>
-    ";
+    thinkingPlaceholder.innerHTML = `
+        <div class="status-shimmer ml-2">Doing important ai stuff...</div>
+    `;
     chatHistory.appendChild(thinkingPlaceholder);
     scrollToBottom();
 }
@@ -362,13 +362,13 @@ export function addUserMessage(text) {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex justify-end animate-fade-in';
-    messageDiv.innerHTML = "
-        <div class=\"max-w-3xl\">
-            <div class=\"bg-orange-600 text-white rounded-lg px-4 py-3 shadow\">
-                <div class=\"message-content\">${escapeHtml(text)}</div>
+    messageDiv.innerHTML = `
+        <div class="max-w-3xl">
+            <div class="bg-orange-600 text-white rounded-lg px-4 py-3 shadow">
+                <div class="message-content">${escapeHtml(text)}</div>
             </div>
         </div>
-    ";
+    `;
     
     chatHistory.appendChild(messageDiv);
     scrollToBottom();
@@ -389,17 +389,17 @@ export function addAgentMessage(text) {
     const messageDiv = document.createElement('div');
     messageDiv.id = messageId;
     messageDiv.className = 'flex justify-start animate-fade-in';
-    messageDiv.innerHTML = "
-        <div class=\"max-w-3xl\">
-            <div class=\"bg-white border-2 border-tan-300 rounded-lg px-4 py-3 shadow\">
-                <div class=\"flex items-center mb-2\">
-                    <div class=\"w-6 h-6 bg-orange-600 rounded flex items-center justify-center text-white text-xs font-bold mr-2\">C</div>
-                    <span class=\"text-sm font-semibold text-brown-800\">Cody</span>
+    messageDiv.innerHTML = `
+        <div class="max-w-3xl">
+            <div class="bg-white border-2 border-tan-300 rounded-lg px-4 py-3 shadow">
+                <div class="flex items-center mb-2">
+                    <div class="w-6 h-6 bg-orange-600 rounded flex items-center justify-center text-white text-xs font-bold mr-2">C</div>
+                    <span class="text-sm font-semibold text-brown-800">Cody</span>
                 </div>
-                <div class=\"message-content text-brown-900\">${escapeHtml(text)}</div>
+                <div class="message-content text-brown-900">${escapeHtml(text)}</div>
             </div>
         </div>
-    ";
+    `;
     
     chatHistory.appendChild(messageDiv);
     scrollToBottom();
@@ -446,19 +446,19 @@ export function addReasoningMessage(text) {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex justify-start reasoning-message animate-fade-in';
-    messageDiv.innerHTML = "
-        <div class=\"max-w-3xl w-full\">
-            <div class=\"bg-tan-200 border-l-4 border-tan-400 rounded-r-lg px-4 py-3 shadow-sm my-2\">
-                <div class=\"flex items-center mb-1\">
-                    <svg class=\"w-4 h-4 mr-2 text-tan-600\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
-                        <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z\"></path>
+    messageDiv.innerHTML = `
+        <div class="max-w-3xl w-full">
+            <div class="bg-tan-200 border-l-4 border-tan-400 rounded-r-lg px-4 py-3 shadow-sm my-2">
+                <div class="flex items-center mb-1">
+                    <svg class="w-4 h-4 mr-2 text-tan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                     </svg>
-                    <span class=\"text-xs font-bold uppercase tracking-wide text-tan-700\">Reasoning</span>
+                    <span class="text-xs font-bold uppercase tracking-wide text-tan-700">Reasoning</span>
                 </div>
-                <div class=\"reasoning-content text-sm text-brown-800 font-mono whitespace-pre-wrap\">${escapeHtml(text)}</div>
+                <div class="reasoning-content text-sm text-brown-800 font-mono whitespace-pre-wrap">${escapeHtml(text)}</div>
             </div>
         </div>
-    ";
+    `;
     
     chatHistory.appendChild(messageDiv);
     scrollToBottom();
@@ -468,13 +468,13 @@ export function addSystemMessage(text) {
     const chatHistory = document.getElementById('chatHistory');
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex justify-center animate-fade-in';
-    messageDiv.innerHTML = "
-        <div class=\"max-w-2xl\">
-            <div class=\"bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm\">
+    messageDiv.innerHTML = `
+        <div class="max-w-2xl">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm">
                 ${escapeHtml(text)}
             </div>
         </div>
-    ";
+    `;
     chatHistory.appendChild(messageDiv);
     scrollToBottom();
 }
@@ -493,15 +493,15 @@ export function addToThreadNav(role, content) {
     
     const navItem = document.createElement('div');
     navItem.className = `nav-item ${bgColor} rounded-lg p-2 mb-2 cursor-pointer transition-colors`;
-    navItem.innerHTML = "
-        <div class=\"flex items-start\">
-            <span class=\"mr-2 text-sm\">${icon}</span>
-            <div class=\"flex-1 min-w-0\">
-                <div class=\"text-xs text-brown-600 font-medium mb-1\">${role === 'user' ? 'You' : 'Cody'}</div>
-                <div class=\"text-xs text-brown-700 truncate\">${escapeHtml(preview)}</div>
+    navItem.innerHTML = `
+        <div class="flex items-start">
+            <span class="mr-2 text-sm">${icon}</span>
+            <div class="flex-1 min-w-0">
+                <div class="text-xs text-brown-600 font-medium mb-1">${role === 'user' ? 'You' : 'Cody'}</div>
+                <div class="text-xs text-brown-700 truncate">${escapeHtml(preview)}</div>
             </div>
         </div>
-    ";
+    `;
     
     navItem.onclick = () => {
         const messageElements = state.messageHistory.filter(m => m.role === role && m.content.startsWith(content.substring(0, 30)));
@@ -521,10 +521,10 @@ export function updateStatus(text, color) {
         'red': 'bg-red-500'
     };
     
-    statusIndicator.innerHTML = "
-        <span class=\"inline-block w-2 h-2 ${colors[color]} rounded-full mr-1\"></span>
+    statusIndicator.innerHTML = `
+        <span class="inline-block w-2 h-2 ${colors[color]} rounded-full mr-1"></span>
         ${text}
-    ";
+    `;
 }
 
 export function toggleLeftSidebar() {

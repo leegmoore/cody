@@ -1,9 +1,9 @@
-import { state } from './state.js';
+import { state, ensureToolCall, applyToolCallUpdates } from './state.js';
 import { 
     updateStatus, addSystemMessage, resetToolCallState, 
     addUserMessage, addAgentMessage, showThinkingPlaceholder, 
     closeToolCallModal, toggleLeftSidebar, toggleRightSidebar,
-    ensureToolCall, applyToolCallUpdates, syncToolCallUI,
+    syncToolCallUI,
     scrollToBottom
 } from './ui.js';
 import { streamTurn } from './stream.js';
