@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { registerConversationRoutes } from "./api/routes/conversations.js";
 import { registerMessageRoutes } from "./api/routes/messages.js";
 import { registerTurnRoutes } from "./api/routes/turns.js";
@@ -40,7 +41,7 @@ export async function createServer() {
 
   // Initialize Codex runtime
   const codexHome =
-    process.env.CODY_HOME ?? join(process.cwd(), "..", "tmp-cody-home");
+    process.env.CODY_HOME ?? join(tmpdir(), "cody-runtime");
   await mkdir(codexHome, { recursive: true });
   process.env.CODY_HOME ??= codexHome;
   const cwd = process.cwd();
