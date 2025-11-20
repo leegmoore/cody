@@ -21,10 +21,6 @@ export async function createServer() {
   const app = Fastify({
     logger: {
       level: "debug",
-      transport: {
-        target: "pino/file",
-        options: { destination: "./logs/debug.log", mkdir: true },
-      },
     },
   });
 

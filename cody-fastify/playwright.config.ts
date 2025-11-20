@@ -10,6 +10,8 @@ dotenv.config({ path: ".env.local" });
 const workspaceRoot = fileURLToPath(new URL("..", import.meta.url));
 const defaultCodyHome =
   process.env.CODY_HOME ?? join(workspaceRoot, "tmp-cody-home");
+const reuseExistingServer =
+  process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "true";
 
 // Ensure a clean Codex state before the server spins up
 rmSync(defaultCodyHome, { recursive: true, force: true });
@@ -34,7 +36,7 @@ export default defineConfig({
       CODY_HOME: defaultCodyHome,
     },
     url: "http://127.0.0.1:4010/health",
-    reuseExistingServer: false, // Always start fresh to ensure clean shutdown
+    reuseExistingServer,
     timeout: 120_000,
     stdout: "ignore", // Prevent stdout from keeping pipes open
     stderr: "pipe", // Keep stderr for debugging but pipe it properly

@@ -742,7 +742,7 @@ Model generates response:
 │ QuickJS Continue                                │
 │    const results = await Promise.all(           │
 │      tests.map(t => tools.exec({...}))          │──┐
-│    );                                           │  │
+│    );
 └─────────────────────┬───────────────────────────┘  │
                       ↓                                │
 ┌─────────────────────────────────────────────────┐  │
@@ -970,7 +970,7 @@ readFile(params: {
 }): Promise<{
   content: string;      // Formatted lines (L123: content)
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Reads file contents with smart indentation-aware mode for navigating code structure by indentation levels, or simple slice mode for range reading.
 
@@ -984,7 +984,7 @@ listDir(params: {
 }): Promise<{
   content: string;      // Tree structure with / @ ? markers
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Lists directory contents recursively with visual tree structure. Directories marked with `/`, symlinks with `@`, other types with `?`.
 
@@ -998,7 +998,7 @@ grepFiles(params: {
 }): Promise<{
   content: string;      // File paths with matches
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Searches file contents using ripgrep. Returns paths of files containing pattern match. Requires ripgrep installed.
 
@@ -1011,7 +1011,7 @@ applyPatch(params: {
   success: boolean;
   stdout: string;
   stderr: string;
-}>
+}> 
 ```
 **What it does:** Applies unified diff patches to files. Uses tree-sitter for bash heredoc parsing. Handles Add/Delete/Update operations.
 
@@ -1027,7 +1027,7 @@ fileSearch(params: {
     path: string;
     score: number;
   }>;
-}>
+}> 
 ```
 **What it does:** Fuzzy filename search. Returns ranked results by relevance score. Respects gitignore patterns.
 
@@ -1047,7 +1047,7 @@ exec(params: {
   aggregatedOutput: string;
   timedOut: boolean;
   durationMs: number;
-}>
+}> 
 ```
 **What it does:** Executes shell command in sandboxed environment. Requires user approval. Captures stdout/stderr. Enforces timeout. Integrates with platform sandboxing (macOS Seatbelt, Linux Seccomp).
 
@@ -1064,7 +1064,7 @@ updatePlan(params: {
 }): Promise<{
   content: string;
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Structured task planning. Validates at most one step can be in_progress. Forces model to document plan for UI rendering.
 
@@ -1078,7 +1078,7 @@ viewImage(params: {
 }): Promise<{
   content: string;
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Validates image path and prepares for injection into conversation. Checks file exists and is a file. Actual injection handled at session level.
 
@@ -1092,7 +1092,7 @@ listMcpResources(params: {
 }): Promise<{
   content: string;      // JSON: {server, resources[], nextCursor}
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Lists available resources from MCP servers. Resources are data/content (not tools). Can list from specific server or aggregate all servers.
 
@@ -1104,7 +1104,7 @@ listMcpResourceTemplates(params: {
 }): Promise<{
   content: string;      // JSON: {server, resourceTemplates[], nextCursor}
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Lists resource templates with URI variables (e.g., "file:///{path}"). Templates can be instantiated with specific values.
 
@@ -1116,7 +1116,7 @@ readMcpResource(params: {
 }): Promise<{
   content: string;      // Resource content
   success: boolean;
-}>
+}> 
 ```
 **What it does:** Reads specific resource content from MCP server. Returns text or structured data from resource URI.
 
@@ -1135,7 +1135,7 @@ webSearch(params: {
     snippet: string;
     relevanceScore?: number;
   }>;
-}>
+}> 
 ```
 **What it does:** Web search via Perplexity API. Returns ranked SERP results. Background prefetch scrapes top N URLs to cache.
 
@@ -1153,7 +1153,7 @@ fetchUrl(params: {
     tokens: number;
     cached: boolean;
   }>;
-}>
+}> 
 ```
 **What it does:** Fetches web page content via Firecrawl. Checks cache first (URL-keyed, 24hr TTL). Converts to markdown. Auto-assigns fileKey for later retrieval. Adds to announcement board.
 
@@ -1548,6 +1548,42 @@ FunctionCall {name: "readFile"}
 **Potential:** Provider-specific tool signatures could be offered, but early testing suggests the scripting advantage is so significant that signature differences are marginal. The compositional capability matters more than parameter naming.
 
 **Decision:** Defer provider-specific tools until measurement shows benefit.
+
+---
+
+## Addendum: Meta-Tooling and MCP Adapters
+
+### "Vibe Coding" MCP Adapters
+
+**Problem:** Many Model Context Protocol (MCP) servers are verbose, token-heavy, and require multi-turn orchestration for simple tasks. Directly exposing all granular methods bloats the context window and confuses models.
+
+**Solution:** A **"Tool Compressor"** CLI workflow (`npx codex-bridge`) that wraps complex external protocols into clean, local scripting interfaces.
+
+**Workflow:**
+1.  **Connect:** Point CLI at MCP server (`codex-bridge connect ./mcp-server`).
+2.  **Introspect:** Pull full tool definitions.
+3.  **Curate:** User prompts an agent (Claude/GPT) to "vibe code" a high-level adapter.
+    *   *User:* "I want a tool called `deployToProd`. It should use `login`, `build`, and `upload`."
+    *   *Agent:* Generates a TypeScript function for the Script Harness.
+    *   `async function deployToProd() { await mcp.login(); await mcp.build(); ... }`
+4.  **Publish:** Save the function to the local Script Harness Registry.
+
+**Result:**
+- Runtime sees one clean tool (`deployToProd`).
+- One token trigger. One turn execution.
+- Complex protocol logic hidden inside the script abstraction.
+
+### Architectural Alignment: Responses API
+
+**Decision:** We confirm the selection of the **OpenAI Responses API schema** as our canonical internal representation for tool execution and conversation history.
+
+**Rationale:**
+- The Responses API's nested `Response -> OutputItem` structure natively models the agentic loop (Thinking → Script/Tool → Result → Message).
+- It supports the "Block-Based" model required for script execution (where a `<tool-calls>` block is just another content item).
+- It allows for rich, multi-modal outputs (text, code, tool results) within a single response container, matching the output of our Script Harness.
+- Other provider APIs (Anthropic Messages) map cleanly to this schema, minimizing transformation overhead.
+
+This alignment ensures that our "Super Tools" (scripts) and "Meta Tools" (MCP adapters) flow through the system using the same data structures as standard text and structured tool calls.
 
 ---
 

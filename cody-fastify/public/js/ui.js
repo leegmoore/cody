@@ -20,6 +20,8 @@ export function resetToolCallState(options = {}) {
         });
         state.toolCallTimelines.clear();
         state.toolCallSequence = 0;
+        state.thinkingBlocks.clear();
+        state.activeThinkingId = null;
     }
     state.toolCallModalCallId = null;
     closeToolCallModal(true);
@@ -312,6 +314,163 @@ export function mapToolStatus(status) {
     return 'completed';
 }
 
+function ensureThinkingBlock(thinkingId) {
+    if (!thinkingId) {
+        return null;
+    }
+
+    let block = state.thinkingBlocks.get(thinkingId);
+    if (block && block.wrapper && !document.body.contains(block.wrapper)) {
+        state.thinkingBlocks.delete(thinkingId);
+        block = null;
+    }
+
+    if (!block) {
+        block = createThinkingBlock(thinkingId);
+        if (block) {
+            state.thinkingBlocks.set(thinkingId, block);
+        }
+    }
+
+    return block;
+}
+
+function createThinkingBlock(thinkingId) {
+    const chatHistory = document.getElementById('chatHistory');
+    if (!chatHistory) return null;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-start thinking-message animate-fade-in';
+    wrapper.dataset.thinkingId = thinkingId;
+    wrapper.innerHTML = `
+        <div class="thinking-card" data-thinking-id="${thinkingId}" role="status" aria-live="polite">
+            <div class="thinking-card-header">
+                <div class="thinking-card-title">
+                    <svg class="w-4 h-4 mr-1 text-orange-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    <span class="text-xs font-semibold tracking-wide uppercase text-brown-700">Thinking</span>
+                </div>
+                <span class="thinking-status text-xs font-semibold text-shimmer">Streaming</span>
+            </div>
+            <div class="thinking-content text-sm text-brown-900 font-mono whitespace-pre-wrap" data-expanded="false"></div>
+            <div class="thinking-card-footer">
+                <span class="thinking-hint text-[11px] font-semibold text-brown-600">Click to expand</span>
+                <svg class="thinking-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"></path>
+                </svg>
+            </div>
+        </div>
+    `;
+
+    const card = wrapper.querySelector('.thinking-card');
+    const content = wrapper.querySelector('.thinking-content');
+    const status = wrapper.querySelector('.thinking-status');
+    const chevron = wrapper.querySelector('.thinking-chevron');
+
+    card?.addEventListener('click', () => {
+        const selection = typeof window.getSelection === 'function' ? window.getSelection() : null;
+        if (selection && selection.toString().length) {
+            return;
+        }
+        toggleThinkingExpansion(card, content, chevron);
+    });
+
+    chatHistory.appendChild(wrapper);
+    scrollToBottom();
+
+    return { wrapper, card, content, status, chevron, text: '' };
+}
+
+function toggleThinkingExpansion(card, content, chevron) {
+    if (!content || !card) return;
+    const expanded = content.getAttribute('data-expanded') === 'true';
+    const next = expanded ? 'false' : 'true';
+    content.setAttribute('data-expanded', next);
+    card.classList.toggle('expanded', next === 'true');
+    if (chevron) {
+        chevron.classList.toggle('rotated', next === 'true');
+    }
+}
+
+function resolveThinkingId(preferred) {
+    return preferred || state.activeThinkingId || null;
+}
+
+function updateThinkingContent(block, text) {
+    if (!block || !block.content) return;
+    block.text = text;
+    block.content.textContent = text;
+    scrollToBottom();
+}
+
+export function handleThinkingStarted(data = {}) {
+    const thinkingId = data.thinkingId || `thinking-${Date.now()}`;
+    state.activeThinkingId = thinkingId;
+
+    const block = ensureThinkingBlock(thinkingId);
+    if (!block) return;
+
+    if (block.content) {
+        block.content.textContent = '';
+        block.content.setAttribute('data-expanded', 'false');
+    }
+
+    block.text = '';
+
+    if (block.card) {
+        block.card.classList.remove('completed');
+        block.card.classList.remove('expanded');
+        block.card.classList.add('active');
+    }
+
+    if (block.status) {
+        block.status.textContent = 'Thinking';
+        block.status.classList.add('text-shimmer');
+    }
+}
+
+export function handleThinkingDelta(data = {}) {
+    const thinkingId = resolveThinkingId(data.thinkingId);
+    if (!thinkingId) {
+        return;
+    }
+    const block = ensureThinkingBlock(thinkingId);
+    if (!block) {
+        return;
+    }
+
+    const delta = data.delta || data.text || '';
+    if (!delta) return;
+
+    const nextText = (block.text || '') + delta;
+    updateThinkingContent(block, nextText);
+}
+
+export function handleThinkingCompleted(data = {}) {
+    const thinkingId = resolveThinkingId(data.thinkingId);
+    if (!thinkingId) {
+        return;
+    }
+    const block = ensureThinkingBlock(thinkingId);
+    if (!block) {
+        return;
+    }
+
+    const finalText = data.text || block.text || '';
+    updateThinkingContent(block, finalText);
+
+    if (block.card) {
+        block.card.classList.remove('active');
+        block.card.classList.add('completed');
+    }
+    if (block.status) {
+        block.status.textContent = 'Finished';
+        block.status.classList.remove('text-shimmer');
+    }
+    state.activeThinkingId = null;
+}
+
 export function showThinkingPlaceholder() {
     const chatHistory = document.getElementById('chatHistory');
     if (document.getElementById('temp-thinking-placeholder')) return;
@@ -461,6 +620,45 @@ export function addReasoningMessage(text) {
     `;
     
     chatHistory.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+export function addThinkingHistoryMessage(text) {
+    const chatHistory = document.getElementById('chatHistory');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-start thinking-message animate-fade-in';
+
+    wrapper.innerHTML = `
+        <div class="thinking-card completed" data-history="true">
+            <div class="thinking-card-header">
+                <div class="thinking-card-title">
+                    <svg class="w-4 h-4 mr-1 text-orange-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    <span class="text-xs font-semibold tracking-wide uppercase text-brown-700">Thinking</span>
+                </div>
+                <span class="thinking-status text-xs font-semibold text-brown-700">Finished</span>
+            </div>
+            <div class="thinking-content text-sm text-brown-900 font-mono whitespace-pre-wrap" data-expanded="false"></div>
+            <div class="thinking-card-footer">
+                <span class="thinking-hint text-[11px] font-semibold text-brown-600">Click to expand</span>
+                <svg class="thinking-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"></path>
+                </svg>
+            </div>
+        </div>
+    `;
+
+    const card = wrapper.querySelector('.thinking-card');
+    const content = wrapper.querySelector('.thinking-content');
+    const chevron = wrapper.querySelector('.thinking-chevron');
+    if (content) {
+        content.textContent = text;
+    }
+    if (card) {
+        card.addEventListener('click', () => toggleThinkingExpansion(card, content, chevron));
+    }
+    chatHistory.appendChild(wrapper);
     scrollToBottom();
 }
 

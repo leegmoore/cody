@@ -207,6 +207,7 @@ export class FileRolloutStore implements RolloutStore {
  */
 export class RolloutRecorder {
   private readonly rolloutPath: string;
+  // @ts-ignore
   private _meta?: SessionMeta;
 
   private constructor(rolloutPath: string, _meta?: SessionMeta) {

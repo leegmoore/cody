@@ -511,6 +511,12 @@ export class Session {
           type: "agent_message",
           message: text,
         });
+      } else if (turnItem.type === "reasoning") {
+        const text = (turnItem.item.raw_content ?? []).join("");
+        await this.sendEvent(subId, {
+          type: "agent_reasoning",
+          text,
+        });
       }
     }
 

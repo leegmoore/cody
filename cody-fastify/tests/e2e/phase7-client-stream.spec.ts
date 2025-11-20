@@ -8,6 +8,11 @@ import type { FastifyInstance } from "fastify";
 import { createServer } from "../../src/server.ts";
 import { clientStreamManager } from "../../src/api/client-stream/client-stream-manager.ts";
 import { redisClient } from "../../src/api/client-stream/redis-client.ts";
+import { processMessage } from "../../src/api/services/message-processor.ts";
+import { convexClient } from "../../src/api/services/convex-client.ts";
+import { api } from "../../convex/_generated/api.js";
+import type { Conversation } from "codex-ts/src/core/conversation.ts";
+import type { Event } from "codex-ts/src/protocol/protocol.ts";
 import {
   parseSSE,
   SSEEvent,
@@ -177,6 +182,29 @@ test.describe("Phase 7 - Client Stream Manager", () => {
       expect(events).toContain("thinking_started");
       expect(events).toContain("thinking_delta");
       expect(events).toContain("thinking_completed");
+    });
+  });
+
+  test("TC-CSM-8: Conversation history receives thinking entries", async () => {
+    const { conversationId } = await seedConversationWithProcessMessage();
+
+    await withServers(1, async ([worker]) => {
+      const conversation = await fetchConversation(
+        worker.baseUrl,
+        conversationId,
+      );
+
+      expect(Array.isArray(conversation.history)).toBe(true);
+      const thinkingEntries = conversation.history.filter(
+        (item: any) => item.type === "thinking",
+      );
+
+      expect(thinkingEntries.length).toBeGreaterThan(0);
+      const mergedText = thinkingEntries
+        .map((entry: any) => entry.content)
+        .join(" ");
+      expect(mergedText).toContain("Initial thought");
+      expect(mergedText).toContain("Next steps");
     });
   });
 
@@ -359,6 +387,73 @@ async function seedTurn(
 
   return { turnId, conversationId };
 }
+
+async function seedConversationWithProcessMessage() {
+  const conversationId = randomUUID();
+  const turnId = randomUUID();
+  const submissionId = randomUUID();
+
+  await convexClient.mutation(api.threads.create, {
+    externalId: conversationId,
+    modelProviderId: "openai",
+    modelProviderApi: "responses",
+    model: "gpt-5-codex",
+    title: "Thinking Conversation",
+    summary: "Seeded for tests",
+  });
+
+  await clientStreamManager.createTurn(
+    turnId,
+    conversationId,
+    submissionId,
+    "openai",
+    "responses",
+    "gpt-5-codex",
+  );
+
+  const events: Event[] = [
+    { id: submissionId, msg: { type: "task_started" } },
+    {
+      id: submissionId,
+      msg: { type: "agent_reasoning", text: "Initial thought: understand task." },
+    },
+    {
+      id: submissionId,
+      msg: { type: "agent_reasoning_delta", delta: " Next steps: read files." },
+    },
+    {
+      id: submissionId,
+      msg: { type: "agent_message", message: "All done." },
+    },
+    {
+      id: submissionId,
+      msg: { type: "task_complete", last_agent_message: "All done." },
+    },
+  ];
+
+  const fakeConversation = createStubConversation(events);
+  await processMessage(
+    fakeConversation,
+    submissionId,
+    turnId,
+    conversationId,
+  );
+
+  return { conversationId, turnId };
+}
+
+function createStubConversation(events: Event[]): Conversation {
+  let index = 0;
+  const stub = {
+    async nextEvent() {
+      if (index >= events.length) {
+        throw new Error("No more events");
+      }
+      return events[index++];
+    },
+  };
+  return stub as Conversation;
+}
 async function collectFullStream(
   baseUrl: string,
   turnId: string,
@@ -537,5 +632,15 @@ async function fetchTurn(baseUrl: string, turnId: string) {
   return response.json() as Promise<{
     status: string;
     result?: unknown;
+  }>;
+}
+
+async function fetchConversation(baseUrl: string, conversationId: string) {
+  const response = await fetch(
+    `${baseUrl}/api/v1/conversations/${conversationId}`,
+  );
+  expect(response.status).toBe(200);
+  return response.json() as Promise<{
+    history: Array<Record<string, unknown>>;
   }>;
 }

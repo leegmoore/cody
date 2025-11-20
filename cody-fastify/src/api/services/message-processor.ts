@@ -23,11 +23,41 @@ export async function processMessage(
   let foundCompletionEvent = false;
   let accumulatedMessage = "";
   let capturedError = "";
+  let thinkingBuffer = "";
+
+  const writeThinkingChunk = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    await convexClient
+      .mutation(api.messages.add, {
+        conversationId,
+        role: "assistant",
+        content: trimmed,
+        turnId,
+        type: "thinking",
+      })
+      .catch((e) =>
+        console.error("Failed to sync thinking chunk to Convex", e),
+      );
+  };
+
+  const flushThinkingBuffer = async () => {
+    if (!thinkingBuffer.trim()) return;
+    await writeThinkingChunk(thinkingBuffer);
+    thinkingBuffer = "";
+  };
 
   while (eventsProcessed < maxEvents && !foundCompletionEvent) {
     try {
       const event: Event = await conversation.nextEvent();
       eventsProcessed++;
+
+      // Log every event type for debugging
+      if (event.msg) {
+          console.log(`[processMessage] Received event: ${event.msg.type}`, 
+            event.msg.type === "agent_reasoning" ? "(thinking start)" : 
+            event.msg.type.includes("reasoning") ? "(thinking delta)" : "");
+      }
 
       // Only process events for this submission
       if (event.id !== submissionId) {
@@ -85,6 +115,23 @@ export async function processMessage(
         }
       }
 
+      if (
+        msg.type === "agent_reasoning" ||
+        msg.type === "agent_reasoning_raw_content"
+      ) {
+        await flushThinkingBuffer();
+        await writeThinkingChunk(msg.text);
+      } else if (
+        msg.type === "agent_reasoning_delta" ||
+        msg.type === "agent_reasoning_raw_content_delta" ||
+        msg.type === "reasoning_content_delta" ||
+        msg.type === "reasoning_raw_content_delta"
+      ) {
+        thinkingBuffer += msg.delta || "";
+      } else if (msg.type === "agent_reasoning_section_break") {
+        await flushThinkingBuffer();
+      }
+
       // Add event to turn store FIRST
       await clientStreamManager.addEvent(turnId, msg);
       await handleToolFailureEvent(turnId, msg);
@@ -101,6 +148,8 @@ export async function processMessage(
       ) {
         foundCompletionEvent = true;
         
+        await flushThinkingBuffer();
+
         // Sync final Assistant Message to Convex
         if (accumulatedMessage.trim()) {
             await convexClient.mutation(api.messages.add, {
@@ -131,6 +180,10 @@ export async function processMessage(
       });
       await clientStreamManager.updateTurnStatus(turnId, "error");
       foundCompletionEvent = true;
+
+      await flushThinkingBuffer().catch((e) =>
+        console.error("Failed flushing thinking buffer on error", e),
+      );
       
       // Attempt to write fallback message immediately on crash
       if (!accumulatedMessage.trim()) {
@@ -144,6 +197,10 @@ export async function processMessage(
       }
     }
   }
+
+  await flushThinkingBuffer().catch((e) =>
+    console.error("Failed flushing thinking buffer post-loop", e),
+  );
 
   if (eventsProcessed >= maxEvents && !foundCompletionEvent) {
     await clientStreamManager.addEvent(turnId, {
@@ -177,21 +234,9 @@ async function handleToolFailureEvent(
         ? msg.item.output.content
         : JSON.stringify(msg.item.output.content);
 
-    // Do NOT emit a generic 'error' event here.
-    // Doing so causes client-stream-manager to set turn.status = 'error' and close the stream immediately.
-    // We want the agent to see the tool failure and respond naturally.
-    
-    /*
     await clientStreamManager.addEvent(turnId, {
-      type: "error",
+      type: "stream_error",
       message: errorMessage,
     });
-    */
-
-    // Do NOT abort the turn here. Let the model see the error and respond.
-    // await clientStreamManager.addEvent(turnId, {
-    //   type: "turn_aborted",
-    //   reason: "replaced",
-    // });
   }
 }

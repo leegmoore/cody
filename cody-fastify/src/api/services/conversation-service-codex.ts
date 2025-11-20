@@ -15,6 +15,13 @@ import { api } from "../../../convex/_generated/api.js";
 
 // Helper to map Convex message to API history format
 function mapConvexMessageToHistory(msg: any): any {
+  if (msg.type === "thinking") {
+    return {
+      type: "thinking",
+      content: msg.content,
+      turnId: msg.turnId,
+    };
+  }
   if (msg.type === "tool_call") {
     return {
       type: "tool_call",
@@ -110,11 +117,16 @@ export async function listConversations(
   conversations: ConversationResponse[];
   nextCursor: string | null;
 }> {
-  const limit = typeof options?.limit === "string" ? parseInt(options.limit, 10) : options?.limit;
+  const requestedLimit =
+    typeof options?.limit === "string"
+      ? Number.parseInt(options.limit, 10)
+      : options?.limit;
+  const limit =
+    Number.isFinite(requestedLimit) && requestedLimit ? requestedLimit : 50;
   
   const result = await convexClient.query(api.threads.list, {
     paginationOpts: {
-      numItems: limit || 20,
+      numItems: limit,
       cursor: options?.cursor ?? null,
     }
   });

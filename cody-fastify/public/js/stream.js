@@ -2,7 +2,8 @@ import { state, ensureToolCall, applyToolCallUpdates } from './state.js';
 import { 
     updateStatus, addAgentMessage, updateAgentMessage, finalizeAgentMessage, 
     addReasoningMessage, addSystemMessage, 
-    syncToolCallUI, delayedToolUpdate, removeThinkingPlaceholder, mapToolStatus
+    syncToolCallUI, delayedToolUpdate, removeThinkingPlaceholder, mapToolStatus,
+    handleThinkingStarted, handleThinkingDelta, handleThinkingCompleted
 } from './ui.js';
 import { normalizeTurnId, formatToolCallJson } from './utils.js';
 
@@ -178,6 +179,19 @@ export function streamTurn(turnId) {
         } catch (error) {
             console.error('Error parsing agent_reasoning:', error);
         }
+    });
+
+    state.eventSource.addEventListener('thinking_started', (e) => {
+        removeThinkingPlaceholder();
+        handleThinkingStarted(parseStreamEventData(e.data));
+    });
+
+    state.eventSource.addEventListener('thinking_delta', (e) => {
+        handleThinkingDelta(parseStreamEventData(e.data));
+    });
+
+    state.eventSource.addEventListener('thinking_completed', (e) => {
+        handleThinkingCompleted(parseStreamEventData(e.data));
     });
 
     state.eventSource.addEventListener('tool_call_begin', (e) => {

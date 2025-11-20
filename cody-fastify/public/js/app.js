@@ -4,7 +4,8 @@ import {
     addUserMessage, addAgentMessage, showThinkingPlaceholder, 
     closeToolCallModal, toggleLeftSidebar, toggleRightSidebar,
     syncToolCallUI,
-    scrollToBottom
+    scrollToBottom,
+    addThinkingHistoryMessage
 } from './ui.js';
 import { streamTurn } from './stream.js';
 import { getTimeAgo, escapeHtml } from './utils.js';
@@ -32,7 +33,7 @@ export async function loadConversations() {
         conversationsList.innerHTML = '';
         
         // Add each conversation
-        conversations.slice(0, 20).forEach(conv => {
+        conversations.forEach(conv => {
             const convDiv = document.createElement('div');
             const isActive = conv.conversationId === state.currentConversationId;
             convDiv.className = `p-3 border-l-4 ${isActive ? 'border-orange-600 bg-orange-50' : 'border-transparent'} hover:border-tan-400 hover:bg-tan-100 cursor-pointer transition-colors`;
@@ -111,6 +112,9 @@ export async function loadConversationMessages(conversationId) {
                     addAgentMessage(msg.content);
                 }
             } 
+            else if (msg.type === 'thinking') {
+                addThinkingHistoryMessage(msg.content || '');
+            }
             else if (msg.type === 'tool_call') {
                 const isExec = msg.toolName === 'exec';
                 const call = ensureToolCall(msg.callId, {
