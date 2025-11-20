@@ -47,23 +47,31 @@ You must read and internalize these three documents before writing code:
 
 **Verification**
 *   **Lint/Check Often:** Run `npm run lint` and `npm run typecheck` (or the bun equivalents) after every significant change. Do not let errors accumulate.
-*   **TDD Strategy:** Write **Integration Tests** first.
-    *   *Bad:* Mocking the Redis client to test the Adapter class.
-    *   *Good:* Spinning up a real Redis instance, feeding raw bytes into the Adapter, and asserting the correct events appear in the Redis Stream.
+*   **Testing Strategy: NO MOCKS.**
+    *   **Requirement:** **Working code with mocks is FAILING code.**
+    *   **Infrastructure:** Tests MUST run against the real local Redis instance and real OpenAI API.
+    *   **Framework:** Use **Playwright** for End-to-End verification. Use simple standalone TS scripts (`bun run scripts/verify.ts`) for pipeline checks.
+    *   **Bad:** `vi.mock('redis')` -> Immediate Rejection.
+    *   **Good:** `const redis = new Redis(); await redis.xadd(...)`
 
 **Tooling**
-*   **Package:** `codex-ts` and `cody-fastify` are the workspaces.
-*   **Run Scripts:** Check `package.json` in root and sub-packages.
-    *   `bun run dev`: Starts the dev server.
-    *   `bun run test:e2e`: Runs Playwright tests.
-*   **Testing:** We use Vitest (`codex-ts`) and Playwright (`cody-fastify`).
+*   **Package Structure:**
+    *   **`cody-fastify` (Primary):** This is where **ALL** new work happens (Core 2.0, API, Workers). It runs on **Bun**.
+    *   **`codex-ts` (Legacy):** Deprecated. The CLI is dead. Treat this package as "Read-Only". Only import reusable tools (like patch logic) from it. Do not add new code here.
+*   **Environment:** The environment is **pre-configured** in `cody-fastify`. **Do NOT create new `.env` files.**
+*   **Run Scripts:**
+    *   `bun run dev`: Starts the server (in `cody-fastify`).
+        *   **Local Dev Setup:** Expects Convex to be running in one console (`npx convex dev`) and the `bun run dev` server in another. Both should auto-reload on changes. If either service encounters issues or requires a manual restart, notify me.
+    *   `bun run test:e2e`: Runs Playwright tests (in `cody-fastify`).
 
-# Work Plan (Phase 1: The Foundation)
+# Work Plan (Phase 1: The Foundation - ISOLATED)
 
-1.  **Schema Definition:** Create the TypeScript types for the Canonical Schema (`Response`, `OutputItem`, `StreamEvent`) as defined in the Tech Design doc.
-2.  **Redis Infrastructure:** Implement the strictly-typed Redis Stream wrapper (Publisher/Subscriber) to handle these events.
-3.  **OpenAI Adapter:** Build the first "dumb adapter" that takes an OpenAI stream and pushes `StreamEvents` to Redis.
-4.  **Verification Script:** Create a standalone script that connects to OpenAI, pipes through the Adapter to Redis, and tails the Redis stream to console to prove the pipe works.
+**Constraint:** This phase is strictly about building the engine. **Do NOT** modify existing Fastify routes or import this new code into the main application yet. Verification happens solely via the standalone script.
+
+1.  **Schema Definition:** Create the TypeScript types for the Canonical Schema (`Response`, `OutputItem`, `StreamEvent`) in **`cody-fastify`** (e.g., `src/core/schema.ts`) as defined in the Tech Design doc.
+2.  **Redis Infrastructure:** Implement the strictly-typed Redis Stream wrapper (Publisher/Subscriber) in **`cody-fastify`**.
+3.  **OpenAI Adapter:** Build the first "dumb adapter" in **`cody-fastify`** that takes an OpenAI stream and pushes `StreamEvents` to Redis.
+4.  **Verification Script:** Create a standalone script (e.g., `cody-fastify/scripts/verify_pipeline.ts`) that connects to OpenAI, pipes through the Adapter to Redis, and tails the Redis stream to console to prove the pipe works.
 
 # Developer Log
 Maintain a `DEVLOG.md` in the root. Update it after every session.
