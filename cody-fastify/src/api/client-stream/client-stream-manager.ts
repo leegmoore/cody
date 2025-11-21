@@ -187,19 +187,20 @@ class RedisClientStreamManager {
       case "reasoning_raw_content_delta": {
         const delta = "delta" in msg ? msg.delta : "";
         this.appendThinkingDelta(turn, delta);
-        if (!turn.activeThinkingId) {
-          turn.activeThinkingId = randomUUID();
+        let thinkingId = turn.activeThinkingId;
+        if (!thinkingId) {
+          thinkingId = randomUUID();
+          turn.activeThinkingId = thinkingId;
           turn.pendingThinkingText = "";
           synthetic.push({
             type: "thinking_started",
-            thinkingId: turn.activeThinkingId,
+            thinkingId,
           });
         }
-        turn.pendingThinkingText =
-          (turn.pendingThinkingText ?? "") + delta;
+        turn.pendingThinkingText = (turn.pendingThinkingText ?? "") + delta;
         synthetic.push({
           type: "thinking_delta",
-          thinkingId: turn.activeThinkingId!,
+          thinkingId,
           delta,
         });
         break;
@@ -385,4 +386,3 @@ class RedisClientStreamManager {
 }
 
 export const clientStreamManager = new RedisClientStreamManager();
-

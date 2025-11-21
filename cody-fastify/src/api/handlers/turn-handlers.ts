@@ -9,8 +9,6 @@ import type {
   StreamMessage,
   TurnRecord,
 } from "../types/turns.js";
-import type { EventMsg } from "codex-ts/src/protocol/protocol.ts";
-import type { ResponseItem } from "codex-ts/src/protocol/models.ts";
 
 export function buildTurnHandlers(_codexRuntime: CodexRuntime) {
   return {

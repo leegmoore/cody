@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { registerConversationRoutes } from "./api/routes/conversations.js";
 import { registerMessageRoutes } from "./api/routes/messages.js";
 import { registerTurnRoutes } from "./api/routes/turns.js";
+import { registerRunRoutes } from "./api/routes/runs.js";
 import { AppError } from "./api/errors/api-errors.js";
 import { CodexRuntime } from "./api/services/codex-runtime.js";
 
@@ -67,6 +68,7 @@ export async function createServer() {
       registerConversationRoutes(sub);
       registerMessageRoutes(sub);
       registerTurnRoutes(sub);
+      registerRunRoutes(sub);
     },
     { prefix: "/api/v1" },
   );

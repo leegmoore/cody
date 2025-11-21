@@ -87,3 +87,7 @@ CHANGELOG.ignore.md
 # external projects
 gemini-cli-main/
 tmp-cody-home/
+
+dump.rdb
+gemini-conversation-*.json
+gemini-export.md

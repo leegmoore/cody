@@ -13,11 +13,15 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test:e2e": "PW_TEST_HTML_REPORT_OPEN=never playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "verify:pipeline": "bun run scripts/verify_pipeline.ts",
+    "run:projector": "bun run scripts/projector.ts",
+    "run:projector:convex": "bun run scripts/run_projector.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
     "@fastify/static": "^8.0.1",
+    "@traceloop/node-server-sdk": "^0.20.1",
     "codex-ts": "workspace:*",
     "convex": "^1.29.2",
     "fastify": "^5.2.0",

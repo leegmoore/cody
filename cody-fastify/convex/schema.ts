@@ -48,5 +48,6 @@ export default defineSchema({
     
     createdAt: v.number(),
   })
-  .index("by_threadId", ["threadId"]),
+  .index("by_threadId", ["threadId"])
+  .index("by_callId", ["callId"]),
 });

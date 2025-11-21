@@ -12,9 +12,55 @@ import type {
 import { NotFoundError, ValidationError } from "../errors/api-errors.js";
 import { convexClient } from "./convex-client.js";
 import { api } from "../../../convex/_generated/api.js";
+import type { ReasoningEffort } from "codex-ts/src/protocol/config-types.ts";
+
+type ConvexMessage =
+  | {
+      role: string;
+      content: string;
+      turnId?: string;
+      type?: "message";
+    }
+  | {
+      type: "run_snapshot";
+      callId: string;
+      toolOutput?: unknown;
+      status?: string;
+      turnId?: string;
+    }
+  | {
+      type: "thinking";
+      content: string;
+      turnId?: string;
+    }
+  | {
+      type: "tool_call";
+      callId: string;
+      toolName?: string;
+      toolArgs?: unknown;
+      status?: string;
+      turnId?: string;
+  }
+  | {
+      type: "tool_output";
+      callId: string;
+      toolOutput?: unknown;
+      turnId?: string;
+    };
+
+type HistoryItem = ConversationResponse["history"][number];
 
 // Helper to map Convex message to API history format
-function mapConvexMessageToHistory(msg: any): any {
+function mapConvexMessageToHistory(msg: ConvexMessage): HistoryItem {
+  if (msg.type === "run_snapshot") {
+    return {
+      type: "run_snapshot",
+      callId: msg.callId,
+      status: msg.status,
+      output: msg.toolOutput,
+      turnId: msg.turnId,
+    };
+  }
   if (msg.type === "thinking") {
     return {
       type: "thinking",
@@ -74,7 +120,7 @@ export async function createConversation(
     summary: body.summary,
     tags: body.tags,
     agentRole: body.agentRole,
-    reasoningEffort: body.reasoningEffort as any,
+    reasoningEffort: body.reasoningEffort as ReasoningEffort | undefined,
   });
 
   // 2. Sync to Convex
@@ -246,7 +292,11 @@ export async function updateConversation(
     modelProviderApi: updates.modelProviderApi,
   });
 
-  return (await getConversation(_codexRuntime, conversationId))!;
+  const refreshed = await getConversation(_codexRuntime, conversationId);
+  if (!refreshed) {
+    throw new NotFoundError(`Conversation ${conversationId} not found after update`);
+  }
+  return refreshed;
 }
 
 /**

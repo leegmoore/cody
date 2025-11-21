@@ -68,7 +68,7 @@ export const update = mutation({
     modelProviderApi: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const updates: any = { updatedAt: Date.now() };
+    const updates: Record<string, unknown> = { updatedAt: Date.now() };
     
     if (args.title !== undefined) updates.title = args.title;
     if (args.model !== undefined) updates.model = args.model;

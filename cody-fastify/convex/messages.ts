@@ -54,3 +54,62 @@ export const list = query({
       .collect();
   },
 });
+
+// Projector: store reduced run snapshot
+export const projectRunSnapshot = mutation({
+  args: {
+    runId: v.string(),
+    turnId: v.string(),
+    threadId: v.string(),
+    agentId: v.optional(v.string()),
+    modelId: v.string(),
+    providerId: v.string(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("in_progress"),
+      v.literal("complete"),
+      v.literal("error"),
+      v.literal("aborted")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    outputItems: v.array(v.any()),
+    usage: v.optional(v.object({
+      prompt_tokens: v.number(),
+      completion_tokens: v.number(),
+      total_tokens: v.number(),
+    })),
+    finishReason: v.optional(v.string()),
+    error: v.optional(v.object({
+      code: v.string(),
+      message: v.string(),
+      details: v.optional(v.any()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("by_externalId", (q) => q.eq("externalId", args.threadId))
+      .unique();
+
+    if (!thread) {
+      throw new Error(`Thread not found for threadId ${args.threadId}`);
+    }
+
+    await ctx.db.insert("messages", {
+      threadId: thread._id,
+      role: "assistant",
+      content: "",
+      turnId: args.turnId,
+      type: "run_snapshot",
+      callId: args.runId,
+      toolName: undefined,
+      toolArgs: undefined,
+      toolOutput: args.outputItems,
+      status: args.status,
+      createdAt: args.createdAt,
+    });
+
+    await ctx.db.patch(thread._id, { updatedAt: args.updatedAt });
+  },
+});

@@ -144,7 +144,10 @@ test.describe("Phase 7 - Client Stream Manager", () => {
         (event) => event.event === "tool_call_end",
       );
       expect(failureEvent).toBeTruthy();
-      const failurePayload = parseEventPayload(failureEvent!);
+      if (!failureEvent) {
+        throw new Error("tool_call_end event missing");
+      }
+      const failurePayload = parseEventPayload(failureEvent);
       expect(failurePayload?.status).toBe("failed");
 
       const eventTypes = stream.events.map((event) => event.event);
@@ -155,7 +158,10 @@ test.describe("Phase 7 - Client Stream Manager", () => {
         (event) => event.event === "error",
       );
       expect(errorEvent).toBeTruthy();
-      const errorPayload = parseEventPayload(errorEvent!);
+      if (!errorEvent) {
+        throw new Error("error event missing");
+      }
+      const errorPayload = parseEventPayload(errorEvent);
       expect(
         (errorPayload?.message as string | undefined)?.toLowerCase() ?? "",
       ).toContain("missing-phase7.txt");
@@ -196,12 +202,12 @@ test.describe("Phase 7 - Client Stream Manager", () => {
 
       expect(Array.isArray(conversation.history)).toBe(true);
       const thinkingEntries = conversation.history.filter(
-        (item: any) => item.type === "thinking",
+        (item: { type?: string }) => item.type === "thinking",
       );
 
       expect(thinkingEntries.length).toBeGreaterThan(0);
       const mergedText = thinkingEntries
-        .map((entry: any) => entry.content)
+        .map((entry: { content?: string }) => entry.content ?? "")
         .join(" ");
       expect(mergedText).toContain("Initial thought");
       expect(mergedText).toContain("Next steps");
@@ -561,9 +567,11 @@ async function streamWithBackpressure(
   const decoder = new TextDecoder();
   const events: SSEEvent[] = [];
 
-  while (true) {
+  let finished = false;
+  while (!finished) {
     const { done, value } = await reader.read();
     if (done) {
+      finished = true;
       break;
     }
     if (options.delayMs) {
