@@ -453,7 +453,7 @@ const StreamEventSchema = z.object({
 *   **Guarantees:**
     *   **At-Least-Once:** Consumers must handle duplicate events.
     *   **Ordering:** Strict ordering per `response_id` is guaranteed by Redis Stream.
-*   **Driver:** `bun:redis` MUST be used.
+*   **Driver:** `ioredis` is currently used for streaming operations due to `bun:redis` lacking necessary streaming commands. It should be replaced with `bun:redis` once streaming support is mature.
 
 ### 3. Observability & Tracing (Mandatory)
 

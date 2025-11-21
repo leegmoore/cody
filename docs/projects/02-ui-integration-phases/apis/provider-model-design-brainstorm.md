@@ -255,4 +255,58 @@ Key principles:
 - Adapters handle all provider-specific logic
 - Agent automation handles maintenance (not complex extensibility code)
 
-The permutations problem (provider × model × config × tools × prompts) is acknowledged but **explicitly deferred**. Start simple, add sophistication only when pain is felt.
+
+---
+
+## Refined Design: Provider Gateways & Active Configs (2025-11-20)
+
+**Status:** Consolidated design direction following deep dive session.
+
+### 1. Terminology Shift: Vendor vs. Gateway
+
+To resolve ambiguity and prevent "Provider" overloading, we are splitting the concept:
+
+*   **Model Vendor (Metadata):** The company entity (e.g., OpenAI, Anthropic, Google). Used primarily for grouping in the UI and branding.
+*   **Provider Gateway (Functional Unit):** The specific service endpoint and protocol implementation (e.g., `openai-responses`, `openai-chat`, `anthropic-messages`).
+    *   This solves the "Provider-API Lock" brittleness. OpenAI can have multiple gateways (`responses` vs `chat`) if needed for legacy support, without monolithic conditional logic.
+
+### 2. Provider Gateway Structure
+
+The **Provider Gateway** is the primary architectural unit. It encapsulates:
+
+1.  **Wire Adapter:** The code that speaks the specific protocol (Responses vs Chat vs Messages).
+2.  **Model Registry:** A curated list of specific models *supported by this gateway*.
+    *   *Crucial:* Models are data entries in this registry, not hardcoded constants in the adapter.
+    *   Entries include capabilities flags: `supportsThinking`, `supportsTools`.
+3.  **Config Schema (Zod):** The specific configuration knobs available for this gateway.
+    *   *Example:* `openai-responses` requires `reasoning_effort` (Enum).
+    *   *Example:* `anthropic-messages` requires `budget_tokens` (Integer).
+
+### 3. Active Config Registry (Saved Presets)
+
+To manage the combinatorial explosion of options (Gateway x Model x Config), we introduce **Active Configs**.
+
+*   **Concept:** A first-class resource that snapshots a valid configuration tuple.
+*   **Key/Slug:** A human-readable identifier (e.g., `smart-coder`, `fast-chat`).
+*   **Structure:**
+    ```typescript
+    interface ActiveConfigEntry {
+      slug: string;             // "smart-coder"
+      providerGatewayId: string; // "openai-responses"
+      modelId: string;          // "model-reasoning-v1"
+      config: Record<string, any>; // { reasoning_effort: "high" }
+    }
+    ```
+*   **Usage:** The API and UI primarily interact with `slugs`. Users select "Smart Coder", not a raw tuple of provider/model/params.
+
+### 4. Dynamic Configuration & Validation
+
+We do *not* normalize configuration knobs into a generic super-object. We lean into the differences.
+
+*   **Validation:** When an `ActiveConfigEntry` is saved or used, the system looks up the `providerGatewayId`, retrieves its specific `Config Schema`, and validates the `config` payload against it.
+*   **UI Generation:** The Client queries the Gateway for its schema (filtered by the selected Model's capabilities) to render the correct form fields (e.g., Dropdown vs. Number Input).
+
+### 5. No-Hardcoding Mandate
+
+*   **Models are Data:** Specific model IDs (e.g., `gpt-4o`, `claude-3-5-sonnet`) MUST NOT appear as hardcoded switch-case constants in the application logic. They exist only as string entries within the Gateway Registries.
+*   **Future-Proofing:** This ensures that when a vendor drops a new model, we only update the Registry data, not the Adapter code.

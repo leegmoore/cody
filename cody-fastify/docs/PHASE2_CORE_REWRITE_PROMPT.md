@@ -56,7 +56,9 @@ You must read and internalize these documents before writing code:
 **Phase 2 Deliverables (from cody-fastify/docs/codex-core-2.0-tech-design.md):**
 
 1.  **Persistence Worker:** Implement the `PersistenceWorker` class (the Projector). This class will read `StreamEvent`s from Redis, apply reducer logic, and write `Response` objects to Convex.
+    *   **Entrypoint:** Create `cody-fastify/src/workers/run_projector.ts` as the executable script to launch this worker process.
 2.  **Reducer Logic:** Implement the `ResponseReducer` class (likely in `cody-fastify/src/core/reducer.ts`) that builds a full `Response` object from a sequence of `StreamEvent`s.
+    *   **Robustness:** The reducer MUST be idempotent. It should handle duplicate events (replays) gracefully without corrupting the state.
 3.  **Convex Schema:** Define the Convex schema for the `messages` table in `cody-fastify/convex/schema.ts` (as detailed in Appendix A of the Tech Design doc).
 4.  **DB Writer:** Implement the `ConvexWriter` class (or similar) in `cody-fastify/src/core/persistence/` that handles writing/updating the `Response` object to Convex.
 5.  **Verification:** Extend the `cody-fastify/scripts/verify_pipeline.ts` script to:
@@ -86,3 +88,6 @@ Maintain a `DEVLOG.md` in the root (or `cody-fastify/DEVLOG.md`). Update it afte
 ### Next Steps
 - [ ] Task C
 ```
+
+# Final Instruction
+Please review these instructions and the instructions and information in all reference documents listed thoroughly. You can ask up to 4 crisp clarifying questions before starting. Once the work is started, **continue working until you complete Phase 2.** Do not stop to report status unless there is a blocker or difficult decision that requires user consultation. Otherwise, continue working autonomously until Phase 2 is verified and complete.
