@@ -147,4 +147,23 @@ These tests verify that every available tool is correctly wired and executable v
 *   **TC-V2-19: Tool - File Search**
     *   **Action:** Submit "Find the file named 'v2-test-plan.md'".
     *   **Assert:** `item_start` (`function_call`: `fileSearch`).
-    *   **Assert:** Output contains the correct path `cody-fastify/docs/v2-test-plan.md`.
+---
+
+## 7. Provider Variety Validation
+
+These tests verify that the Core 2.0 pipeline works across different provider protocols.
+
+*   **TC-V2-20: Provider - Anthropic (Messages API + Thinking)**
+    *   **Action:** Submit request with:
+        *   `provider: "anthropic"`
+        *   `model: "claude-3-7-sonnet-20250219"` (or known thinking model)
+        *   `config: { thinking: { type: "enabled", budget_tokens: 1024 } }`
+    *   **Assert:** Stream contains `item_start` (`type: "reasoning"`) -> `item_delta` (thinking content) -> `item_done`.
+    *   **Assert:** Stream contains `item_start` (`type: "message"`) after reasoning.
+
+*   **TC-V2-21: Provider - OpenRouter (Chat Completions API + Reasoning)**
+    *   **Action:** Submit request with:
+        *   `provider: "openrouter"`
+        *   `model: "deepseek/deepseek-r1"` (or reasoning-capable model)
+    *   **Assert:** Stream contains `item_start` (`type: "reasoning"`) if the provider maps it, OR `item_delta` contains reasoning content if exposed that way.
+    *   **Goal:** Verify OpenRouter adapter handles reasoning fields (e.g. `reasoning_content`) correctly.
