@@ -320,7 +320,7 @@ git commit -m "fix(display): handle tool execution timeout event"
 ## External Dependencies
 
 ### LLM Providers
-- OpenAI Responses API (GPT-5-Codex)
+- OpenAI Responses API
 - OpenAI Chat Completions API
 - Anthropic Messages API
 
