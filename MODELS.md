@@ -72,7 +72,11 @@ claude-haiku-4.5
 
 ### Google Gemini
 ```
-google/gemini-flash-2.0
+google/gemini-3-pro-preview
+google/gemini-2.5-pro
+google/gemini-2.5-flash
+google/gemini-2.5-flash-lite
+google/gemini-2.0-flash-001
 ```
 
 **Limitations:**
@@ -95,7 +99,7 @@ claude-sonnet-4.5
 
 **Tertiary (OpenRouter):**
 ```
-google/gemini-flash-2.0
+google/gemini-2.5-flash
 ```
 
 ---
