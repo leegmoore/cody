@@ -1,10 +1,13 @@
-# Core 2.0 E2E Test Plan (Comprehensive and Granular)
+# Core 2.0 E2E Test Plan (Comprehensive)
 
-**Status:** Authoritative Test Specification for Phase 5. This document provides explicit test conditions for 100% feature parity with V1, plus full coverage of V2 capabilities. The implementer should be able to write every test case using *only* this document and Playwright knowledge.
+**Status:** Authoritative Test Specification for Phase 5
+**Scope:** 100% Feature Parity with V1 + Full Coverage of V2 Capabilities.
+
+This document defines the **mandatory** test conditions. The implementer MUST write a Playwright test for every single condition listed below.
 
 ---
 
-## 1. Threads (Conversations) Management - `tests/e2e/conversations.spec.ts` Parity
+## 1. Threads (Conversations) Management
 
 ### 1.1. Create Threads (`POST /api/v2/threads`)
 
@@ -181,59 +184,44 @@
 
 ---
 
-## 2. Run Status (`GET /api/v2/runs/:id`)
+## 2. Submission & Runs (The Engine)
 
-*   **TC-V2-6.1: Get Run Status - Queued/Running**
-    *   **Setup:** `POST /api/v2/submit` for a slow model/prompt.
-    *   **Action:** Immediately `GET /api/v2/runs/{runId}`.
-    *   **Assert:** HTTP `200 OK`. `status` is "queued" or "in_progress". `completedAt` is `null`. `outputItems` is empty or partial.
-*   **TC-V2-6.2: Get Run Status - Completed (Success)**
-    *   **Setup:** Submit a run. Wait for it to complete.
+### 2.1. Submission Contract
+*   **TC-V2-6.1: Submit Run - Success**
+    *   **Action:** `POST /api/v2/submit`
+    *   **Payload:** `{ threadId: "{validId}", prompt: "Hello" }`
+    *   **Assert:** HTTP `202 Accepted`. Body: `{ runId: "uuid", streamUrl: "..." }`.
+*   **TC-V2-6.2: Submit Run - Invalid Thread**
+    *   **Action:** `POST /api/v2/submit`
+    *   **Payload:** `{ threadId: "invalid-uuid", prompt: "Hello" }`
+    *   **Assert:** HTTP 404 (Thread not found).
+*   **TC-V2-6.3: Submit Run - Empty Prompt**
+    *   **Action:** `POST /api/v2/submit`
+    *   **Payload:** `{ threadId: "{validId}", prompt: "" }`
+    *   **Assert:** HTTP 400 (Validation error).
+
+### 2.2. Run Status
+*   **TC-V2-7.1: Get Run Status - Queued/Running**
+    *   **Setup:** Submit a run with a long/slow prompt (or mocked delay).
+    *   **Action:** `GET /api/v2/runs/{runId}` immediately.
+    *   **Assert:** HTTP 200. `status` is "queued" or "in_progress". `completedAt` is `null`. `outputItems` is empty or partial.
+*   **TC-V2-7.2: Get Run Status - Completed (Success)**
+    *   **Setup:** Submit run, wait for completion (poll).
     *   **Action:** `GET /api/v2/runs/{runId}`.
-    *   **Assert:** HTTP `200 OK`. `status` is "complete". `completedAt` is not null. `outputItems` contains all final items. `usage` is populated. `finishReason` is `null` or valid.
-*   **TC-V2-6.3: Get Run Status - Completed (Error)**
+    *   **Assert:** HTTP 200. `status` is "complete". `completedAt` is not null. `outputItems` contains all final items. `usage` is populated. `finishReason` is `null` or valid.
+*   **TC-V2-7.3: Get Run Status - Completed (Error)**
     *   **Setup:** Submit run that causes `response_error`. Wait for completion.
     *   **Action:** `GET /api/v2/runs/{runId}`.
-    *   **Assert:** HTTP `200 OK`. `status` is "error". `error` object is present.
-*   **TC-V2-6.4: Get Run Status - Not Found**
+    *   **Assert:** HTTP 200. `status` is "error". `error` object is present.
+*   **TC-V2-7.4: Get Run Status - Not Found**
     *   **Action:** `GET /api/v2/runs/non-existent-uuid`
     *   **Assert:** HTTP `404 Not Found`.
 
 ---
 
-## 3. Submit (`POST /api/v2/submit`)
+## 3. Streaming Mechanics (SSE)
 
-*   **TC-V2-7.1: Submit Run - Basic Functionality**
-    *   **Setup:** Create Thread A.
-    *   **Action:** `POST /api/v2/submit`
-    *   **Payload:** `{ threadId: "{threadId_A}", prompt: "Hello, world!" }`
-    *   **Assert:** HTTP `202 Accepted`. Body: `{ runId: "UUID" }`.
-*   **TC-V2-7.2: Submit Run - With Model & Provider**
-    *   **Setup:** Create Thread A.
-    *   **Action:** `POST /api/v2/submit`
-    *   **Payload:** `{ threadId: "{threadId_A}", prompt: "Hello", model: "codex-test-model", provider: "openai" }`
-    *   **Assert:** HTTP `202 Accepted`.
-    *   **Verify DB:** `GET /api/v2/runs/{runId}` -> Model/Provider match payload.
-*   **TC-V2-7.3: Submit Run - Invalid Model/Provider Combo**
-    *   **Setup:** Create Thread A.
-    *   **Action:** `POST /api/v2/submit`
-    *   **Payload:** `{ threadId: "{threadId_A}", prompt: "Hello", model: "openai-model", provider: "anthropic" }`
-    *   **Assert:** HTTP `400 Bad Request`. Error indicates invalid combo.
-*   **TC-V2-7.4: Submit Run - Empty Prompt**
-    *   **Setup:** Create Thread A.
-    *   **Action:** `POST /api/v2/submit`
-    *   **Payload:** `{ threadId: "{threadId_A}", prompt: "" }`
-    *   **Assert:** HTTP `400 Bad Request`.
-*   **TC-V2-7.5: Submit Run - Thread Not Found**
-    *   **Action:** `POST /api/v2/submit`
-    *   **Payload:** `{ threadId: "non-existent-uuid", prompt: "Hello" }`
-    *   **Assert:** HTTP `404 Not Found`.
-
----
-
-## 4. Streaming (`GET /api/v2/stream/:runId`)
-
-### 4.1. Basic Streaming
+### 3.1. Event Sequence
 *   **TC-V2-8.1: Basic Stream - Standard Message Flow**
     *   **Setup:** `POST /api/v2/submit` -> `runId`.
     *   **Action:** `GET /api/v2/stream/{runId}`.
@@ -249,7 +237,7 @@
     *   **Action:** `GET /api/v2/stream/non-existent-uuid`.
     *   **Assert:** HTTP `404 Not Found`.
 
-### 4.2. Stream Reliability
+### 3.2. Stream Reliability
 *   **TC-V2-8.4: Reconnection with `Last-Event-ID`**
     *   **Setup:** `POST /api/v2/submit` -> `runId`. Start stream, consume 3 events, save `event_id` of 3rd event.
     *   **Action:** `GET /api/v2/stream/{runId}` with `Last-Event-ID: {saved-event-id}`.
@@ -270,9 +258,9 @@
 
 ---
 
-## 5. Lifecycle Flows (Multi-Step Scenarios)
+## 4. Lifecycle Flows (Multi-Step Scenarios)
 
-### 5.1. Full Conversation Flow
+### 4.1. Full Conversation Flow
 *   **TC-V2-L1: Basic Full Flow**
     *   **Setup:** `POST /api/v2/threads` -> `threadId`.
     *   **Action:** `POST /api/v2/submit` (`threadId`, `prompt: "Hello"`) -> `runId_1`.
@@ -285,7 +273,7 @@
     *   **Action:** `GET /api/v2/stream/{runId_2}`. Assert completion.
     *   **Verify DB:** `GET /api/v2/threads/{threadId}`. Assert `history` contains 4 items (user, agent, user, agent). Order is chronological.
 
-### 5.2. Concurrent Isolation
+### 4.2. Concurrent Isolation
 *   **TC-V2-L3: Concurrent Runs Isolation**
     *   **Setup:** `POST /api/v2/threads` -> `threadId_A`. `POST /api/v2/threads` -> `threadId_B`.
     *   **Action:** `POST /api/v2/submit` (`threadId_A`, `prompt: "Count to 100"`) -> `runId_A`.
@@ -295,9 +283,9 @@
 
 ---
 
-## 6. Tool Execution (The Hands)
+## 5. Tool Execution (The Hands)
 
-### 6.1. Basic Tooling
+### 5.1. Basic Tooling
 *   **TC-V2-T1: Tool - `listDir`**
     *   **Action:** Submit "List files in the current directory (`.`)".
     *   **Assert Stream Sequence:** `function_call` (`name: "listDir"`) -> `function_call_output` (`success: true`, `output` contains `package.json`).
@@ -308,7 +296,7 @@
     *   **Action:** Submit "Find the test plan file".
     *   **Assert Stream Sequence:** `function_call` (`name: "fileSearch"`) -> `function_call_output` (`success: true`, `output` contains `v2-test-plan.md`).
 
-### 6.2. Advanced Tooling
+### 5.2. Advanced Tooling
 *   **TC-V2-T4: Tool - `applyPatch` (Simple Edit)**
     *   **Setup:** Create a temporary `test_patch.txt` with content "original".
     *   **Action:** Submit "Change 'original' to 'updated' in `test_patch.txt`".
@@ -324,7 +312,7 @@
     *   **Assert Stream Sequence:** `function_call` (delete file) -> `function_call_output` (`success: true`).
     *   **Verify Filesystem:** Assert `temp_delete.txt` does not exist.
 
-### 6.3. Tool Error Handling
+### 5.3. Tool Error Handling
 *   **TC-V2-T7: Tool Error - Non-existent file**
     *   **Action:** Submit "Read file 'nonexistent.txt'".
     *   **Assert Stream Sequence:** `function_call` (`name: "readFile"`) -> `function_call_output` (`success: false`, `output` contains "ENOENT").
@@ -334,9 +322,9 @@
 
 ---
 
-## 7. Provider & Capability Variety
+## 6. Provider & Capability Variety
 
-### 7.1. Basic Adapter Functionality
+### 6.1. Basic Adapter Functionality
 *   **TC-V2-P1: Provider - Anthropic Messages API**
     *   **Action:** Submit "Hello Anthropic!" with `provider: "anthropic"`, `model: "claude-test-model"`.
     *   **Assert Stream Sequence:** `response_start` (`provider_id: "anthropic"`) -> `item_start` (`message`) -> `response_done`.
@@ -344,7 +332,7 @@
     *   **Action:** Submit "Hello OpenRouter!" with `provider: "openrouter"`, `model: "openrouter-test-model"`.
     *   **Assert Stream Sequence:** `response_start` (`provider_id: "openrouter"`) -> `item_start` (`message`) -> `response_done`.
 
-### 7.2. Thinking/Reasoning Capabilities
+### 6.2. Thinking/Reasoning Capabilities
 *   **TC-V2-P3: OpenAI Reasoning Flow**
     *   **Action:** Submit "Solve complex problem." with `provider: "openai"`, `model: "o1-reasoning-model"`.
     *   **Assert Stream Sequence:** `response_start` -> `item_start` (`type: "reasoning"`) -> `item_delta` (thinking text) -> `item_done` -> `item_start` (`type: "message"`) -> `response_done`.
@@ -357,19 +345,19 @@
     *   **Payload Config:** `config: { thinking: { max_tokens: 500 } }`.
     *   **Assert Stream Sequence:** `response_start` -> `item_start` (`type: "reasoning"`) -> `item_delta` (thinking text) -> `item_done` -> `item_start` (`type: "message"`) -> `response_done`.
 
-### 7.3. Provider-Specific Invalid Config
+### 6.3. Provider-Specific Invalid Config
 *   **TC-V2-P6: Invalid Config - OpenAI (no budget_tokens)**
     *   **Action:** `POST /api/v2/submit` with `provider: "openai"`, `config: { budget_tokens: 100 }`.
     *   **Assert:** HTTP `400 Bad Request`. Error indicates unknown config field.
 
 ---
 
-## 8. Persistence Verification
+## 7. Persistence Verification
 
 *   **TC-V2-12.1: Convex Hydration - Full Flow**
     *   **Setup:** Complete a full flow with Tools and Thinking (e.g., submit prompt for TC-V2-T1). Wait for `response_done`.
     *   **Action:** `GET /api/v2/threads/{threadId}`.
-    *   **Assert:** HTTP `200 OK`. The `history` array in the response reflects the full sequence of user messages, reasoning, tool calls, tool outputs, and assistant messages as seen in the stream.
+    *   **Assert:** HTTP `200 OK`. The `history` array in the response matches the event stream.
         *   `history[0]`: User message.
         *   `history[1]`: Reasoning (if applicable).
         *   `history[2]`: Tool Call.
