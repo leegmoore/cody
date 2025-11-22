@@ -22,6 +22,7 @@ interface StreamParams {
   turnId?: string;
   threadId?: string;
   agentId?: string;
+  traceContext?: TraceContext;
 }
 
 type ItemAccumulator = {
@@ -64,7 +65,7 @@ export class OpenAIStreamAdapter {
     const runId = params.runId ?? randomUUID();
     const turnId = params.turnId ?? randomUUID();
     const threadId = params.threadId ?? randomUUID();
-    const baseTrace = createTraceContext();
+    const baseTrace = params.traceContext ?? createTraceContext();
 
     const responseStart = this.makeEvent(baseTrace, runId, {
       type: "response_start",
@@ -94,7 +95,7 @@ export class OpenAIStreamAdapter {
     const res = await fetch(this.baseUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        "Authorization": `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(reqBody),
@@ -128,7 +129,7 @@ export class OpenAIStreamAdapter {
       if (readerDone) {
         done = true;
       }
-        if (value) {
+      if (value) {
         buffer.push(decoder.decode(value, { stream: true }));
       }
       const joined = buffer.join("");
@@ -137,9 +138,17 @@ export class OpenAIStreamAdapter {
       buffer.length = 0;
       if (blocks.length > 0) {
         const trailing = blocks.pop();
-        if (trailing && trailing.trim().length > 0 && !trailing.trim().startsWith("data:")) {
+        if (
+          trailing &&
+          trailing.trim().length > 0 &&
+          !trailing.trim().startsWith("data:")
+        ) {
           buffer.push(trailing);
-        } else if (trailing && trailing.trim().startsWith("data:") && !trailing.trim().endsWith("}")) {
+        } else if (
+          trailing &&
+          trailing.trim().startsWith("data:") &&
+          !trailing.trim().endsWith("}")
+        ) {
           buffer.push(trailing);
         }
       }
@@ -190,35 +199,35 @@ export class OpenAIStreamAdapter {
 
     // Heuristic mapping for Responses API events
     if (block.event === "response.output_text.delta" && dataJson) {
-      const itemId = ensureValidItemId(dataJson?.item?.id as string | undefined);
-      const delta = typeof dataJson?.delta === "string" ? dataJson.delta : "";
-      const item = ensureItem(items, itemId, "message");
-      await this.publishItemStartIfNeeded(trace, runId, item);
+      const itemPayload = asObject(dataJson.item);
+      const itemId = ensureValidItemId(getString(itemPayload?.id));
+      const delta = getString(dataJson.delta) ?? "";
+      const accumulator = ensureItem(items, itemId, "message");
+      await this.publishItemStartIfNeeded(trace, runId, accumulator);
       await this.publishItemDelta(trace, runId, itemId, delta);
-      item.content.push(delta);
+      accumulator.content.push(delta);
       return;
     }
 
     if (block.event === "response.output_tool_calls.delta" && dataJson) {
-      const tool = dataJson?.tool_call;
+      const tool = asObject(dataJson.tool_call);
+      const itemPayload = asObject(dataJson.item);
+      const deltaPayload = asObject(dataJson.delta);
+      const deltaFunction = asObject(deltaPayload?.function);
+      const toolFunction = asObject(tool?.function);
+
       const callId = ensureValidItemId(
-        (tool?.id as string | undefined) ?? (dataJson?.item?.id as string | undefined),
+        getString(tool?.id) ?? getString(itemPayload?.id),
       );
       const name =
-        (tool?.function?.name as string | undefined) ??
-        (dataJson?.delta?.function?.name as string | undefined);
-      const argsChunk =
-        (dataJson?.delta?.function?.arguments as string | undefined) ?? "";
-      const item = ensureItem(items, callId, "function_call");
-      item.name = item.name ?? name;
-      item.callId = callId;
-      item.argumentsChunks = item.argumentsChunks ?? [];
-      if (argsChunk) item.argumentsChunks.push(argsChunk);
-      await this.publishItemStartIfNeeded(trace, runId, {
-        ...item,
-        name: item.name,
-        callId: callId,
-      });
+        getString(toolFunction?.name) ?? getString(deltaFunction?.name);
+      const argsChunk = getString(deltaFunction?.arguments) ?? "";
+      const accumulator = ensureItem(items, callId, "function_call");
+      accumulator.name = accumulator.name ?? name;
+      accumulator.callId = callId;
+      accumulator.argumentsChunks = accumulator.argumentsChunks ?? [];
+      if (argsChunk) accumulator.argumentsChunks.push(argsChunk);
+      await this.publishItemStartIfNeeded(trace, runId, accumulator);
       if (argsChunk) {
         await this.publishItemDelta(trace, runId, callId, argsChunk);
       }
@@ -226,39 +235,39 @@ export class OpenAIStreamAdapter {
     }
 
     if (block.event === "response.output_tool_calls.done" && dataJson) {
-      const tool = dataJson?.tool_call;
+      const tool = asObject(dataJson.tool_call);
+      const itemPayload = asObject(dataJson.item);
       const callId = ensureValidItemId(
-        (tool?.id as string | undefined) ?? (dataJson?.item?.id as string | undefined),
+        getString(tool?.id) ?? getString(itemPayload?.id),
       );
-      const item = ensureItem(items, callId, "function_call");
-      item.name =
-        item.name ??
-        (tool?.function?.name as string | undefined) ??
-        "function_call";
-      item.callId = callId;
+      const accumulator = ensureItem(items, callId, "function_call");
+      const toolFunction = asObject(tool?.function);
+      accumulator.name =
+        accumulator.name ?? getString(toolFunction?.name) ?? "function_call";
+      accumulator.callId = callId;
       const finalArgs =
-        item.argumentsChunks?.join("") ??
-        (tool?.function?.arguments as string | undefined) ??
+        accumulator.argumentsChunks?.join("") ??
+        getString(toolFunction?.arguments) ??
         "";
-      await this.publishItemDone(trace, runId, {
-        ...item,
-        content: [finalArgs],
-      });
+      accumulator.content = [finalArgs];
+      await this.publishItemDone(trace, runId, accumulator);
       return;
     }
 
     if (block.event === "response.reasoning.delta" && dataJson) {
-      const itemId = ensureValidItemId(dataJson?.item?.id as string | undefined);
-      const delta = typeof dataJson?.delta === "string" ? dataJson.delta : "";
-      const item = ensureItem(items, itemId, "reasoning");
-      await this.publishItemStartIfNeeded(trace, runId, item);
+      const itemPayload = asObject(dataJson.item);
+      const itemId = ensureValidItemId(getString(itemPayload?.id));
+      const delta = getString(dataJson.delta) ?? "";
+      const accumulator = ensureItem(items, itemId, "reasoning");
+      await this.publishItemStartIfNeeded(trace, runId, accumulator);
       await this.publishItemDelta(trace, runId, itemId, delta);
-      item.content.push(delta);
+      accumulator.content.push(delta);
       return;
     }
 
     if (block.event === "response.output_item.done" && dataJson) {
-      const itemId = (dataJson?.item?.id as string) || "message-default";
+      const itemPayload = asObject(dataJson.item);
+      const itemId = getString(itemPayload?.id) || "message-default";
       const item = items.get(itemId);
       if (item) {
         await this.publishItemDone(trace, runId, item);
@@ -267,13 +276,14 @@ export class OpenAIStreamAdapter {
     }
 
     if (block.event === "response.completed" && dataJson?.usage) {
+      const usage = asObject(dataJson.usage);
       const usageEvent = this.makeEvent(trace, runId, {
         type: "usage_update",
         response_id: runId,
         usage: {
-          prompt_tokens: dataJson.usage.prompt_tokens ?? 0,
-          completion_tokens: dataJson.usage.completion_tokens ?? 0,
-          total_tokens: dataJson.usage.total_tokens ?? 0,
+          prompt_tokens: getNumber(usage?.prompt_tokens) ?? 0,
+          completion_tokens: getNumber(usage?.completion_tokens) ?? 0,
+          total_tokens: getNumber(usage?.total_tokens) ?? 0,
         },
       });
       await this.redis.publish(usageEvent);
@@ -341,12 +351,12 @@ export class OpenAIStreamAdapter {
             call_id: item.callId ?? item.id,
             origin: "agent",
           }
-        : {
+        : ({
             id: item.id,
             type: item.type,
             content: item.content.join(""),
             origin: "agent",
-          } as OutputItem;
+          } as OutputItem);
 
     const event = this.makeEvent(trace, runId, {
       type: "item_done",
@@ -420,4 +430,19 @@ function ensureValidItemId(rawId: string | undefined): string {
     return rawId;
   }
   return randomUUID();
+}
+
+function asObject(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function getString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function getNumber(value: unknown): number | undefined {
+  return typeof value === "number" ? value : undefined;
 }

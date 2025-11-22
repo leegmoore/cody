@@ -47,7 +47,10 @@ export function buildMessageHandlers(codexRuntime: CodexRuntime) {
           content: req.body.message,
         })
         .catch((err) => {
-          req.log?.error({ err, conversationId: req.params.id }, "Failed to sync user message to Convex");
+          req.log?.error(
+            { err, conversationId: req.params.id },
+            "Failed to sync user message to Convex",
+          );
         });
 
       // Load conversation metadata for defaults
@@ -80,7 +83,9 @@ export function buildMessageHandlers(codexRuntime: CodexRuntime) {
           req.body.modelProviderApi,
         );
         if (!validation.valid) {
-          throw new ValidationError(validation.error || "Invalid provider/API combination");
+          throw new ValidationError(
+            validation.error || "Invalid provider/API combination",
+          );
         }
 
         modelProviderId = req.body.modelProviderId;

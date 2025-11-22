@@ -1,6 +1,8 @@
 /**
  * Conversation Service using Convex (migrated from FileRolloutStore)
  */
+// NOTE: This legacy service was updated during Core 2.0 Phase 2 to align with the new Convex Schema.
+// It does NOT use the new Core 2.0 pipeline logic yet.
 
 import type { CodexRuntime } from "./codex-runtime.js";
 import type {
@@ -12,84 +14,55 @@ import type {
 import { NotFoundError, ValidationError } from "../errors/api-errors.js";
 import { convexClient } from "./convex-client.js";
 import { api } from "../../../convex/_generated/api.js";
+// NOTE(Phase 2): Type fix for legacy compatibility
+import type { Doc } from "../../../convex/_generated/dataModel.js";
 import type { ReasoningEffort } from "codex-ts/src/protocol/config-types.ts";
 
-type ConvexMessage =
-  | {
-      role: string;
-      content: string;
-      turnId?: string;
-      type?: "message";
-    }
-  | {
-      type: "run_snapshot";
-      callId: string;
-      toolOutput?: unknown;
-      status?: string;
-      turnId?: string;
-    }
-  | {
-      type: "thinking";
-      content: string;
-      turnId?: string;
-    }
-  | {
-      type: "tool_call";
-      callId: string;
-      toolName?: string;
-      toolArgs?: unknown;
-      status?: string;
-      turnId?: string;
-  }
-  | {
-      type: "tool_output";
-      callId: string;
-      toolOutput?: unknown;
-      turnId?: string;
-    };
+type LegacyMessageDoc = Doc<"legacyMessages">;
 
 type HistoryItem = ConversationResponse["history"][number];
 
 // Helper to map Convex message to API history format
-function mapConvexMessageToHistory(msg: ConvexMessage): HistoryItem {
-  if (msg.type === "run_snapshot") {
+function mapLegacyMessageToHistory(msg: LegacyMessageDoc): HistoryItem {
+  const msgType = msg.type ?? "message";
+
+  if (msgType === "run_snapshot") {
     return {
       type: "run_snapshot",
-      callId: msg.callId,
+      callId: msg.callId ?? "",
       status: msg.status,
       output: msg.toolOutput,
       turnId: msg.turnId,
     };
   }
-  if (msg.type === "thinking") {
+  if (msgType === "thinking") {
     return {
       type: "thinking",
-      content: msg.content,
+      content: msg.content ?? "",
       turnId: msg.turnId,
     };
   }
-  if (msg.type === "tool_call") {
+  if (msgType === "tool_call") {
     return {
       type: "tool_call",
-      callId: msg.callId,
+      callId: msg.callId ?? "",
       toolName: msg.toolName,
       arguments: msg.toolArgs,
-      status: msg.status || "in_progress",
+      status: msg.status ?? "in_progress",
       turnId: msg.turnId,
     };
   }
-  if (msg.type === "tool_output") {
+  if (msgType === "tool_output") {
     return {
       type: "tool_output",
-      callId: msg.callId,
+      callId: msg.callId ?? "",
       output: msg.toolOutput,
-      status: "completed",
       turnId: msg.turnId,
     };
   }
   return {
-    role: msg.role,
-    content: msg.content,
+    role: msg.role ?? "assistant",
+    content: msg.content ?? "",
     turnId: msg.turnId,
   };
 }
@@ -108,7 +81,9 @@ export async function createConversation(
     body.modelProviderApi,
   );
   if (!validation.valid) {
-    throw new ValidationError(validation.error || "Invalid provider/API combination");
+    throw new ValidationError(
+      validation.error || "Invalid provider/API combination",
+    );
   }
 
   // 1. Create Legacy Conversation (File-based) - Required for CodexRuntime execution
@@ -169,12 +144,12 @@ export async function listConversations(
       : options?.limit;
   const limit =
     Number.isFinite(requestedLimit) && requestedLimit ? requestedLimit : 50;
-  
+
   const result = await convexClient.query(api.threads.list, {
     paginationOpts: {
       numItems: limit,
       cursor: options?.cursor ?? null,
-    }
+    },
   });
 
   // Fetch stats for each thread (inefficient N+1, but okay for local pod)
@@ -183,9 +158,10 @@ export async function listConversations(
       const messages = await convexClient.query(api.messages.list, {
         threadId: thread._id,
       });
-      
+
       const firstUserMsg = messages.find(
-        (m) => m.role === "user" && (!m.type || m.type === "message")
+        (m) =>
+          m.role === "user" && (m.type === undefined || m.type === "message"),
       );
 
       return {
@@ -204,12 +180,12 @@ export async function listConversations(
         firstMessage: firstUserMsg?.content,
         history: [],
       };
-    })
+    }),
   );
 
   return {
     conversations,
-    nextCursor: result.continueCursor === result.isDone ? null : result.continueCursor,
+    nextCursor: result.isDone ? null : result.continueCursor,
   };
 }
 
@@ -232,7 +208,7 @@ export async function getConversation(
     threadId: thread._id,
   });
 
-  const history = messages.map(mapConvexMessageToHistory);
+  const history = messages.map(mapLegacyMessageToHistory);
 
   return {
     conversationId: thread.externalId,
@@ -267,17 +243,15 @@ export async function updateConversation(
   }
 
   // Validate provider/API combination if updating model config
-  if (
-    updates.modelProviderId ||
-    updates.modelProviderApi ||
-    updates.model
-  ) {
+  if (updates.modelProviderId || updates.modelProviderApi || updates.model) {
     const providerId = updates.modelProviderId ?? thread.modelProviderId ?? "";
     const api = updates.modelProviderApi ?? thread.modelProviderApi ?? "";
 
     const validation = validateProviderApi(providerId, api);
     if (!validation.valid) {
-      throw new ValidationError(validation.error || "Invalid provider/API combination");
+      throw new ValidationError(
+        validation.error || "Invalid provider/API combination",
+      );
     }
   }
 
@@ -294,7 +268,9 @@ export async function updateConversation(
 
   const refreshed = await getConversation(_codexRuntime, conversationId);
   if (!refreshed) {
-    throw new NotFoundError(`Conversation ${conversationId} not found after update`);
+    throw new NotFoundError(
+      `Conversation ${conversationId} not found after update`,
+    );
   }
   return refreshed;
 }
@@ -308,14 +284,14 @@ export async function deleteConversation(
 ): Promise<boolean> {
   // Delete from Convex
   const deleted = await convexClient.mutation(api.threads.remove, {
-    externalId: conversationId
+    externalId: conversationId,
   });
-  
+
   // Delete from Legacy File Store (for cleanup)
   if (deleted) {
     await codexRuntime.removeConversation(conversationId);
   }
-  
+
   return deleted;
 }
 

@@ -15,6 +15,8 @@ import { registerConversationRoutes } from "./api/routes/conversations.js";
 import { registerMessageRoutes } from "./api/routes/messages.js";
 import { registerTurnRoutes } from "./api/routes/turns.js";
 import { registerRunRoutes } from "./api/routes/runs.js";
+import { registerStreamRoutes } from "./api/routes/stream.js";
+import { registerSubmitRoutes } from "./api/routes/submit.js";
 import { AppError } from "./api/errors/api-errors.js";
 import { CodexRuntime } from "./api/services/codex-runtime.js";
 
@@ -43,8 +45,7 @@ export async function createServer() {
   });
 
   // Initialize Codex runtime
-  const codexHome =
-    process.env.CODY_HOME ?? join(tmpdir(), "cody-runtime");
+  const codexHome = process.env.CODY_HOME ?? join(tmpdir(), "cody-runtime");
   await mkdir(codexHome, { recursive: true });
   process.env.CODY_HOME ??= codexHome;
   const cwd = process.cwd();
@@ -73,6 +74,17 @@ export async function createServer() {
     { prefix: "/api/v1" },
   );
 
+  app.register(
+    (sub) => {
+      sub.setValidatorCompiler(validatorCompiler);
+      sub.setSerializerCompiler(serializerCompiler);
+
+      registerSubmitRoutes(sub);
+      registerStreamRoutes(sub);
+    },
+    { prefix: "/api/v2" },
+  );
+
   // Global error handler
   app.setErrorHandler((err, req, reply) => {
     // Fastify validation errors (including Zod validation errors wrapped by Fastify)
@@ -83,9 +95,9 @@ export async function createServer() {
       err.code === "FST_ERR_VALIDATION"
     ) {
       const message =
-        ("message" in err && typeof err.message === "string"
+        "message" in err && typeof err.message === "string"
           ? err.message
-          : "Validation error");
+          : "Validation error";
       reply.code(400).send({
         error: {
           code: "VALIDATION_ERROR",

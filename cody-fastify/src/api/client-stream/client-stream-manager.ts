@@ -1,19 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { EventMsg } from "codex-ts/src/protocol/protocol.ts";
 import type { ResponseItem } from "codex-ts/src/protocol/models.ts";
-import { redisClient } from "./redis-client.js";
-import type {
-  ClientEvent,
-  StoredEvent,
-  TurnRecord,
-} from "../types/turns.js";
+import Redis from "ioredis";
+import type { ClientEvent, StoredEvent, TurnRecord } from "../types/turns.js";
 
 const TURN_META_PREFIX = "cs:turn";
 const CONV_TURNS_KEY = "cs:conv";
-const DEFAULT_TTL_SECONDS = Number.parseInt(
-  process.env.CLIENT_STREAM_TTL_SECONDS || "",
-  10,
-) || 60 * 60 * 24;
+const DEFAULT_TTL_SECONDS =
+  Number.parseInt(process.env.CLIENT_STREAM_TTL_SECONDS || "", 10) ||
+  60 * 60 * 24;
 
 function metaKey(turnId: string) {
   return `${TURN_META_PREFIX}:${turnId}:meta`;
@@ -30,6 +25,20 @@ function seqKey(turnId: string) {
 function conversationListKey(conversationId: string) {
   return `${CONV_TURNS_KEY}:${conversationId}:turns`;
 }
+
+const REDIS_URL = process.env.REDIS_URL?.trim() ?? "redis://127.0.0.1:6379";
+
+const redisClient = new Redis(REDIS_URL, {
+  maxRetriesPerRequest: 1,
+  retryStrategy: () => null,
+  reconnectOnError: () => false,
+  lazyConnect: false,
+});
+
+redisClient.on("error", (err: Error) => {
+  // Surface connection issues immediately rather than silently degrading.
+  throw err;
+});
 
 class RedisClientStreamManager {
   async createTurn(
@@ -145,7 +154,11 @@ class RedisClientStreamManager {
     const turn = await this.getTurn(turnId);
     await redisClient.del(metaKey(turnId), eventsKey(turnId), seqKey(turnId));
     if (turn) {
-      await redisClient.lrem(conversationListKey(turn.conversationId), 0, turnId);
+      await redisClient.lrem(
+        conversationListKey(turn.conversationId),
+        0,
+        turnId,
+      );
     }
   }
 
@@ -163,8 +176,7 @@ class RedisClientStreamManager {
         if (!turn.result || typeof turn.result !== "object") {
           turn.result = { type: "message", content: msg.delta };
         } else {
-          const current =
-            (turn.result as { content?: string }).content ?? "";
+          const current = (turn.result as { content?: string }).content ?? "";
           (turn.result as { content?: string }).content = current + msg.delta;
         }
         break;
@@ -219,9 +231,7 @@ class RedisClientStreamManager {
         });
         break;
       case "exec_command_end": {
-        const execCall = turn.toolCalls.find(
-          (tc) => tc.callId === msg.call_id,
-        );
+        const execCall = turn.toolCalls.find((tc) => tc.callId === msg.call_id);
         if (execCall) {
           execCall.output = {
             stdout: msg.stdout,
@@ -286,7 +296,9 @@ class RedisClientStreamManager {
       const callId = item.call_id ?? item.id ?? randomUUID();
       let parsedArgs: unknown = item.arguments;
       try {
-        parsedArgs = item.arguments ? JSON.parse(item.arguments) : item.arguments;
+        parsedArgs = item.arguments
+          ? JSON.parse(item.arguments)
+          : item.arguments;
       } catch {
         parsedArgs = item.arguments;
       }
@@ -386,3 +398,4 @@ class RedisClientStreamManager {
 }
 
 export const clientStreamManager = new RedisClientStreamManager();
+export { redisClient };

@@ -9,6 +9,8 @@ import type {
   StreamMessage,
   TurnRecord,
 } from "../types/turns.js";
+// NOTE(Phase 2): Type fix for legacy compatibility
+import type { ResponseItem } from "codex-ts/src/protocol/models.ts";
 
 export function buildTurnHandlers(_codexRuntime: CodexRuntime) {
   return {
@@ -108,11 +110,7 @@ export function buildTurnHandlers(_codexRuntime: CodexRuntime) {
       const sendEvents = (events: StoredEvent[]): boolean => {
         for (const storedEvent of events) {
           if (
-            !shouldIncludeEvent(
-              storedEvent.msg,
-              thinkingFormat,
-              toolFormat,
-            )
+            !shouldIncludeEvent(storedEvent.msg, thinkingFormat, toolFormat)
           ) {
             continue;
           }
@@ -149,7 +147,7 @@ export function buildTurnHandlers(_codexRuntime: CodexRuntime) {
       let lastEventId =
         initialEvents.length > 0
           ? initialEvents[initialEvents.length - 1].id
-          : fromEventId ?? 0;
+          : (fromEventId ?? 0);
 
       const finish = () => {
         try {
@@ -172,7 +170,7 @@ export function buildTurnHandlers(_codexRuntime: CodexRuntime) {
       // to catch any late-arriving events from async message processor
       let completedPollCount = 0;
       const maxCompletedPolls = 50; // Poll for up to 5 seconds after completion
-      
+
       const pollInterval = setInterval(async () => {
         const newEvents = await clientStreamManager.getEvents(
           turnId,
@@ -379,7 +377,9 @@ function mapEventMsgToSSEData(
   };
 }
 
-function isToolRawResponseItem(item: ResponseItem): item is Extract<
+function isToolRawResponseItem(
+  item: ResponseItem,
+): item is Extract<
   ResponseItem,
   { type: "function_call" | "function_call_output" }
 > {
@@ -434,11 +434,11 @@ function isThinkingClientEvent(
   );
 }
 
-function isToolClientEvent(
-  event: ClientEvent,
-): event is Extract<
+function isToolClientEvent(event: ClientEvent): event is Extract<
   ClientEvent,
-  { type: "tool_call_begin" | "tool_call_end" | "ts_exec_begin" | "ts_exec_end" }
+  {
+    type: "tool_call_begin" | "tool_call_end" | "ts_exec_begin" | "ts_exec_end";
+  }
 > {
   return (
     event.type === "tool_call_begin" ||

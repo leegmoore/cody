@@ -100,7 +100,9 @@ test.describe("Conversations - Create (TC-1)", () => {
     const hasAnthropic = message.includes("anthropic");
     const hasOpenRouter = message.includes("openrouter");
     // Verify at least 2 providers are listed (constitutes a "list")
-    const providerCount = [hasOpenAI, hasAnthropic, hasOpenRouter].filter(Boolean).length;
+    const providerCount = [hasOpenAI, hasAnthropic, hasOpenRouter].filter(
+      Boolean,
+    ).length;
     expect(providerCount).toBeGreaterThanOrEqual(2); // Full list means multiple providers
   });
 
@@ -157,7 +159,7 @@ test.describe("Conversations - List (TC-2)", () => {
     // Note: In parallel test environment, we cannot guarantee complete emptiness
     // as other tests may create conversations concurrently. However, the spec
     // requires that when empty, the API returns [] and null cursor.
-    
+
     // Attempt to clean up: Get all conversations and delete them
     // This ensures empty state per spec requirement
     const listBefore = await api.listConversations();
@@ -168,13 +170,13 @@ test.describe("Conversations - List (TC-2)", () => {
         await api.deleteConversation(conv.conversationId);
       }
     }
-    
+
     const response = await api.listConversations();
     expect(response.status()).toBe(200);
     const data = await response.json();
     expect(Array.isArray(data.conversations)).toBe(true);
     // We can't guarantee empty state in a persistent local env without a wipe hook
-    // expect(data.conversations).toEqual([]); 
+    // expect(data.conversations).toEqual([]);
     // expect(data.nextCursor).toBeNull();
   });
 
@@ -200,18 +202,22 @@ test.describe("Conversations - List (TC-2)", () => {
       model: "gpt-5-codex",
     });
     const conv3 = await create3.json();
-    const createdIds = [conv1.conversationId, conv2.conversationId, conv3.conversationId];
+    const createdIds = [
+      conv1.conversationId,
+      conv2.conversationId,
+      conv3.conversationId,
+    ];
 
     const response = await api.listConversations();
 
     expect(response.status()).toBe(200);
     const data = await response.json();
     // Find our 3 conversations in the list
-    const ourConversations = data.conversations.filter((c: { conversationId: string }) =>
-      createdIds.includes(c.conversationId),
+    const ourConversations = data.conversations.filter(
+      (c: { conversationId: string }) => createdIds.includes(c.conversationId),
     );
     expect(ourConversations.length).toBe(3);
-    
+
     // Verify sorted by createdAt descending (newest first)
     for (let i = 0; i < ourConversations.length - 1; i++) {
       expect(
@@ -220,7 +226,7 @@ test.describe("Conversations - List (TC-2)", () => {
         new Date(ourConversations[i + 1].createdAt).getTime(),
       );
     }
-    
+
     // Verify each conversation has all expected fields
     const requiredFields = [
       "conversationId",
@@ -291,7 +297,11 @@ test.describe("Conversations - List (TC-2)", () => {
       model: "gpt-5-codex",
     });
     const conv3 = await create3.json();
-    const allIds = [conv1.conversationId, conv2.conversationId, conv3.conversationId];
+    const allIds = [
+      conv1.conversationId,
+      conv2.conversationId,
+      conv3.conversationId,
+    ];
 
     const firstResponse = await api.listConversations({ limit: 1 });
     expect(firstResponse.status()).toBe(200);
@@ -313,12 +323,12 @@ test.describe("Conversations - List (TC-2)", () => {
     expect(secondResponse.status()).toBe(200);
     const secondData = await secondResponse.json();
     expect(secondData.conversations.length).toBe(1);
-    
+
     // Verify different conversation than first page
     expect(secondData.conversations[0].conversationId).not.toBe(
       firstData.conversations[0].conversationId,
     );
-    
+
     // Verify no duplicates: collect all IDs from both pages
     const allReturnedIds = [
       firstData.conversations[0].conversationId,
@@ -326,7 +336,7 @@ test.describe("Conversations - List (TC-2)", () => {
     ];
     const uniqueIds = new Set(allReturnedIds);
     expect(uniqueIds.size).toBe(2); // No duplicates
-    
+
     // Verify both are from our created conversations
     expect(allIds).toContain(firstData.conversations[0].conversationId);
     expect(allIds).toContain(secondData.conversations[0].conversationId);
@@ -362,7 +372,7 @@ test.describe("Conversations - Get (TC-3)", () => {
     expect(response.status()).toBe(200);
     const data = await response.json();
     expect(data.conversationId).toBe(conversationId);
-    
+
     // Verify all metadata fields present
     expect(data.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     expect(data.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
@@ -375,7 +385,7 @@ test.describe("Conversations - Get (TC-3)", () => {
     expect(Array.isArray(data.tags)).toBe(true);
     expect(data.tags).toEqual([]);
     expect(data.agentRole).toBeNull();
-    
+
     // Verify history = [] (empty for new conversation)
     expect(Array.isArray(data.history)).toBe(true);
     expect(data.history).toEqual([]);
@@ -419,7 +429,7 @@ test.describe("Conversations - Delete (TC-4)", () => {
       modelProviderApi: "responses",
       model: "gpt-5-codex",
     });
-    
+
     expect(createResponse.status()).toBe(201);
     const createData = await createResponse.json();
     const conversationId = createData.conversationId;
@@ -469,7 +479,7 @@ test.describe("Conversations - Update (TC-5)", () => {
     expect(response.status()).toBe(200);
     const data = await response.json();
     expect(data.title).toBe("Updated Title");
-    
+
     // Verify other fields unchanged
     expect(data.summary).toBe("Original Summary");
     expect(data.tags).toEqual(["original"]);
@@ -477,7 +487,7 @@ test.describe("Conversations - Update (TC-5)", () => {
     expect(data.modelProviderId).toBe("openai");
     expect(data.modelProviderApi).toBe("responses");
     expect(data.model).toBe("gpt-5-codex");
-    
+
     // Verify updatedAt > original updatedAt
     expect(new Date(data.updatedAt).getTime()).toBeGreaterThan(
       new Date(originalUpdatedAt).getTime(),
@@ -512,12 +522,12 @@ test.describe("Conversations - Update (TC-5)", () => {
     expect(data.summary).toBe("New Summary");
     expect(data.tags).toEqual(["new", "tags"]);
     expect(data.agentRole).toBe("coder");
-    
+
     // Verify model config unchanged
     expect(data.modelProviderId).toBe("openai");
     expect(data.modelProviderApi).toBe("responses");
     expect(data.model).toBe("gpt-5-codex");
-    
+
     // Verify updatedAt changed
     expect(new Date(data.updatedAt).getTime()).toBeGreaterThan(
       new Date(originalUpdatedAt).getTime(),
@@ -550,7 +560,7 @@ test.describe("Conversations - Update (TC-5)", () => {
     expect(data.modelProviderId).toBe("anthropic");
     expect(data.modelProviderApi).toBe("messages");
     expect(data.model).toBe("claude-sonnet-4");
-    
+
     // Verify metadata unchanged
     expect(data.title).toBe("Original Title");
     expect(data.summary).toBe("Original Summary");

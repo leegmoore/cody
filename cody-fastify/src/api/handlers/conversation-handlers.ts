@@ -1,8 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import {
-  ValidationError,
-  NotFoundError,
-} from "../errors/api-errors.js";
+import { ValidationError, NotFoundError } from "../errors/api-errors.js";
 import { ConfigurationError } from "codex-ts/src/core/errors.ts";
 import type {
   CreateConversationBody,
@@ -30,18 +27,21 @@ export function buildConversationHandlers(codexRuntime: CodexRuntime) {
       } catch (error) {
         // Log the error for debugging
         req.log?.error({ err: error }, "Error in create conversation handler");
-        
-        if (error instanceof ValidationError || error instanceof NotFoundError) {
+
+        if (
+          error instanceof ValidationError ||
+          error instanceof NotFoundError
+        ) {
           throw error;
         }
-        
+
         // Handle ConfigurationError (missing API keys, etc.) as validation error
         if (error instanceof ConfigurationError) {
           throw new ValidationError(
             `Configuration error: ${error.message}. Please ensure API keys are configured.`,
           );
         }
-        
+
         if (error instanceof Error) {
           if (error.message.includes("does not support")) {
             throw new ValidationError(error.message);
@@ -49,7 +49,10 @@ export function buildConversationHandlers(codexRuntime: CodexRuntime) {
           if (error.message.includes("Unsupported provider")) {
             throw new ValidationError(error.message);
           }
-          if (error.message.includes("Missing API key") || error.message.includes("No credentials")) {
+          if (
+            error.message.includes("Missing API key") ||
+            error.message.includes("No credentials")
+          ) {
             throw new ValidationError(
               `Missing API key: ${error.message}. Please set the required API key environment variable.`,
             );
@@ -99,7 +102,10 @@ export function buildConversationHandlers(codexRuntime: CodexRuntime) {
         );
         reply.code(200).send(conversation);
       } catch (error) {
-        if (error instanceof NotFoundError || error instanceof ValidationError) {
+        if (
+          error instanceof NotFoundError ||
+          error instanceof ValidationError
+        ) {
           throw error;
         }
         if (
@@ -108,7 +114,10 @@ export function buildConversationHandlers(codexRuntime: CodexRuntime) {
         ) {
           throw new NotFoundError(`Conversation ${req.params.id} not found`);
         }
-        if (error instanceof Error && error.message.includes("does not support")) {
+        if (
+          error instanceof Error &&
+          error.message.includes("does not support")
+        ) {
           throw new ValidationError(error.message);
         }
         throw error;

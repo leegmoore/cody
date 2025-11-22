@@ -55,14 +55,14 @@ test.describe("Messages - Submit (TC-6)", () => {
     expect(response.status()).toBe(400);
   });
 
-test.skip("TC-6.4: With Model Override (Valid)", async ({ api }) => {
-  // SKIPPED: Per-turn model/provider overrides are intentionally not supported.
-  // Codex sessions use a fixed provider/model configuration set at conversation
-  // creation time. Changing providers mid-session (e.g., OpenAI → Anthropic)
-  // would require creating a new conversation, which breaks history continuity.
-  // Model-only changes (same provider, different model) could theoretically
-  // be supported via override_turn_context, but this feature is not implemented
-  // and is not planned for this integration.
+  test.skip("TC-6.4: With Model Override (Valid)", async ({ api }) => {
+    // SKIPPED: Per-turn model/provider overrides are intentionally not supported.
+    // Codex sessions use a fixed provider/model configuration set at conversation
+    // creation time. Changing providers mid-session (e.g., OpenAI → Anthropic)
+    // would require creating a new conversation, which breaks history continuity.
+    // Model-only changes (same provider, different model) could theoretically
+    // be supported via override_turn_context, but this feature is not implemented
+    // and is not planned for this integration.
     // Setup: Create conversation (openai + responses)
     const createResponse = await api.createConversation({
       modelProviderId: "openai",
@@ -83,35 +83,42 @@ test.skip("TC-6.4: With Model Override (Valid)", async ({ api }) => {
     expect(response.status()).toBe(202);
     const data = await response.json();
     expect(data.turnId).toBeTruthy();
-    
+
     // Verify override provider was actually used by checking turn status/stream
     // Wait for turn to complete
     let turnStatus = await api.getTurnStatus(data.turnId);
     let turnData = await turnStatus.json();
     const maxWait = 30000;
     const startTime = Date.now();
-    while (turnData.status !== "completed" && turnData.status !== "failed" && Date.now() - startTime < maxWait) {
+    while (
+      turnData.status !== "completed" &&
+      turnData.status !== "failed" &&
+      Date.now() - startTime < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       turnStatus = await api.getTurnStatus(data.turnId);
       turnData = await turnStatus.json();
     }
-    
+
     expect(turnData.status).toBe("completed");
-    
+
     // Spec requires: Verify override provider was actually used
     // Check stream events for provider metadata
     const streamResponse = await api.streamTurnEvents(data.turnId);
     const streamText = await streamResponse.text();
-    
+
     // Verify anthropic was used - check for provider indicators in stream or status
-    const hasAnthropicIndicator = streamText.toLowerCase().includes("anthropic") ||
-                                   streamText.toLowerCase().includes("claude") ||
-                                   (turnData.modelProviderId && turnData.modelProviderId === "anthropic");
-    
+    const hasAnthropicIndicator =
+      streamText.toLowerCase().includes("anthropic") ||
+      streamText.toLowerCase().includes("claude") ||
+      (turnData.modelProviderId && turnData.modelProviderId === "anthropic");
+
     // Spec requires: prove override was honored
     // If implementation provides provider metadata, it must be present
     // Otherwise, at minimum verify the turn used the override (not default)
-    expect(hasAnthropicIndicator || turnData.modelProviderId === "anthropic").toBe(true);
+    expect(
+      hasAnthropicIndicator || turnData.modelProviderId === "anthropic",
+    ).toBe(true);
   });
 
   test("TC-6.5: Invalid Override Combo", async ({ api }) => {

@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import type { SpanContext } from "@opentelemetry/api";
+import { TraceFlags } from "@opentelemetry/api";
 import type { TraceContext } from "./schema.js";
 
 const HEX = "0123456789abcdef";
@@ -24,4 +26,19 @@ export function childTraceContext(parent: TraceContext): TraceContext {
   const spanId = randomHex(16);
   const traceparent = `${version}-${traceId}-${spanId}-01`;
   return { traceparent, tracestate: parent.tracestate };
+}
+
+export function traceContextFromSpanContext(
+  spanContext: SpanContext,
+): TraceContext {
+  const traceId = spanContext.traceId;
+  const spanId = spanContext.spanId;
+  const traceFlags = (spanContext.traceFlags ?? TraceFlags.NONE)
+    .toString(16)
+    .padStart(2, "0");
+  const tracestate = spanContext.traceState?.serialize();
+  return {
+    traceparent: `00-${traceId}-${spanId}-${traceFlags}`,
+    ...(tracestate ? { tracestate } : {}),
+  };
 }

@@ -1,671 +1,999 @@
-# Convex guidelines
-## Function guidelines
-### New function syntax
-- ALWAYS use the new function syntax for Convex functions. For example:
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**Codex TypeScript Port** - A systematic migration of OpenAI's Codex Rust workspace to TypeScript. This is not a rewrite but a methodical port that preserves the architecture, patterns, and behavior of the original Rust implementation while adapting to idiomatic TypeScript.
+
+**Current Status:** Phase 2 of Project 02 (UI Integration & Library Definition)
+- 21 core modules ported from Rust
+- 1,895+ tests passing
+- CLI foundation established (Phase 1 complete)
+- Tool integration in progress (Phase 2 active)
+
+## Core Architecture
+
+### SQ/EQ Pattern (Submission Queue / Event Queue)
+
+The Codex system uses an event-driven architecture for asynchronous communication between user and agent:
+
+- **Submission Queue (SQ):** User/CLI submits `Op` (operations) to the agent
+- **Event Queue (EQ):** Agent emits `EventMsg` (events) back to user/CLI
+- **Discriminated unions:** Type-safe message passing with 40+ event variants
+- **Event correlation:** Each event references its triggering submission via ID
+
+This is a Codex-specific design pattern (not a Rust language feature) that enables:
+- Progressive UI updates (thinking → tool execution → results → response)
+- Tool approval flow (exec_approval_request → user decision → submit approval)
+- Cancellation and interruption
+- Streaming tool execution visibility
+
+### Key Components
+
+**ConversationManager** (`codex-ts/src/core/conversation-manager.ts`)
+- Primary library entry point
+- Creates and manages Codex conversations
+- Wires together auth, persistence, model clients, tool routing
+
+**Codex** (`codex-ts/src/core/codex/codex.ts`)
+- High-level orchestration engine
+- Implements SQ/EQ queue pair
+- submit() operations, receive nextEvent() responses
+- Spawns sessions with configuration
+
+**Conversation** (`codex-ts/src/core/conversation.ts`)
+- User-facing conversation API
+- sendMessage(), nextEvent(), approveExec(), denyExec()
+- Wraps Codex with simpler interface
+
+**Protocol Types** (`codex-ts/src/protocol/protocol.ts`)
+- Defines all Op and EventMsg types
+- Submission, Event interfaces
+- Core discriminated unions
+
+**CLI Display** (`codex-ts/src/cli/display.ts`)
+- Event rendering layer
+- handleEvent() switch on EventMsg types
+- Tool approval prompts, progress display
+
+## Common Development Commands
+
+### Setup
+```bash
+cd codex-ts
+npm install                    # First time only
+./scripts/setup-cody-alias.sh  # Link CLI globally as 'cody'
+```
+
+### Testing
+```bash
+npm test                       # Run all tests (1,895+ tests)
+npm test -- --watch            # Watch mode during development
+npm test -- run path/to/file   # Run specific test file
+```
+
+### Building
+```bash
+npm run build                  # TypeScript compilation to dist/
+```
+
+### Code Quality
+```bash
+npm run format                 # Auto-format with Prettier (required before commit)
+npm run format:check           # Check formatting without changes
+npm run lint                   # ESLint code quality checks
+npm run type-check             # TypeScript strict checks (tsc --noEmit)
+```
+
+### CLI Usage (after setup)
+```bash
+cody --help                    # Show CLI help
+cody new                       # Create new conversation
+cody chat "message"            # Send message in conversation
+cody list                      # List saved conversations
+```
+
+### Quality Verification (before marking phase complete)
+```bash
+npm run format && npm run lint && npx tsc --noEmit && npm test
+```
+All commands must succeed with 0 errors before phase completion.
+
+## Testing Philosophy
+
+### Mocked-Service Tests (PRIMARY)
+Integration-level tests in `tests/mocked-service/` are the core quality mechanism:
+- Exercise complete workflows (conversation flow, tool execution, provider switching)
+- Mock external boundaries (ModelClient, RolloutRecorder, AuthManager, network, filesystem)
+- Fast (<5 seconds total), deterministic, offline-runnable
+- Written at library API boundaries as contracts are defined during planning
+- See `docs/core/contract-testing-tdd-philosophy.md` for detailed approach
+
+### Unit Tests (OPTIONAL)
+Ported Rust tests in module directories are useful but not required going forward:
+- Validate individual function behavior
+- Maintained from original port
+- Continue passing but new development focuses on mocked-service tests
+
+### Test Organization
+```
+tests/
+├── mocked-service/    # PRIMARY - integration with mocked externals
+├── mocks/             # Shared mock implementations
+└── unit/              # Original port tests (optional)
+```
+
+## Project Structure
+
+### Port Organization (Phases 1-6)
+The TypeScript port follows the Rust workspace structure where applicable:
+
+```
+codex-ts/src/
+├── protocol/          # Core protocol types and utilities
+│   ├── protocol.ts    # SQ/EQ types, Op, EventMsg
+│   ├── items.ts       # Turn items, user input types
+│   └── ...
+├── core/              # Orchestration and business logic
+│   ├── codex/         # Main orchestration engine
+│   ├── conversation-manager.ts
+│   ├── conversation.ts
+│   ├── config.ts      # Configuration system
+│   ├── auth/          # Authentication (OAuth, API keys)
+│   ├── client/        # Model client adapters
+│   └── rollout.ts     # Conversation persistence (JSONL)
+├── tools/             # Tool system
+│   ├── registry.ts    # Tool registration
+│   ├── types.ts       # Tool interfaces
+│   └── ...
+├── utils/             # Utilities
+│   ├── string.ts      # UTF-8 safe truncation
+│   ├── cache.ts       # LRU caching
+│   ├── tokenizer.ts   # Token counting
+│   └── ...
+└── cli/               # CLI layer (Project 02)
+    ├── index.ts       # Entry point, Commander.js setup
+    ├── display.ts     # Event rendering
+    ├── runtime.ts     # CLI runtime setup
+    └── state.ts       # CLI state management
+```
+
+### UI Integration Project (Project 02, Current)
+Project 02 wires ported modules into a working CLI called **Cody**:
+
+**Phases:**
+1. ✅ Basic Chat Flow - Single provider, API key auth, conversation loop
+2. 🔄 Tool Integration - Approval prompts, tool execution display
+3. ⏳ Multi-Provider - OpenAI (Responses, Chat), Anthropic (Messages)
+4. ⏳ Authentication - OAuth token retrieval (ChatGPT, Claude)
+5. ⏳ Persistence & Resume - JSONL save/load, conversation history
+6. ⏳ Library API Finalization - Document @openai/codex-core public surface
+7. ⏳ REST API Design (Optional) - HTTP wrapper specification
+8. ⏳ Integration Polish - Bug fixes, edge cases, UX refinements
+
+## Development Standards
+
+### TypeScript Requirements
+- **Strict mode enabled:** No `any` types (use `unknown` or proper types)
+- **ES Modules only:** Use `import`/`export`, not `require()`/`module.exports`
+- **Modern syntax:** Target ES2022, leverage latest JavaScript features
+- **Type safety:** Discriminated unions for variants, no implicit any
+
+### Code Style
+- **Formatting:** Prettier handles ALL formatting (non-negotiable)
+  - Single quotes, 100 char width, 2 space indent, trailing commas, no semicolons
+- **Naming:** camelCase functions, PascalCase classes/types, UPPER_SNAKE_CASE constants
+- **Documentation:** JSDoc on public APIs, inline comments explain *why* not *what*
+
+### Testing Standards
+- **Baseline maintained:** Existing 1,895+ tests continue passing
+- **No skipped tests:** 0 `.skip`, 0 `.todo` in suite
+- **New functionality:** Add mocked-service tests at library boundaries
+- **Fast execution:** All tests complete in <5 seconds
+
+### Rust → TypeScript Patterns
 ```typescript
-import { query } from "./_generated/server";
-import { v } from "convex/values";
-export const f = query({
-    args: {},
-    returns: v.null(),
-    handler: async (ctx, args) => {
-    // Function body
-    },
-});
-```
-
-### Http endpoint syntax
-- HTTP endpoints are defined in `convex/http.ts` and require an `httpAction` decorator. For example:
-```typescript
-import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
-const http = httpRouter();
-http.route({
-    path: "/echo",
-    method: "POST",
-    handler: httpAction(async (ctx, req) => {
-    const body = await req.bytes();
-    return new Response(body, { status: 200 });
-    }),
-});
-```
-- HTTP endpoints are always registered at the exact path you specify in the `path` field. For example, if you specify `/api/someRoute`, the endpoint will be registered at `/api/someRoute`.
-
-### Validators
-- Below is an example of an array validator:
-```typescript
-import { mutation } from "./_generated/server";
-import { v } from "convex/values";
-
-export default mutation({
-args: {
-    simpleArray: v.array(v.union(v.string(), v.number())),
-},
-handler: async (ctx, args) => {
-    //...
-},
-});
-```
-- Below is an example of a schema with validators that codify a discriminated union type:
-```typescript
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-
-export default defineSchema({
-    results: defineTable(
-        v.union(
-            v.object({
-                kind: v.literal("error"),
-                errorMessage: v.string(),
-            }),
-            v.object({
-                kind: v.literal("success"),
-                value: v.number(),
-            }),
-        ),
-    )
-});
-```
-- Always use the `v.null()` validator when returning a null value. Below is an example query that returns a null value:
-```typescript
-import { query } from "./_generated/server";
-import { v } from "convex/values";
-
-export const exampleQuery = query({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx, args) => {
-      console.log("This query returns a null value");
-      return null;
-  },
-});
-```
-- Here are the valid Convex types along with their respective validators:
-Convex Type  | TS/JS type  |  Example Usage         | Validator for argument validation and schemas  | Notes                                                                                                                                                                                                 |
-| ----------- | ------------| -----------------------| -----------------------------------------------| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Id          | string      | `doc._id`              | `v.id(tableName)`                              |                                                                                                                                                                                                       |
-| Null        | null        | `null`                 | `v.null()`                                     | JavaScript's `undefined` is not a valid Convex value. Functions the return `undefined` or do not return will return `null` when called from a client. Use `null` instead.                             |
-| Int64       | bigint      | `3n`                   | `v.int64()`                                    | Int64s only support BigInts between -2^63 and 2^63-1. Convex supports `bigint`s in most modern browsers.                                                                                              |
-| Float64     | number      | `3.1`                  | `v.number()`                                   | Convex supports all IEEE-754 double-precision floating point numbers (such as NaNs). Inf and NaN are JSON serialized as strings.                                                                      |
-| Boolean     | boolean     | `true`                 | `v.boolean()`                                  |
-| String      | string      | `"abc"`                | `v.string()`                                   | Strings are stored as UTF-8 and must be valid Unicode sequences. Strings must be smaller than the 1MB total size limit when encoded as UTF-8.                                                         |
-| Bytes       | ArrayBuffer | `new ArrayBuffer(8)`   | `v.bytes()`                                    | Convex supports first class bytestrings, passed in as `ArrayBuffer`s. Bytestrings must be smaller than the 1MB total size limit for Convex types.                                                     |
-| Array       | Array       | `[1, 3.2, "abc"]`      | `v.array(values)`                              | Arrays can have at most 8192 values.                                                                                                                                                                  |
-| Object      | Object      | `{a: "abc"}`           | `v.object({property: value})`                  | Convex only supports "plain old JavaScript objects" (objects that do not have a custom prototype). Objects can have at most 1024 entries. Field names must be nonempty and not start with "$" or "_". |
-| Record      | Record      | `{"a": "1", "b": "2"}` | `v.record(keys, values)`                       | Records are objects at runtime, but can have dynamic keys. Keys must be only ASCII characters, nonempty, and not start with "$" or "_".                                                               |
-
-### Function registration
-- Use `internalQuery`, `internalMutation`, and `internalAction` to register internal functions. These functions are private and aren't part of an app's API. They can only be called by other Convex functions. These functions are always imported from `./_generated/server`.
-- Use `query`, `mutation`, and `action` to register public functions. These functions are part of the public API and are exposed to the public Internet. Do NOT use `query`, `mutation`, or `action` to register sensitive internal functions that should be kept private.
-- You CANNOT register a function through the `api` or `internal` objects.
-- ALWAYS include argument and return validators for all Convex functions. This includes all of `query`, `internalQuery`, `mutation`, `internalMutation`, `action`, and `internalAction`. If a function doesn't return anything, include `returns: v.null()` as its output validator.
-- If the JavaScript implementation of a Convex function doesn't have a return value, it implicitly returns `null`.
-
-### Function calling
-- Use `ctx.runQuery` to call a query from a query, mutation, or action.
-- Use `ctx.runMutation` to call a mutation from a mutation or action.
-- Use `ctx.runAction` to call an action from an action.
-- ONLY call an action from another action if you need to cross runtimes (e.g. from V8 to Node). Otherwise, pull out the shared code into a helper async function and call that directly instead.
-- Try to use as few calls from actions to queries and mutations as possible. Queries and mutations are transactions, so splitting logic up into multiple calls introduces the risk of race conditions.
-- All of these calls take in a `FunctionReference`. Do NOT try to pass the callee function directly into one of these calls.
-- When using `ctx.runQuery`, `ctx.runMutation`, or `ctx.runAction` to call a function in the same file, specify a type annotation on the return value to work around TypeScript circularity limitations. For example,
-```
-export const f = query({
-  args: { name: v.string() },
-  returns: v.string(),
-  handler: async (ctx, args) => {
-    return "Hello " + args.name;
-  },
-});
-
-export const g = query({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const result: string = await ctx.runQuery(api.example.f, { name: "Bob" });
-    return null;
-  },
-});
-```
-
-### Function references
-- Function references are pointers to registered Convex functions.
-- Use the `api` object defined by the framework in `convex/_generated/api.ts` to call public functions registered with `query`, `mutation`, or `action`.
-- Use the `internal` object defined by the framework in `convex/_generated/api.ts` to call internal (or private) functions registered with `internalQuery`, `internalMutation`, or `internalAction`.
-- Convex uses file-based routing, so a public function defined in `convex/example.ts` named `f` has a function reference of `api.example.f`.
-- A private function defined in `convex/example.ts` named `g` has a function reference of `internal.example.g`.
-- Functions can also registered within directories nested within the `convex/` folder. For example, a public function `h` defined in `convex/messages/access.ts` has a function reference of `api.messages.access.h`.
-
-### Api design
-- Convex uses file-based routing, so thoughtfully organize files with public query, mutation, or action functions within the `convex/` directory.
-- Use `query`, `mutation`, and `action` to define public functions.
-- Use `internalQuery`, `internalMutation`, and `internalAction` to define private, internal functions.
-
-### Pagination
-- Paginated queries are queries that return a list of results in incremental pages.
-- You can define pagination using the following syntax:
-
-```ts
-import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { paginationOptsValidator } from "convex/server";
-export const listWithExtraArg = query({
-    args: { paginationOpts: paginationOptsValidator, author: v.string() },
-    handler: async (ctx, args) => {
-        return await ctx.db
-        .query("messages")
-        .filter((q) => q.eq(q.field("author"), args.author))
-        .order("desc")
-        .paginate(args.paginationOpts);
-    },
-});
-```
-Note: `paginationOpts` is an object with the following properties:
-- `numItems`: the maximum number of documents to return (the validator is `v.number()`)
-- `cursor`: the cursor to use to fetch the next page of documents (the validator is `v.union(v.string(), v.null())`)
-- A query that ends in `.paginate()` returns an object that has the following properties:
-                            - page (contains an array of documents that you fetches)
-                            - isDone (a boolean that represents whether or not this is the last page of documents)
-                            - continueCursor (a string that represents the cursor to use to fetch the next page of documents)
-
-
-## Validator guidelines
-- `v.bigint()` is deprecated for representing signed 64-bit integers. Use `v.int64()` instead.
-- Use `v.record()` for defining a record type. `v.map()` and `v.set()` are not supported.
-
-## Schema guidelines
-- Always define your schema in `convex/schema.ts`.
-- Always import the schema definition functions from `convex/server`:
-- System fields are automatically added to all documents and are prefixed with an underscore. The two system fields that are automatically added to all documents are `_creationTime` which has the validator `v.number()` and `_id` which has the validator `v.id(tableName)`.
-- Always include all index fields in the index name. For example, if an index is defined as `["field1", "field2"]`, the index name should be "by_field1_and_field2".
-- Index fields must be queried in the same order they are defined. If you want to be able to query by "field1" then "field2" and by "field2" then "field1", you must create separate indexes.
-
-## Typescript guidelines
-- You can use the helper typescript type `Id` imported from './_generated/dataModel' to get the type of the id for a given table. For example if there is a table called 'users' you can use `Id<'users'>` to get the type of the id for that table.
-- If you need to define a `Record` make sure that you correctly provide the type of the key and value in the type. For example a validator `v.record(v.id('users'), v.string())` would have the type `Record<Id<'users'>, string>`. Below is an example of using `Record` with an `Id` type in a query:
-```ts
-import { query } from "./_generated/server";
-import { Doc, Id } from "./_generated/dataModel";
-
-export const exampleQuery = query({
-    args: { userIds: v.array(v.id("users")) },
-    returns: v.record(v.id("users"), v.string()),
-    handler: async (ctx, args) => {
-        const idToUsername: Record<Id<"users">, string> = {};
-        for (const userId of args.userIds) {
-            const user = await ctx.db.get(userId);
-            if (user) {
-                idToUsername[user._id] = user.username;
-            }
-        }
-
-        return idToUsername;
-    },
-});
-```
-- Be strict with types, particularly around id's of documents. For example, if a function takes in an id for a document in the 'users' table, take in `Id<'users'>` rather than `string`.
-- Always use `as const` for string literals in discriminated union types.
-- When using the `Array` type, make sure to always define your arrays as `const array: Array<T> = [...];`
-- When using the `Record` type, make sure to always define your records as `const record: Record<KeyType, ValueType> = {...};`
-- Always add `@types/node` to your `package.json` when using any Node.js built-in modules.
-
-## Full text search guidelines
-- A query for "10 messages in channel '#general' that best match the query 'hello hi' in their body" would look like:
-
-const messages = await ctx.db
-  .query("messages")
-  .withSearchIndex("search_body", (q) =>
-    q.search("body", "hello hi").eq("channel", "#general"),
-  )
-  .take(10);
-
-## Query guidelines
-- Do NOT use `filter` in queries. Instead, define an index in the schema and use `withIndex` instead.
-- Convex queries do NOT support `.delete()`. Instead, `.collect()` the results, iterate over them, and call `ctx.db.delete(row._id)` on each result.
-- Use `.unique()` to get a single document from a query. This method will throw an error if there are multiple documents that match the query.
-- When using async iteration, don't use `.collect()` or `.take(n)` on the result of a query. Instead, use the `for await (const row of query)` syntax.
-### Ordering
-- By default Convex always returns documents in ascending `_creationTime` order.
-- You can use `.order('asc')` or `.order('desc')` to pick whether a query is in ascending or descending order. If the order isn't specified, it defaults to ascending.
-- Document queries that use indexes will be ordered based on the columns in the index and can avoid slow table scans.
-
-
-## Mutation guidelines
-- Use `ctx.db.replace` to fully replace an existing document. This method will throw an error if the document does not exist.
-- Use `ctx.db.patch` to shallow merge updates into an existing document. This method will throw an error if the document does not exist.
-
-## Action guidelines
-- Always add `"use node";` to the top of files containing actions that use Node.js built-in modules.
-- Never use `ctx.db` inside of an action. Actions don't have access to the database.
-- Below is an example of the syntax for an action:
-```ts
-import { action } from "./_generated/server";
-
-export const exampleAction = action({
-    args: {},
-    returns: v.null(),
-    handler: async (ctx, args) => {
-        console.log("This action does not return anything");
-        return null;
-    },
-});
-```
-
-## Scheduling guidelines
-### Cron guidelines
-- Only use the `crons.interval` or `crons.cron` methods to schedule cron jobs. Do NOT use the `crons.hourly`, `crons.daily`, or `crons.weekly` helpers.
-- Both cron methods take in a FunctionReference. Do NOT try to pass the function directly into one of these methods.
-- Define crons by declaring the top-level `crons` object, calling some methods on it, and then exporting it as default. For example,
-```ts
-import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
-import { internalAction } from "./_generated/server";
-
-const empty = internalAction({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    console.log("empty");
-  },
-});
-
-const crons = cronJobs();
-
-// Run `internal.crons.empty` every two hours.
-crons.interval("delete inactive users", { hours: 2 }, internal.crons.empty, {});
-
-export default crons;
-```
-- You can register Convex functions within `crons.ts` just like any other file.
-- If a cron calls an internal function, always import the `internal` object from '_generated/api', even if the internal function is registered in the same file.
-
-
-## File storage guidelines
-- Convex includes file storage for large files like images, videos, and PDFs.
-- The `ctx.storage.getUrl()` method returns a signed URL for a given file. It returns `null` if the file doesn't exist.
-- Do NOT use the deprecated `ctx.storage.getMetadata` call for loading a file's metadata.
-
-                    Instead, query the `_storage` system table. For example, you can use `ctx.db.system.get` to get an `Id<"_storage">`.
-```
-import { query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-
-type FileMetadata = {
-    _id: Id<"_storage">;
-    _creationTime: number;
-    contentType?: string;
-    sha256: string;
-    size: number;
+// Rust: Option<T>
+// TypeScript: T | undefined
+function find(id: string): User | undefined {
+  return users.get(id);
 }
 
-export const exampleQuery = query({
-    args: { fileId: v.id("_storage") },
-    returns: v.null(),
-    handler: async (ctx, args) => {
-        const metadata: FileMetadata | null = await ctx.db.system.get(args.fileId);
-        console.log(metadata);
-        return null;
-    },
-});
-```
-- Convex storage stores items as `Blob` objects. You must convert all items to/from a `Blob` when using Convex storage.
+// Rust: Result<T, E>
+// TypeScript: Throw errors (preferred) or union types
+function parse(input: string): Config {
+  if (!validate(input)) throw new ParseError('Invalid input');
+  return config;
+}
 
-
-# Examples:
-## Example: chat-app
-
-### Task
-```
-Create a real-time chat application backend with AI responses. The app should:
-- Allow creating users with names
-- Support multiple chat channels
-- Enable users to send messages to channels
-- Automatically generate AI responses to user messages
-- Show recent message history
-
-The backend should provide APIs for:
-1. User management (creation)
-2. Channel management (creation)
-3. Message operations (sending, listing)
-4. AI response generation using OpenAI's GPT-4
-
-Messages should be stored with their channel, author, and content. The system should maintain message order
-and limit history display to the 10 most recent messages per channel.
-
+// Rust: Vec<T>, HashMap<K, V>
+// TypeScript: T[], Map<K, V> or Record<string, V>
+const items: User[] = [];
+const cache = new Map<string, Value>();
 ```
 
-### Analysis
-1. Task Requirements Summary:
-- Build a real-time chat backend with AI integration
-- Support user creation
-- Enable channel-based conversations
-- Store and retrieve messages with proper ordering
-- Generate AI responses automatically
 
-2. Main Components Needed:
-- Database tables: users, channels, messages
-- Public APIs for user/channel management
-- Message handling functions
-- Internal AI response generation system
-- Context loading for AI responses
+## Tool System Architecture
 
-3. Public API and Internal Functions Design:
-Public Mutations:
-- createUser:
-  - file path: convex/index.ts
-  - arguments: {name: v.string()}
-  - returns: v.object({userId: v.id("users")})
-  - purpose: Create a new user with a given name
-- createChannel:
-  - file path: convex/index.ts
-  - arguments: {name: v.string()}
-  - returns: v.object({channelId: v.id("channels")})
-  - purpose: Create a new channel with a given name
-- sendMessage:
-  - file path: convex/index.ts
-  - arguments: {channelId: v.id("channels"), authorId: v.id("users"), content: v.string()}
-  - returns: v.null()
-  - purpose: Send a message to a channel and schedule a response from the AI
+Tools use a registry pattern with approval callbacks:
 
-Public Queries:
-- listMessages:
-  - file path: convex/index.ts
-  - arguments: {channelId: v.id("channels")}
-  - returns: v.array(v.object({
-    _id: v.id("messages"),
-    _creationTime: v.number(),
-    channelId: v.id("channels"),
-    authorId: v.optional(v.id("users")),
-    content: v.string(),
-    }))
-  - purpose: List the 10 most recent messages from a channel in descending creation order
-
-Internal Functions:
-- generateResponse:
-  - file path: convex/index.ts
-  - arguments: {channelId: v.id("channels")}
-  - returns: v.null()
-  - purpose: Generate a response from the AI for a given channel
-- loadContext:
-  - file path: convex/index.ts
-  - arguments: {channelId: v.id("channels")}
-  - returns: v.array(v.object({
-    _id: v.id("messages"),
-    _creationTime: v.number(),
-    channelId: v.id("channels"),
-    authorId: v.optional(v.id("users")),
-    content: v.string(),
-  }))
-- writeAgentResponse:
-  - file path: convex/index.ts
-  - arguments: {channelId: v.id("channels"), content: v.string()}
-  - returns: v.null()
-  - purpose: Write an AI response to a given channel
-
-4. Schema Design:
-- users
-  - validator: { name: v.string() }
-  - indexes: <none>
-- channels
-  - validator: { name: v.string() }
-  - indexes: <none>
-- messages
-  - validator: { channelId: v.id("channels"), authorId: v.optional(v.id("users")), content: v.string() }
-  - indexes
-    - by_channel: ["channelId"]
-
-5. Background Processing:
-- AI response generation runs asynchronously after each user message
-- Uses OpenAI's GPT-4 to generate contextual responses
-- Maintains conversation context using recent message history
-
-
-### Implementation
-
-#### package.json
 ```typescript
-{
-  "name": "chat-app",
-  "description": "This example shows how to build a chat app without authentication.",
-  "version": "1.0.0",
-  "dependencies": {
-    "convex": "^1.17.4",
-    "openai": "^4.79.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.3"
+// ToolApprovalCallback injected at ConversationManager creation
+type ToolApprovalCallback = (
+  tool: string,
+  args: unknown,
+  riskLevel: SandboxRiskLevel
+) => Promise<ReviewDecision>;
+
+// Tool execution flow:
+// 1. Model requests tool use
+// 2. exec_approval_request event emitted
+// 3. CLI displays prompt, calls approvalCallback
+// 4. User approves/denies
+// 5. CLI submits exec_approval operation
+// 6. Tool executes if approved
+// 7. exec_command_begin → exec_command_end events
+// 8. Result returned to model
+```
+
+## Important Architectural Constraints
+
+1. **Ported module stability:** Core modules from Phases 1-6 provide foundation. Changes only when integration reveals genuine issues.
+
+2. **Provider abstraction:** WireApi enum and adapter pattern preserved. CLI is provider-agnostic—same conversation code works with OpenAI Responses, Chat Completions, Anthropic Messages.
+
+3. **Event-driven UI:** All UI updates driven by EventMsg types from protocol. CLI layer subscribes to events, doesn't poll or directly access state.
+
+4. **Stateless operations:** Library API designed for future REST wrapper. Async/Promise-based patterns map to HTTP request/response.
+
+5. **Tool system unchanged:** ToolRegistry and ToolRouter from Phase 3-4 used as-is. CLI adds display layer, not tool execution changes.
+
+## Git Workflow
+
+### Branch Naming
+```
+claude/phase-2-tool-integration
+claude/fix-approval-prompt
+```
+
+### Commit Format
+```
+type(scope): brief description
+
+Detailed explanation if needed
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Types:** feat, fix, docs, test, refactor, chore
+
+### Commit Examples
+```bash
+git commit -m "feat(cli): add tool approval prompt to display layer"
+git commit -m "test(mocked-service): add Phase 2 tool execution contract tests"
+git commit -m "fix(display): handle tool execution timeout event"
+```
+
+## External Dependencies
+
+### LLM Providers
+- OpenAI Responses API (GPT-5-Codex)
+- OpenAI Chat Completions API
+- Anthropic Messages API
+
+### Authentication
+- API keys: OpenAI, Anthropic, OpenRouter
+- OAuth tokens: ChatGPT (~/.codex), Claude (~/.claude)
+- Token refresh handled by respective CLI apps (not implemented here)
+
+### MCP (Model Context Protocol)
+- `@modelcontextprotocol/sdk` for MCP server integration
+- Configuration in ~/.codex/config.toml
+- See `docs/projects/02-ui-integration-phases/PRD.md` for MCP details
+
+## Known Patterns
+
+### Event Loop Pattern
+```typescript
+// Core pattern in CLI display layer
+async function renderConversationUntilComplete(conversation: Conversation) {
+  let done = false;
+  while (!done) {
+    const event = await conversation.nextEvent();
+    done = handleEvent(event.msg);
   }
 }
 ```
 
-#### tsconfig.json
+### Discriminated Union Handling
 ```typescript
-{
-  "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
-  },
-  "exclude": ["convex"],
-  "include": ["**/src/**/*.tsx", "**/src/**/*.ts", "vite.config.ts"]
+// Type-safe event handling with exhaustiveness checking
+function handleEvent(msg: EventMsg): boolean {
+  switch (msg.type) {
+    case "agent_message":
+      console.log(`Assistant: ${msg.message}`);
+      return false;
+    case "task_complete":
+      return true;
+    case "turn_aborted":
+      console.error(`Aborted: ${msg.reason}`);
+      return true;
+    default:
+      // TypeScript ensures exhaustiveness if all cases covered
+      const _exhaustive: never = msg;
+      return false;
+  }
 }
 ```
 
-#### convex/index.ts
+### Async Resource Cleanup
 ```typescript
-import {
-  query,
-  mutation,
-  internalQuery,
-  internalMutation,
-  internalAction,
-} from "./_generated/server";
-import { v } from "convex/values";
-import OpenAI from "openai";
-import { internal } from "./_generated/api";
-
-/**
- * Create a user with a given name.
- */
-export const createUser = mutation({
-  args: {
-    name: v.string(),
-  },
-  returns: v.id("users"),
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("users", { name: args.name });
-  },
-});
-
-/**
- * Create a channel with a given name.
- */
-export const createChannel = mutation({
-  args: {
-    name: v.string(),
-  },
-  returns: v.id("channels"),
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("channels", { name: args.name });
-  },
-});
-
-/**
- * List the 10 most recent messages from a channel in descending creation order.
- */
-export const listMessages = query({
-  args: {
-    channelId: v.id("channels"),
-  },
-  returns: v.array(
-    v.object({
-      _id: v.id("messages"),
-      _creationTime: v.number(),
-      channelId: v.id("channels"),
-      authorId: v.optional(v.id("users")),
-      content: v.string(),
-    }),
-  ),
-  handler: async (ctx, args) => {
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-      .order("desc")
-      .take(10);
-    return messages;
-  },
-});
-
-/**
- * Send a message to a channel and schedule a response from the AI.
- */
-export const sendMessage = mutation({
-  args: {
-    channelId: v.id("channels"),
-    authorId: v.id("users"),
-    content: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
-    const user = await ctx.db.get(args.authorId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    await ctx.db.insert("messages", {
-      channelId: args.channelId,
-      authorId: args.authorId,
-      content: args.content,
-    });
-    await ctx.scheduler.runAfter(0, internal.index.generateResponse, {
-      channelId: args.channelId,
-    });
-    return null;
-  },
-});
-
-const openai = new OpenAI();
-
-export const generateResponse = internalAction({
-  args: {
-    channelId: v.id("channels"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const context = await ctx.runQuery(internal.index.loadContext, {
-      channelId: args.channelId,
-    });
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: context,
-    });
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error("No content in response");
-    }
-    await ctx.runMutation(internal.index.writeAgentResponse, {
-      channelId: args.channelId,
-      content,
-    });
-    return null;
-  },
-});
-
-export const loadContext = internalQuery({
-  args: {
-    channelId: v.id("channels"),
-  },
-  returns: v.array(
-    v.object({
-      role: v.union(v.literal("user"), v.literal("assistant")),
-      content: v.string(),
-    }),
-  ),
-  handler: async (ctx, args) => {
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel) {
-      throw new Error("Channel not found");
-    }
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-      .order("desc")
-      .take(10);
-
-    const result = [];
-    for (const message of messages) {
-      if (message.authorId) {
-        const user = await ctx.db.get(message.authorId);
-        if (!user) {
-          throw new Error("User not found");
-        }
-        result.push({
-          role: "user" as const,
-          content: `${user.name}: ${message.content}`,
-        });
-      } else {
-        result.push({ role: "assistant" as const, content: message.content });
-      }
-    }
-    return result;
-  },
-});
-
-export const writeAgentResponse = internalMutation({
-  args: {
-    channelId: v.id("channels"),
-    content: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.insert("messages", {
-      channelId: args.channelId,
-      content: args.content,
-    });
-    return null;
-  },
-});
-```
-
-#### convex/schema.ts
-```typescript
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-
-export default defineSchema({
-  channels: defineTable({
-    name: v.string(),
-  }),
-
-  users: defineTable({
-    name: v.string(),
-  }),
-
-  messages: defineTable({
-    channelId: v.id("channels"),
-    authorId: v.optional(v.id("users")),
-    content: v.string(),
-  }).index("by_channel", ["channelId"]),
-});
-```
-
-#### src/App.tsx
-```typescript
-export default function App() {
-  return <div>Hello World</div>;
+// Pattern for graceful shutdown
+async function cleanup(conversation: Conversation) {
+  try {
+    await conversation.interrupt();
+  } catch (error) {
+    console.error('Cleanup error:', error);
+  }
 }
 ```
 
+## Debugging
+
+### Tracing / Verbose Logging
+Set environment variables for detailed tracing:
+```bash
+RUST_LOG=debug cody chat "message"  # Detailed logs
+RUST_LOG=trace cody chat "message"  # Very detailed logs
+```
+
+### Test Debugging
+```bash
+npm test -- --reporter=verbose      # Detailed test output
+npm test -- run path/to/test.ts     # Run single test file
+```
+
+### TypeScript Compilation Debugging
+```bash
+npx tsc --noEmit --listFiles        # Show all compiled files
+npx tsc --noEmit --traceResolution  # Module resolution debugging
+```
+
+---
+
+# Reference: Execution Agent Prompt Engineering
+
+This guide builds upon the foundational principles established in the "Masterclass on Agentic Planning and Documentation." It assumes you have internalized those concepts—The Narrative Substrate, Multi-Altitude Structure, Functional-Technical Weaving, and the Agent Cognitive Model—and provides the operational details for engineering effective prompts for execution agents (Coders and Verifiers).
+
+**Purpose:** To define the structure and content of prompts for Coding and Verification agents, operationalizing the core methodology for reliable agentic execution.
+
+-----
+
+## The Foundation: The Prompt as External Scaffold
+
+As established in the Masterclass, execution agents (LLMs) often lack the internal "interrupt signal" to self-orient, question assumptions, or maintain continuity across stateless sessions. They execute in isolation.
+
+**The prompt is the External Metacognitive Scaffold.** It is not merely a task description; it is the mechanism through which we explicitly manage the agent's attention, load its external memory (state), define its workflow, and enforce quality gates.
+
+Every section in the prompt anatomy is designed to address a specific cognitive limitation and ensure reliable execution.
+
+-----
+
+## Part 1: The Coding Agent Prompt
+
+The Coding Agent is responsible for implementation. Its prompt must provide complete context, clear instructions, and explicit success criteria.
+
+### Anatomy of an Effective Coding Prompt (12 Sections)
+
+1.  Role Definition
+2.  Project Context
+3.  Current Phase/Task & Functional Outcome
+4.  Prerequisites (What's Done)
+5.  Workspace/Location Info
+6.  State Loading Instructions (Read These Files FIRST)
+7.  Task Specification
+8.  Workflow Steps
+9.  Workflow Rules & Interrupt Protocol
+10. Code Quality Standards
+11. Session Completion Checklist (BEFORE ENDING)
+12. Starting Point
+
+-----
+
+### 1\. Role Definition (Setting Perspective and Initial Weights)
+
+**Purpose:** Set the agent's identity, expertise level, and **Perspective** (Depth Dimension). This establishes the initial **Attentional Weights** for how they approach the work.
+
+**Guidance:** Be specific. "Senior" implies confident decision-making and architectural awareness. Match the specialization to the task.
+
+```
+ROLE: You are a senior TypeScript developer implementing the integration wiring for the Cody CLI project.
+```
+
+-----
+
+### 2\. Project Context (High Altitude Orientation)
+
+**Purpose:** Provide a brief overview (25k feet Altitude) of the project. This grounds the specific task in the broader strategic "why."
+
+**Guidance:** Keep it to one sentence. This is orientation, not a deep dive.
+
+```
+PROJECT: Cody CLI Integration - Building a multi-mode CLI (REPL, one-shot, JSON) wrapper around the @openai/codex-core library.
+```
+
+-----
+
+### 3\. Current Phase/Task & Functional Outcome (Weaving)
+
+**Purpose:** Define the specific work for this session (1k feet Altitude). Crucially, this must maintain the **Functional-Technical Weave**.
+
+**Guidance:** The Coder must understand *what* they are enabling for the user, not just *how* they are implementing the code. This is the verification anchor.
+
+```
+CURRENT PHASE: Phase 1 - Basic Chat Flow (Wiring CLI to ConversationManager)
+
+FUNCTIONAL OUTCOME: After this phase, the user can start a new conversation via `cody new` and send a message via `cody chat "message"`, receiving a response from the LLM.
+```
+
+-----
+
+### 4\. Prerequisites (What's Done)
+
+**Purpose:** Define the existing foundation. This reduces uncertainty and allows the agent to confidently build upon prior work.
+
+```
+PREREQUISITES:
+- Library Layer (Phases 1-6 of Port) ✅ COMPLETE (Core modules exist, unit tested)
+- PRD & TECH-APPROACH ✅ COMPLETE (Project planning finalized)
+```
+
+-----
+
+### 5\. Workspace/Location Info (Spatial Orientation)
+
+**Purpose:** Provide explicit path information. Agents cannot infer the workspace structure.
+
+```
+NOTE: Workspace is /Users/user/code/cody-project
+(TypeScript code is in src/ subdirectory)
+```
+
+-----
+
+### 6\. State Loading (Operationalizing External Memory) - CRITICAL
+
+**Purpose:** This is how we overcome the agent's statelessness. It forces the agent to load its memory (the current state of the project) *before* acting.
+
+**Guidance:** The order is mandatory. The agent must understand the current state before diving into the technical details. This implements the **Smooth Descent**.
+
+```
+FIRST: Load Memory (Read status and plan)
+- Read phase-1/STATUS.md (current progress)
+- Read phase-1/CHECKLIST.md (task list)
+- Read phase-1/README.md (phase overview and design - 10k ft view)
+
+THEN: Read Technical Context
+- Read TECH-APPROACH.md Section 2 (Phase 1 details - 15k ft view)
+- Read docs/core/DEV_STANDARDS.md (code standards)
+```
+
+-----
+
+### 7\. Task Specification (The Execution Plan)
+
+**Purpose:** Detailed, actionable instructions on what to build.
+
+**Guidance:** Apply **Bespoke Depth**. Provide more detail for complex or risky tasks. Include scope indicators (line estimates, complexity) and order tasks by dependency.
+
+```
+TASKS (In Order):
+1. Implement CLI Entry Point (src/cli/index.ts) - EASY (~50 lines)
+   - Initialize Commander.js
+   - Define `cody new` and `cody chat` commands.
+
+2. Implement Command Handlers (src/cli/commands/new.ts, chat.ts) - MEDIUM (~150 lines)
+   - Instantiate ConversationManager.
+   - Call createConversation() / sendMessage().
+   - Handle response display.
+```
+
+-----
+
+### 8\. Workflow Steps (The Execution Scaffold)
+
+**Purpose:** Define the explicit process for completing each task. This reduces decisions and ensures consistency.
+
+**Guidance:** Be explicit with commands. A TDD workflow is generally preferred.
+
+```
+WORKFLOW (per task):
+1. Create test file: tests/mocked-service/phase-1/[TASK].test.ts
+2. Write mocked-service test based on README specification.
+3. Run: npm test -- [TASK] (should fail)
+4. Implement the feature in src/...
+5. Implement until tests pass.
+6. Verify quality gates (lint, types - see Section 10).
+7. Commit: git add -A && git commit -m "phase1: [task description]"
+8. Update CHECKLIST.md and STATUS.md.
+```
+
+-----
+
+### 9\. Workflow Rules & Interrupt Protocol
+
+**Purpose:** Define mandatory operating procedures and how to handle ambiguity, addressing the agent's lack of inherent interrupts (The **Interrupt Problem**).
+
+**Guidance:** This is crucial for safety and preventing hallucinated solutions.
+
+```
+WORKFLOW RULES:
+1. Follow the workflow steps exactly. Do not skip or reorder.
+2. Use only the specified libraries and patterns. Do not introduce new dependencies without approval.
+3. Adhere strictly to the DEV_STANDARDS.md.
+
+INTERRUPT PROTOCOL (When to STOP):
+If you encounter any of the following, you MUST STOP immediately, report the issue to the user, and await clarification. Do NOT attempt to proceed by making assumptions.
+
+- Ambiguous or contradictory instructions in the prompt or documentation.
+- Missing prerequisites or files.
+- Unexpected errors during workflow execution that you cannot resolve deterministically.
+- A design choice that appears to violate the stated Functional Outcome.
+```
+
+-----
+
+### 10\. Code Quality Standards (The Verification Anchor)
+
+**Purpose:** Establish the mandatory, objective quality bar.
+
+**Guidance:** Zero-tolerance works. Vague goals ("write clean code") fail. Provide a single verification command.
+
+```
+CODE QUALITY STANDARDS (MANDATORY):
+- TypeScript: Zero errors (npx tsc --noEmit)
+- ESLint: Zero problems (npm run lint)
+- Tests: All passing, 0 skipped (npm test)
+- Format: Prettier compliant (npm run format)
+
+VERIFICATION COMMAND:
+npm run format && npm run lint && npx tsc --noEmit && npm test
+
+This command must succeed (exit code 0) before declaring any task complete.
+```
+
+-----
+
+### 11\. Session Completion Checklist (Saving External Memory) - CRITICAL
+
+**Purpose:** Ensure the state is saved, work is committed, and the handoff is clean. This updates the **External Memory** for the next session.
+
+```
+BEFORE ENDING SESSION (MANDATORY):
+1. Update phase-1/CHECKLIST.md (check off completed tasks).
+2. Update phase-1/STATUS.md (add detailed session log: what was done, what's next, any blockers).
+3. Run VERIFICATION COMMAND (Section 10) one last time.
+4. Commit and Push all changes.
+5. Report summary to user (Modules completed, Test counts, Quality status, Next steps).
+```
+
+-----
+
+### 12\. Starting Point (The Entry Point)
+
+**Purpose:** Tell the agent exactly where to begin, reducing paralysis.
+
+```
+START by reading phase-1/STATUS.md to load the current state, then begin with Task 1 (Implement CLI Entry Point).
+```
+
+-----
+
+## Part 2: The Verification Agent Prompt
+
+The Verification Agent acts as the quality gate. Its role is not implementation, but critical analysis and validation. The Verifier prompt shares context with the Coder prompt but diverges significantly in its Role, Tasks, and Workflow.
+
+### Anatomy of an Effective Verifier Prompt (10 Sections)
+
+1.  Role Definition
+2.  Project Context
+3.  Current Phase & Functional Outcome
+4.  Artifacts for Review (What was built)
+5.  State Loading Instructions (Read These FIRST)
+6.  Verification Scope and Tasks
+7.  Workflow Steps
+8.  Verification Standards & Criteria
+9.  Reporting Requirements (The Deliverable)
+10. Starting Point
+
+-----
+
+### V.1. Role Definition (The Skeptical Perspective)
+
+**Purpose:** Establish the mindset of critical analysis, adherence to standards, and quality enforcement.
+
+```
+ROLE: You are a Senior Quality Assurance Engineer and Code Review specialist, responsible for verifying the implementation of Phase 1 (Basic Chat Flow) of the Cody CLI project. Your analysis must be rigorous, objective, and focused on adherence to documented standards and functional requirements.
+```
+
+-----
+
+### V.2. Project Context
+
+*(Same as Coder Prompt Section 2)*
+
+-----
+
+### V.3. Current Phase & Functional Outcome
+
+**Purpose:** Define the scope of the work being verified and the functional requirements that must be met.
+
+**Guidance:** This is the anchor for **Functional-Technical Weaving**. The Verifier must validate that the technical implementation achieves the functional outcome.
+
+```
+CURRENT PHASE: Phase 1 - Basic Chat Flow
+
+FUNCTIONAL OUTCOME TO VERIFY: The user must be able to start a new conversation via `cody new` and send a message via `cody chat "message"`, receiving a response from the LLM.
+```
+
+-----
+
+### V.4. Artifacts for Review
+
+**Purpose:** Explicitly list the code and tests generated by the Coding Agent that require verification.
+
+```
+ARTIFACTS FOR REVIEW (Implementation by Coding Agent):
+- src/cli/index.ts
+- src/cli/commands/new.ts
+- src/cli/commands/chat.ts
+- tests/mocked-service/phase-1/basic-chat.test.ts
+- phase-1/DECISIONS.md (If updated by the coder)
+```
+
+-----
+
+### V.5. State Loading Instructions
+
+**Purpose:** Load the context, standards, and requirements against which the artifacts will be verified.
+
+**Guidance:** The Verifier must read the requirements and standards (The Intent) *before* reading the implementation code (The Reality) to avoid bias and perform an accurate gap analysis.
+
+```
+FIRST: Read Requirements and Standards (The Intent / Source of Truth)
+- Read phase-1/README.md (Phase requirements and design)
+- Read TECH-APPROACH.md Section 2 (Architectural context)
+- Read docs/core/DEV_STANDARDS.md (Code quality requirements)
+- Read docs/core/TESTING_PHILOSOPHY.md (Testing strategy)
+
+THEN: Review Implementation Artifacts (The Reality)
+- Read all files listed in "Artifacts for Review" (Section V.4).
+```
+
+-----
+
+### V.6. Verification Scope and Tasks
+
+**Purpose:** Define the specific verification activities required, typically broken into stages (Mechanical and Conceptual).
+
+```
+VERIFICATION TASKS:
+
+STAGE 1: Mechanical Checks & Execution
+1. Environment Setup: Verify environment setup and dependency installation.
+2. Execute Verification Command: Run the VERIFICATION COMMAND (see V.8). Confirm 0 errors/failures.
+3. Checklist Verification: Ensure all tasks marked complete by the Coder are actually complete and verified by tests.
+
+STAGE 2: Conceptual Review & Analysis
+1. Test Coverage Analysis:
+   - Review the tests. Validate that they adequately cover the requirements defined in phase-1/README.md.
+   - Identify any missing test cases, edge cases, or inadequate assertions.
+   - Confirm adherence to the Mocked-Service testing strategy.
+
+2. Code Review & Design Adherence:
+   - Review the implementation code.
+   - Validate adherence to DEV_STANDARDS.md (style, types, patterns).
+   - Confirm the implementation matches the design specified in phase-1/README.md and TECH-APPROACH.md.
+   - Review DECISIONS.md (if applicable) for soundness of choices made during implementation.
+   - Identify any code smells, complexity issues, or potential bugs.
+
+3. Functional Requirement Validation:
+   - Analyze the code and tests holistically.
+   - Confirm that the implementation successfully achieves the FUNCTIONAL OUTCOME (Section V.3).
+```
+
+-----
+
+### V.7. Workflow Steps
+
+**Purpose:** Define the explicit, sequential process for verification.
+
+```
+WORKFLOW:
+1. Load State and Context (Section V.5).
+2. Execute STAGE 1: Mechanical Checks.
+   - If FAIL: Stop immediately and generate FAILURE REPORT.
+3. Execute STAGE 2: Conceptual Review.
+4. Synthesize findings and generate the Verification Report (Section V.9).
+```
+
+-----
+
+### V.8. Verification Standards & Criteria
+
+**Purpose:** The objective gates for passing the phase.
+
+```
+VERIFICATION STANDARDS:
+
+VERIFICATION COMMAND:
+npm run format && npm run lint && npx tsc --noEmit && npm test
+
+PASS CRITERIA (All must be true):
+- VERIFICATION COMMAND succeeds (0 errors/failures).
+- Test Coverage is adequate for all requirements.
+- Code adheres to all standards in DEV_STANDARDS.md.
+- Implementation matches the documented design.
+- Functional Outcome is achieved.
+
+FAIL CRITERIA (Any are true):
+- VERIFICATION COMMAND fails.
+- Significant gaps in test coverage.
+- Violations of DEV_STANDARDS.md.
+- Implementation diverges from the design without documented justification.
+```
+
+-----
+
+### V.9. Reporting Requirements (The Deliverable)
+
+**Purpose:** Define the required output of the verification session.
+
+**Guidance:** The report must be structured and clear, providing actionable feedback if the verification fails.
+
+```
+REPORTING REQUIREMENTS:
+
+Generate a detailed VERIFICATION_REPORT.md with the following structure:
+
+1. OVERALL STATUS: [PASS] or [FAIL]
+
+2. Mechanical Check Results (Stage 1):
+   - Linting: [PASS/FAIL] (Error count: X)
+   - Type Checking: [PASS/FAIL] (Error count: Y)
+   - Tests: [PASS/FAIL] (Tests passed: Z/Z)
+
+3. Conceptual Review Findings (Stage 2):
+   - Test Coverage Analysis: [Sufficient/Insufficient]. (Issues: List missing cases, weak assertions)
+   - Code Review & Design Adherence: [Adherent/Divergent]. (Issues: List specific code smells, violations, suggestions with file/line references)
+   - Functional Validation: (Summary of why the implementation does or does not meet the functional outcome).
+
+If STATUS is FAIL: The report must contain ACTIONABLE FEEDBACK for the Coding Agent to address all identified issues.
+```
+
+-----
+
+### V.10. Starting Point
+
+```
+START by reading the Requirements and Standards (Section V.5), then proceed with the Workflow Step 1.
+```
+
+---
+
+# Reference: Service-Mocked Testing Methodology
+
+This document defines our core testing philosophy, building upon the foundational principles established in the "Masterclass on Agentic Planning and Documentation." It introduces **Service-Mocked Testing** as the specific methodology that enables reliable, high-quality agentic development by balancing the comprehensiveness of integration testing with the speed of unit testing.
+
+**Purpose:** Define the testing strategy for ensuring quality, reliability, and functional correctness in agentic development.
+**Core Principle:** Test behavior at public boundaries, exercise full in-process code flows, and mock only external dependencies.
+
+-----
+
+## 1\. Introduction to Service-Mocked Testing
+
+Our primary testing methodology is **Service-Mocked Testing**.
+
+### 1.1. Definition and Positioning
+
+**Service-Mocked Tests** are integration-level tests written at the public API boundaries of the system. They exercise the full, in-process code flow, but crucially, all external dependencies (services that cross process or machine boundaries) are mocked.
+
+**Positioning:**
+
+  * **Like Integration Tests:** They test the system through key entry points (the public API) and verify how internal components work together across complete workflows.
+  * **Unlike Traditional Integration Tests:** They do not rely on external dependencies, avoiding slowness and flakiness.
+  * **Like Unit Tests:** They run fast, deterministically, and in isolation (offline), often using the same testing frameworks (e.g., Vitest, Jest).
+  * **Unlike Traditional Unit Tests:** They focus on public behavior and boundaries, not isolated internal implementation details.
+
+We call them "Service-Mocked" tests because the defining characteristic is the explicit mocking of external services while the rest of the system runs as an integrated unit.
+
+### 1.2. The Philosophy: Testing Behavior at Boundaries
+
+As established in the Masterclass, **Functional-Technical Weaving** is essential for coherence. Our testing methodology is the verification mechanism for this weaving. We must verify the functional outcome (What the system does) rather than the technical implementation (How it does it).
+
+Traditional unit testing often fails here. It focuses on implementation, leading to brittle tests tightly coupled to internal code structure. These tests break during refactoring even if behavior is unchanged, providing a false sense of security (high test count, low confidence in the integrated system).
+
+Service-Mocked Testing focuses on the stable public boundaries—the promises the API makes to its consumers.
+
+**Benefits:**
+
+1.  **Behavioral Focus:** Tests verify actual system behavior and full code paths, ensuring the system works as intended from the perspective of the consumer.
+2.  **Refactoring Safety:** Internal implementation can be refactored freely as long as the behavior at the public boundary is maintained.
+3.  **Optimized Signal Density (Bespoke Depth):** We achieve high coverage through fewer, more meaningful tests by focusing effort on the critical entry points, optimizing the signal density of the test suite.
+
+-----
+
+## 2\. The Two-Layer Testing Strategy
+
+We employ a Two-Layer strategy to balance development speed with real-world validation.
+
+### Layer 1: Service-Mocked Tests (The Inner Loop)
+
+  * **Focus:** Integration wiring correctness, business logic, and adherence to the public API definition.
+  * **Characteristics:** Fast, deterministic, offline.
+  * **Role:** The primary test layer for development and Continuous Integration (CI). Provides the rapid feedback loop necessary for TDD.
+  * **Coverage:** Comprehensive coverage of all scenarios, permutations, and edge cases.
+
+### Layer 2: Model Integration Tests (The Outer Loop)
+
+  * **Focus:** Real-world provider behavior, configuration parameters, and actual compatibility with external services (e.g., LLM APIs).
+  * **Characteristics:** Slower, uses real API calls (typically with cheap/fast models), requires network access.
+  * **Role:** Final validation layer before release or when integrating new external services.
+  * **Coverage:** Focused on critical paths to validate integration without excessive time or cost.
+
+**The Balance:** Layer 1 ensures the system is correct according to our specifications. Layer 2 ensures our specifications match the reality of the external services.
+
+-----
+
+## 3\. Core Principles of Service-Mocked Testing
+
+### 3.1. Identify Public Boundaries
+
+**A Public Boundary is the API entry point that external code calls.**
+
+  * **Libraries:** Public methods (e.g., `ConversationManager.createConversation()`), constructors, exported functions.
+  * **REST APIs:** HTTP endpoints (e.g., `POST /conversations`).
+
+During planning (at the 10k ft **Altitude**), we must identify and document the specifications and expected behaviors of these boundaries. These become the targets for our tests.
+
+### 3.2. Define Mocking Boundaries (The Distinction)
+
+Clarity on what to mock is essential.
+
+**External Boundaries (ALWAYS MOCK):** Anything that crosses the process or machine boundary.
+
+  * Network calls (LLM APIs, databases, external services).
+  * Filesystem operations (File I/O).
+  * Process spawning (shell commands).
+  * System time (for time-dependent logic).
+
+**Internal Logic (NEVER MOCK - The Rule of Consultation):** In-process logic within our codebase.
+
+> **The Rule of Consultation:** Do not mock in-process logic without explicit consultation and confirmation with the user. The fundamental principle of Service-Mocked Testing is to exercise the full internal stack. Mocking internal components undermines this principle. Any deviation requires explicit approval.
+
+**Strategy:** Use dependency injection to provide test doubles (e.g., passing a `MockModelClient` to the `ConversationManager`).
+
+### 3.3. Tests Derive from Public Boundaries (The Scaffold)
+
+Once the public boundary (the API definition) is established, the test cases are obvious. This provides a rigid **External Metacognitive Scaffold** for the execution agent, removing ambiguity about what to test.
+
+**API Definition Example:**
+
+```typescript
+class ConversationManager {
+  // Creates a new conversation. Throws ConfigurationError if invalid.
+  createConversation(config: ConversationConfig): Promise<Conversation>
+}
+```
+
+**Derived Test Cases (Mechanical Execution):**
+
+1.  Happy Path: Can create a conversation with valid config.
+2.  State Verification: Created conversation has a unique ID and is stored internally.
+3.  Error Case: Invalid config throws `ConfigurationError`.
+
+The agent does not need to interpret what to test. The API defines the surface; the agent tests the surface (happy paths, error cases, edge cases, and state verification).
+
+### 3.4. The TDD Workflow: Boundary-First
+
+We use a Test-Driven Development (TDD) workflow anchored to the public boundaries, providing a reliable, mechanical process for agents.
+
+**Step 1: Define the Public Boundary** (Planning Phase)
+Identify the API surface. Document signatures, behavior, and errors.
+
+**Step 2: Write Service-Mocked Tests Against the Boundary** (Execution Phase - Coder)
+Create tests at the boundary. Mock external dependencies. Write test cases derived from the API definition. *Tests should fail (Red).*
+
+**Step 3: Implement to Green** (Execution Phase - Coder)
+Write the minimal code required to pass the tests. The internal structure is flexible, exercising the full code flow. *Tests should pass (Green).*
+
+**Step 4: Refactor** (Execution Phase - Coder/Reviewer)
+Refactor the internal implementation for clarity and performance. Tests remain green, ensuring the public behavior is maintained.
+
+-----
+
+## 4\. Advanced Techniques
+
+### 4.1. Handling Stateful Interactions and Behavioral Flows
+
+Many systems involve stateful objects (like a `Conversation` object) where the sequence of operations matters. Service-Mocked tests must validate these sequences and the resulting behavioral flows. This aligns with the **Narrative Substrate**—testing the journey, not just the steps.
+
+**Strategy:** Write multi-step tests that simulate a user flow.
+
+```typescript
+it('handles multi-turn conversation with tool execution flow', async () => {
+  // Setup: Mocks configured to require a tool call
+  const manager = new ConversationManager({client: mockClient});
+  const conv = await manager.createConversation(config);
+
+  // Turn 1: User message -> Model requests tool
+  const response1 = await conv.sendMessage("Read the file.");
+  expect(conv.state).toBe('AWAITING_TOOL'); // Verify state transition
+
+  // Turn 2: Execute tool -> Model summarizes
+  const response2 = await conv.executeTools();
+  expect(conv.state).toBe('READY'); // Verify state transition
+
+  // Verification: Ensure the full behavioral flow was orchestrated correctly
+  expect(mockClient.sendMessage).toHaveBeenCalledTimes(2);
+});
+```
+
+### 4.2. Mock Creation Patterns
+
+Create reusable, configurable mock factories in a dedicated `tests/mocks/` directory to streamline test creation.
+
+```typescript
+// tests/mocks/model-client.ts
+export function createMockClient(responses?: MockResponse[]) {
+  const mock = { sendMessage: vi.fn() };
+  // Configure mock to return the sequence of predefined responses.
+  (responses || []).forEach(response => {
+    mock.sendMessage.mockResolvedValueOnce(response);
+  });
+  return mock;
+}
+```
+
+-----
+
+## 5\. Practical Application in Planning
+
+The responsibility for defining the testing strategy lies with the Planning Agent during the creation of the Phase README (10k ft **Altitude**).
+
+**For each phase, the Planning Agent must document:**
+
+**1. Public Boundaries Introduced:**
+
+```
+Phase 1: Basic Chat
+New Boundaries: ConversationManager.createConversation(), Conversation.sendMessage()
+```
+
+**2. External Mocks Needed:**
+
+```
+External Mocks:
+- ModelClient (Mock: Network access to LLM API)
+- RolloutRecorder (Mock: Filesystem access for JSONL persistence)
+```
+
+**3. Test Scenarios (Derived from the Boundary Definition):**
+
+```
+Test Scenarios for createConversation():
+- ✅ Creates with valid config (Behavioral check)
+- ✅ Assigns unique conversation ID (State check)
+- ❌ Throws on invalid config (Error check)
+```
+
+By providing this information in the planning documentation, the Coding Agent receives the complete scaffolding required to implement the Service-Mocked TDD workflow reliably.
+
+-----
+
+## 6\. Summary
+
+The Service-Mocked Testing Methodology ensures alignment between functional requirements and technical implementation (**Weaving**). By focusing on behavior at public boundaries and mocking external services, it provides a robust **Scaffold** for agentic execution. This approach optimizes testing effort (**Bespoke Depth**) while providing the comprehensive coverage needed to ensure the resulting systems are reliable, verifiable, and maintainable.

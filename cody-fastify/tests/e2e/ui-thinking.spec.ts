@@ -3,7 +3,9 @@ import { test, expect } from "@playwright/test";
 const BASE_URL = "http://localhost:4010";
 const API_BASE_GLOB = "**/api/v1";
 
-function buildSSE(events: Array<{ event: string; data?: Record<string, unknown> }>) {
+function buildSSE(
+  events: Array<{ event: string; data?: Record<string, unknown> }>,
+) {
   return events
     .map(({ event, data }) => {
       const payload = data ? JSON.stringify(data) : "{}";
@@ -13,7 +15,9 @@ function buildSSE(events: Array<{ event: string; data?: Record<string, unknown> 
 }
 
 test.describe("Thinking UI", () => {
-  test("shows expandable thinking card when streaming reasoning", async ({ page }) => {
+  test("shows expandable thinking card when streaming reasoning", async ({
+    page,
+  }) => {
     const conversationId = "conv-test-1";
     const turnId = "turn-test-1";
     const thinkingId = "thinking-123";
@@ -52,46 +56,67 @@ test.describe("Thinking UI", () => {
       return route.continue();
     });
 
-    await page.route(`${API_BASE_GLOB}/conversations/${conversationId}`, async (route) => {
-      conversationDetailRequested++;
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ history: [] }),
-      });
-    });
+    await page.route(
+      `${API_BASE_GLOB}/conversations/${conversationId}`,
+      async (route) => {
+        conversationDetailRequested++;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ history: [] }),
+        });
+      },
+    );
 
-    await page.route(`${API_BASE_GLOB}/conversations/${conversationId}/messages`, async (route) => {
-      messageRequested++;
-      return route.fulfill({
-        status: 202,
-        contentType: "application/json",
-        body: JSON.stringify({ turnId }),
-      });
-    });
+    await page.route(
+      `${API_BASE_GLOB}/conversations/${conversationId}/messages`,
+      async (route) => {
+        messageRequested++;
+        return route.fulfill({
+          status: 202,
+          contentType: "application/json",
+          body: JSON.stringify({ turnId }),
+        });
+      },
+    );
 
     const sseBody = buildSSE([
       { event: "task_started" },
       { event: "thinking_started", data: { thinkingId } },
-      { event: "thinking_delta", data: { thinkingId, delta: "Analyzing request. " } },
-      { event: "thinking_delta", data: { thinkingId, delta: "Looking up files. " } },
-      { event: "thinking_delta", data: { thinkingId, delta: "Ready to respond." } },
+      {
+        event: "thinking_delta",
+        data: { thinkingId, delta: "Analyzing request. " },
+      },
+      {
+        event: "thinking_delta",
+        data: { thinkingId, delta: "Looking up files. " },
+      },
+      {
+        event: "thinking_delta",
+        data: { thinkingId, delta: "Ready to respond." },
+      },
       {
         event: "thinking_completed",
-        data: { thinkingId, text: "Analyzing request. Looking up files. Ready to respond." },
+        data: {
+          thinkingId,
+          text: "Analyzing request. Looking up files. Ready to respond.",
+        },
       },
       { event: "agent_message", data: { message: "Done!" } },
       { event: "task_complete", data: {} },
     ]);
 
-    await page.route(`${API_BASE_GLOB}/turns/${turnId}/stream-events*`, async (route) => {
-      streamRequested++;
-      return route.fulfill({
-        status: 200,
-        headers: { "Content-Type": "text/event-stream" },
-        body: sseBody,
-      });
-    });
+    await page.route(
+      `${API_BASE_GLOB}/turns/${turnId}/stream-events*`,
+      async (route) => {
+        streamRequested++;
+        return route.fulfill({
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+          body: sseBody,
+        });
+      },
+    );
 
     await page.goto(BASE_URL);
 
@@ -99,7 +124,9 @@ test.describe("Thinking UI", () => {
       .poll(() => conversationsRequested, { message: "conversations request" })
       .toBeGreaterThan(0);
     await expect
-      .poll(() => conversationDetailRequested, { message: "conversation detail request" })
+      .poll(() => conversationDetailRequested, {
+        message: "conversation detail request",
+      })
       .toBeGreaterThan(0);
 
     await page.fill("#messageInput", "Hello Cody");
@@ -126,4 +153,3 @@ test.describe("Thinking UI", () => {
     await expect(content).toHaveAttribute("data-expanded", "true");
   });
 });
-

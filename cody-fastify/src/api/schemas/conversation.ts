@@ -45,17 +45,19 @@ export const ConversationResponseSchema = z.object({
   messageCount: z.number().optional(),
   firstMessage: z.string().optional(),
   history: z.array(
-    z.object({
-      role: z.string().optional(),
-      content: z.string().optional(),
-      type: z.string().optional(),
-      callId: z.string().optional(),
-      toolName: z.string().optional(),
-      arguments: z.any().optional(),
-      output: z.any().optional(),
-      status: z.string().optional(),
-      turnId: z.string().optional(),
-    }).passthrough(),
+    z
+      .object({
+        role: z.string().optional(),
+        content: z.string().optional(),
+        type: z.string().optional(),
+        callId: z.string().optional(),
+        toolName: z.string().optional(),
+        arguments: z.any().optional(),
+        output: z.any().optional(),
+        status: z.string().optional(),
+        turnId: z.string().optional(),
+      })
+      .passthrough(),
   ),
 });
 

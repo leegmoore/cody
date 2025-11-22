@@ -226,7 +226,7 @@ const StreamEventPayloadSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-const StreamEventTypeSchema = z.enum([
+export const STREAM_EVENT_TYPES = [
   "response_start",
   "item_start",
   "item_delta",
@@ -241,7 +241,9 @@ const StreamEventTypeSchema = z.enum([
   "usage_update",
   "heartbeat",
   "turn_aborted_by_user",
-]);
+] as const;
+
+const StreamEventTypeSchema = z.enum(STREAM_EVENT_TYPES);
 
 export const StreamEventSchema = z.object({
   event_id: z.string().uuid(),
@@ -261,6 +263,7 @@ export type StreamEvent = z.infer<typeof StreamEventSchema>;
 export type StreamEventPayload = z.infer<typeof StreamEventPayloadSchema>;
 export type TraceContext = z.infer<typeof TraceContextSchema>;
 export type ErrorObject = z.infer<typeof ErrorObjectSchema>;
+export type StreamEventType = (typeof STREAM_EVENT_TYPES)[number];
 
 // Constants / helpers
 export const REDIS_STREAM_KEY_PREFIX = "codex:run";

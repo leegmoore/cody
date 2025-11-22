@@ -89,4 +89,3 @@ export interface StoredEvent {
   msg: StreamMessage;
   timestamp: string;
 }
-

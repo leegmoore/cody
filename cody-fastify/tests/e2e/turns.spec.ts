@@ -47,7 +47,9 @@ test.describe("Turns - Status (TC-7)", () => {
     // Verify all fields per spec
     expect(turnData.status).toBe("completed");
     expect(turnData.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-    expect(turnData.completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    expect(turnData.completedAt).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+    );
     expect(turnData.result).toBeTruthy(); // Must have result
     // Spec requires: thinking = [] (empty array for defaults)
     expect(Array.isArray(turnData.thinking)).toBe(true);
@@ -85,9 +87,9 @@ test.describe("Turns - Status (TC-7)", () => {
     const data = await response.json();
     expect(data.status).toBe("completed");
     // Verify thinking field is absent or empty array
-    expect(
-      data.thinking === undefined || Array.isArray(data.thinking),
-    ).toBe(true);
+    expect(data.thinking === undefined || Array.isArray(data.thinking)).toBe(
+      true,
+    );
   });
 
   test("TC-7.3: With toolLevel=full", async ({ api }) => {
@@ -121,7 +123,7 @@ test.describe("Turns - Status (TC-7)", () => {
     // For "read file" scenario, tool should be used
     expect(Array.isArray(data.toolCalls)).toBe(true);
     expect(data.toolCalls.length).toBeGreaterThan(0); // Must have at least one toolCall
-    
+
     // Verify each toolCall has required fields
     for (const toolCall of data.toolCalls) {
       expect(toolCall.name).toBeTruthy();
@@ -152,14 +154,14 @@ test.describe("Turns - Status (TC-7)", () => {
     // Try multiple times quickly to catch running state
     let runningStateObserved = false;
     let runningStateData: TurnStatusResponse | null = null;
-    
+
     for (let i = 0; i < 10; i++) {
       const response = await api.getTurnStatus(turnId);
       expect(response.status()).toBe(200);
       const data = await response.json();
-      
+
       expect(data.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-      
+
       if (data.status === "running") {
         runningStateObserved = true;
         runningStateData = data;
@@ -168,10 +170,10 @@ test.describe("Turns - Status (TC-7)", () => {
         expect(data.result).toBeFalsy(); // Result absent or null for running turn
         break;
       }
-      
+
       await new Promise((resolve) => setTimeout(resolve, 5)); // Very short delay
     }
-    
+
     // Spec requires: mock slow response must show running status
     // The spec setup calls for "mock slow response" so running state MUST be observable
     // This is a mandatory requirement - the test must verify running state was observed
@@ -230,11 +232,20 @@ test.describe("Turns - Stream Events (TC-8)", () => {
           eventType = parsed.event || parsed.type;
         } catch {
           // Check data content for event indicators
-          if (e.data.includes('"event":"task_started"') || e.data.includes("task_started")) {
+          if (
+            e.data.includes('"event":"task_started"') ||
+            e.data.includes("task_started")
+          ) {
             eventType = "task_started";
-          } else if (e.data.includes('"event":"agent_message"') || e.data.includes("agent_message")) {
+          } else if (
+            e.data.includes('"event":"agent_message"') ||
+            e.data.includes("agent_message")
+          ) {
             eventType = "agent_message";
-          } else if (e.data.includes('"event":"task_complete"') || e.data.includes("task_complete")) {
+          } else if (
+            e.data.includes('"event":"task_complete"') ||
+            e.data.includes("task_complete")
+          ) {
             eventType = "task_complete";
           }
         }
@@ -248,7 +259,7 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     const startedIdx = eventTypes.indexOf("task_started");
     const messageIdx = eventTypes.indexOf("agent_message");
     const completeIdx = eventTypes.indexOf("task_complete");
-    
+
     expect(startedIdx).not.toBe(-1);
     expect(messageIdx).not.toBe(-1);
     expect(completeIdx).not.toBe(-1);
@@ -289,7 +300,8 @@ test.describe("Turns - Stream Events (TC-8)", () => {
             const parsed = JSON.parse(e.data);
             return parsed.event || parsed.type;
           } catch {
-            if (e.data.includes("exec_command_begin")) return "exec_command_begin";
+            if (e.data.includes("exec_command_begin"))
+              return "exec_command_begin";
             if (e.data.includes("exec_command_end")) return "exec_command_end";
             if (e.data.includes("task_started")) return "task_started";
             if (e.data.includes("agent_message")) return "agent_message";
@@ -306,16 +318,16 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     const endIdx = eventTypes.indexOf("exec_command_end");
     const messageIdx = eventTypes.indexOf("agent_message");
     const completeIdx = eventTypes.indexOf("task_complete");
-    
+
     expect(startedIdx).not.toBe(-1);
     expect(completeIdx).not.toBe(-1);
-    
+
     // Spec requires: tool scenario MUST include exec_command_begin and exec_command_end
     // For "read file" scenario, tool events are required
     expect(beginIdx).not.toBe(-1); // exec_command_begin must be present
     expect(endIdx).not.toBe(-1); // exec_command_end must be present
     expect(messageIdx).not.toBe(-1); // agent_message must be present
-    
+
     // Verify strict ordering
     expect(startedIdx).toBeLessThan(beginIdx);
     expect(beginIdx).toBeLessThan(endIdx);
@@ -394,52 +406,50 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     // Subscribe to stream and read first 3 events, then disconnect
     const firstResponse = await api.streamTurnEvents(turnId);
     expect(firstResponse.status()).toBe(200);
-    
+
     // Read stream incrementally to simulate early disconnect
     // Note: Playwright's response.text() reads entire stream, so we simulate by
     // reading full stream but only using first 3 events for reconnection
     const firstText = await firstResponse.text();
     const firstEvents = parseSSE(firstText);
-    
+
     // Spec requires: receive first 3 events, save last event ID, disconnect
     expect(firstEvents.length).toBeGreaterThanOrEqual(3);
     const firstThreeEvents = firstEvents.slice(0, 3);
     const lastEventId = firstThreeEvents[firstThreeEvents.length - 1]?.id;
-    
+
     // If no ID in first 3, use the 3rd event's position
     // Reconnect with Last-Event-ID header
     expect(lastEventId).toBeTruthy();
-    
+
     if (!lastEventId) {
       throw new Error("Expected lastEventId to be present");
     }
 
-    const secondResponse = await api.streamTurnEvents(
-      turnId,
-      undefined,
-      { "Last-Event-ID": lastEventId },
-    );
+    const secondResponse = await api.streamTurnEvents(turnId, undefined, {
+      "Last-Event-ID": lastEventId,
+    });
     expect(secondResponse.status()).toBe(200);
     const secondText = await secondResponse.text();
     const secondEvents = parseSSE(secondText);
 
     // Verify no duplicates: second stream should start from event 4
     // Collect all event IDs from first 3 events
-    const firstThreeIds = firstThreeEvents.map(e => e.id).filter(Boolean);
-    
+    const firstThreeIds = firstThreeEvents.map((e) => e.id).filter(Boolean);
+
     // Verify second stream doesn't contain the first 3 event IDs
-    const secondEventIds = secondEvents.map(e => e.id).filter(Boolean);
+    const secondEventIds = secondEvents.map((e) => e.id).filter(Boolean);
     for (const id of firstThreeIds) {
       expect(secondEventIds).not.toContain(id);
     }
-    
+
     // Verify second stream has events (resume from event 4)
     expect(secondEvents.length).toBeGreaterThan(0);
-    
+
     // Verify complete sequence when combined: first 3 + remaining events
     const combinedEvents = [...firstThreeEvents, ...secondEvents];
-    const hasComplete = combinedEvents.some(e => 
-      (e.data || "").includes("task_complete")
+    const hasComplete = combinedEvents.some((e) =>
+      (e.data || "").includes("task_complete"),
     );
     expect(hasComplete).toBe(true);
   });
@@ -475,16 +485,17 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     // Spec requires: "either client can disconnect without affecting the other"
     // To test disconnection, we simulate early disconnect of A by using a timeout
     // and verify B continues independently
-    
+
     // Start reading both streams concurrently
     const readAPromise = responseA.text();
     const readBPromise = responseB.text();
-    
+
     // Simulate early disconnect of client A after a short delay
     // Use Promise.race to get partial data from A, then "disconnect" by not awaiting completion
     let textAPartial = "";
-    let eventsAPartial: Array<{ event?: string; data?: string; id?: string }> = [];
-    
+    let eventsAPartial: Array<{ event?: string; data?: string; id?: string }> =
+      [];
+
     try {
       // Wait a short time to let some events arrive, then simulate disconnect
       // This simulates client A disconnecting mid-stream
@@ -498,7 +509,7 @@ test.describe("Turns - Stream Events (TC-8)", () => {
           }, 200); // Short timeout to simulate early disconnect
         }),
       ]);
-      
+
       // If we got partial data, parse it
       if (textAPartial) {
         eventsAPartial = parseSSE(textAPartial);
@@ -507,7 +518,7 @@ test.describe("Turns - Stream Events (TC-8)", () => {
       // If A already completed or errored, that's fine - we simulated disconnect
       textAPartial = "";
     }
-    
+
     // Client A is now "disconnected" (we don't await its full completion)
     // Client B should continue receiving events independently
     const textB = await readBPromise;
@@ -516,7 +527,7 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     // Spec requires: both clients receive identical events in same order
     // Verify both streams received events
     expect(eventsB.length).toBeGreaterThan(0);
-    
+
     // Verify sequences match for events received by both before A disconnected
     if (eventsAPartial.length > 0) {
       const minLength = Math.min(eventsAPartial.length, eventsB.length);
@@ -534,13 +545,13 @@ test.describe("Turns - Stream Events (TC-8)", () => {
         }
       }
     }
-    
+
     // Spec requires: client B completed independently (disconnect of A didn't affect B)
     const hasCompleteB = eventsB.some((e) =>
       (e.data || "").includes("task_complete"),
     );
     expect(hasCompleteB).toBe(true);
-    
+
     // Verify B received complete sequence
     // If A got partial data, B should have more events (proving B continued after A disconnected)
     // If A disconnected immediately, B should still have received all events
@@ -582,18 +593,19 @@ test.describe("Turns - Stream Events (TC-8)", () => {
 
     // Spec requires: keepalive comments (`:keepalive\n\n`) during long gaps
     // Verify keepalive format is present - this is mandatory for mocked 20s gap scenario
-    const hasKeepalive = text.includes(":keepalive\n\n") || 
-                         text.includes(":keepalive") ||
-                         text.match(/^:keepalive$/m);
-    
+    const hasKeepalive =
+      text.includes(":keepalive\n\n") ||
+      text.includes(":keepalive") ||
+      text.match(/^:keepalive$/m);
+
     // Spec requires: mocked 20s gap must show keepalive comments
     // This is a mandatory requirement - keepalive must be present
     expect(hasKeepalive).toBe(true);
     expect(text).toMatch(/:keepalive/);
-    
+
     // Verify connection stays alive: stream completes without timeout
     expect(text.length).toBeGreaterThan(0);
-    
+
     // Verify events arrive correctly after gap (task_complete present)
     const hasComplete = text.includes("task_complete");
     expect(hasComplete).toBe(true);
@@ -634,9 +646,14 @@ test.describe("Turns - Stream Events (TC-8)", () => {
           eventType = parsed.event || parsed.type;
         } catch {
           if (e.data.includes("task_started")) eventType = "task_started";
-          else if (e.data.includes('"event":"error"') || e.data.includes('"type":"error"')) eventType = "error";
+          else if (
+            e.data.includes('"event":"error"') ||
+            e.data.includes('"type":"error"')
+          )
+            eventType = "error";
           else if (e.data.includes("turn_aborted")) eventType = "turn_aborted";
-          else if (e.data.includes("task_complete")) eventType = "task_complete";
+          else if (e.data.includes("task_complete"))
+            eventType = "task_complete";
         }
       }
       if (eventType) {
@@ -653,13 +670,13 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     const errorIdx = eventTypes.indexOf("error");
     const abortedIdx = eventTypes.indexOf("turn_aborted");
     const completeIdx = eventTypes.indexOf("task_complete");
-    
+
     // Spec requires: error event MUST occur in error scenario
     expect(errorIdx).not.toBe(-1);
-    
+
     // Error event must come after task_started
     expect(startedIdx).toBeLessThan(errorIdx);
-    
+
     // Must have turn_aborted or task_complete after error
     expect(abortedIdx !== -1 || completeIdx !== -1).toBe(true);
     if (abortedIdx !== -1) {
@@ -668,11 +685,13 @@ test.describe("Turns - Stream Events (TC-8)", () => {
     if (completeIdx !== -1 && abortedIdx === -1) {
       expect(errorIdx).toBeLessThan(completeIdx);
     }
-    
+
     // Verify error event has message and details
     const errorEvent = events.find((e) => {
       const eventType = e.event || (e.data && JSON.parse(e.data).event);
-      return eventType === "error" || (e.data && e.data.includes('"event":"error"'));
+      return (
+        eventType === "error" || (e.data && e.data.includes('"event":"error"'))
+      );
     });
     expect(errorEvent).toBeTruthy();
     if (errorEvent?.data) {

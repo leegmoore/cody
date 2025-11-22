@@ -1,6 +1,6 @@
 /**
  * Codex Runtime Service
- * 
+ *
  * Provides a shared Codex runtime for the Fastify API, managing conversations
  * and coordinating with codex-ts.
  */
@@ -44,15 +44,12 @@ export class CodexRuntime {
   constructor(options: CodexRuntimeOptions) {
     this.codexHome = options.codexHome;
     this.config = createDefaultConfig(options.codexHome, options.cwd);
-    
+
     // Initialize auth manager
     this.authManager = new AuthManager(this.config);
-    
+
     // Create conversation manager
-    this.manager = new ConversationManager(
-      this.authManager,
-      SessionSource.API,
-    );
+    this.manager = new ConversationManager(this.authManager, SessionSource.API);
   }
 
   /**
@@ -214,4 +211,3 @@ export class CodexRuntime {
     }
   }
 }
-

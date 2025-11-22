@@ -6,18 +6,16 @@ import { join } from "node:path";
 import type { AddressInfo } from "node:net";
 import type { FastifyInstance } from "fastify";
 import { createServer } from "../../src/server.ts";
-import { clientStreamManager } from "../../src/api/client-stream/client-stream-manager.ts";
-import { redisClient } from "../../src/api/client-stream/redis-client.ts";
+import {
+  clientStreamManager,
+  redisClient as clientStreamRedis,
+} from "../../src/api/client-stream/client-stream-manager.ts";
 import { processMessage } from "../../src/api/services/message-processor.ts";
 import { convexClient } from "../../src/api/services/convex-client.ts";
 import { api } from "../../convex/_generated/api.js";
 import type { Conversation } from "codex-ts/src/core/conversation.ts";
 import type { Event } from "codex-ts/src/protocol/protocol.ts";
-import {
-  parseSSE,
-  SSEEvent,
-  SSEStreamParser,
-} from "./utils/sse";
+import { parseSSE, SSEEvent, SSEStreamParser } from "./utils/sse";
 
 interface RunningServer {
   app: FastifyInstance;
@@ -34,7 +32,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 test.describe("Phase 7 - Client Stream Manager", () => {
   test.beforeEach(async () => {
-    await redisClient.flushall();
+    await clientStreamRedis.flushall();
   });
 
   test("TC-CSM-1: Multi-worker SSE (Redis)", async () => {
@@ -154,9 +152,7 @@ test.describe("Phase 7 - Client Stream Manager", () => {
       expect(eventTypes).toContain("error");
       expect(eventTypes).toContain("turn_aborted");
 
-      const errorEvent = stream.events.find(
-        (event) => event.event === "error",
-      );
+      const errorEvent = stream.events.find((event) => event.event === "error");
       expect(errorEvent).toBeTruthy();
       if (!errorEvent) {
         throw new Error("error event missing");
@@ -273,7 +269,10 @@ test.describe("Phase 7 - Client Stream Manager", () => {
 });
 async function withServers(
   count: number,
-  fn: (servers: RunningServer[], context: { codyHome: string }) => Promise<void>,
+  fn: (
+    servers: RunningServer[],
+    context: { codyHome: string },
+  ) => Promise<void>,
 ) {
   const tempHome = await mkdtemp(join(tmpdir(), "phase7-home-"));
   const previousHome = process.env.CODY_HOME;
@@ -421,7 +420,10 @@ async function seedConversationWithProcessMessage() {
     { id: submissionId, msg: { type: "task_started" } },
     {
       id: submissionId,
-      msg: { type: "agent_reasoning", text: "Initial thought: understand task." },
+      msg: {
+        type: "agent_reasoning",
+        text: "Initial thought: understand task.",
+      },
     },
     {
       id: submissionId,
@@ -438,12 +440,7 @@ async function seedConversationWithProcessMessage() {
   ];
 
   const fakeConversation = createStubConversation(events);
-  await processMessage(
-    fakeConversation,
-    submissionId,
-    turnId,
-    conversationId,
-  );
+  await processMessage(fakeConversation, submissionId, turnId, conversationId);
 
   return { conversationId, turnId };
 }

@@ -68,9 +68,7 @@ export class SSEStreamParser {
     return parsed ? [parsed] : [];
   }
 
-  private findSeparator():
-    | { index: number; length: number }
-    | undefined {
+  private findSeparator(): { index: number; length: number } | undefined {
     const unixIdx = this.buffer.indexOf("\n\n");
     if (unixIdx >= 0) {
       return { index: unixIdx, length: 2 };
@@ -82,4 +80,3 @@ export class SSEStreamParser {
     return undefined;
   }
 }
-

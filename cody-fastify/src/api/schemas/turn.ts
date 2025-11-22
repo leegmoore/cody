@@ -15,14 +15,16 @@ export const TurnStatusResponseSchema = z.object({
   completedAt: z.string().datetime().nullable(),
   result: z.unknown().optional(),
   thinking: z.array(z.object({ text: z.string() })).optional(),
-  toolCalls: z.array(
-    z.object({
-      name: z.string(),
-      callId: z.string(),
-      input: z.unknown(),
-      output: z.unknown(),
-    }),
-  ).optional(),
+  toolCalls: z
+    .array(
+      z.object({
+        name: z.string(),
+        callId: z.string(),
+        input: z.unknown(),
+        output: z.unknown(),
+      }),
+    )
+    .optional(),
   modelProviderId: z.string().optional(),
   modelProviderApi: z.string().optional(),
   model: z.string().optional(),

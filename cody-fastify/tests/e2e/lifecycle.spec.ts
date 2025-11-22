@@ -25,7 +25,7 @@ test.describe("Lifecycle Tests", () => {
     const streamResponse = await api.streamTurnEvents(turnId);
     expect(streamResponse.status()).toBe(200);
     const streamText = await streamResponse.text();
-    
+
     // Spec requires: Verify event sequence (task_started, agent_message, task_complete)
     // Parse SSE to verify ordering
     const lines = streamText.split("\n");
@@ -40,12 +40,14 @@ test.describe("Lifecycle Tests", () => {
           if (parsed.event) eventTypes.push(parsed.event);
         } catch {
           if (data.includes("task_started")) eventTypes.push("task_started");
-          else if (data.includes("agent_message")) eventTypes.push("agent_message");
-          else if (data.includes("task_complete")) eventTypes.push("task_complete");
+          else if (data.includes("agent_message"))
+            eventTypes.push("agent_message");
+          else if (data.includes("task_complete"))
+            eventTypes.push("task_complete");
         }
       }
     }
-    
+
     // Verify strict ordering
     const startedIdx = eventTypes.indexOf("task_started");
     const messageIdx = eventTypes.indexOf("agent_message");
@@ -61,7 +63,11 @@ test.describe("Lifecycle Tests", () => {
     let turnData = await turnStatus.json();
     const maxWait = 30000;
     const startTime = Date.now();
-    while (turnData.status !== "completed" && turnData.status !== "failed" && Date.now() - startTime < maxWait) {
+    while (
+      turnData.status !== "completed" &&
+      turnData.status !== "failed" &&
+      Date.now() - startTime < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       turnStatus = await api.getTurnStatus(turnId);
       turnData = await turnStatus.json();
@@ -74,7 +80,7 @@ test.describe("Lifecycle Tests", () => {
     // Spec requires: history has exactly 2 items (user message + assistant message)
     expect(Array.isArray(getData.history)).toBe(true);
     expect(getData.history.length).toBe(2);
-    
+
     // Verify: history role/content validation
     expect(getData.history[0].role).toBe("user");
     expect(getData.history[0].content).toContain("Hello");
@@ -89,7 +95,10 @@ test.describe("Lifecycle Tests", () => {
     // Spec requires: result contains assistant message content
     expect(finalTurnData.result).toBeTruthy();
     // Verify actual assistant message content in result
-    if (typeof finalTurnData.result === "object" && finalTurnData.result.content) {
+    if (
+      typeof finalTurnData.result === "object" &&
+      finalTurnData.result.content
+    ) {
       expect(finalTurnData.result.content).toBeTruthy();
     }
   });
@@ -125,7 +134,11 @@ test.describe("Lifecycle Tests", () => {
     let firstTurnData = await firstTurnStatus.json();
     const maxWait = 30000;
     const startTime1 = Date.now();
-    while (firstTurnData.status !== "completed" && firstTurnData.status !== "failed" && Date.now() - startTime1 < maxWait) {
+    while (
+      firstTurnData.status !== "completed" &&
+      firstTurnData.status !== "failed" &&
+      Date.now() - startTime1 < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       firstTurnStatus = await api.getTurnStatus(firstTurnId);
       firstTurnData = await firstTurnStatus.json();
@@ -149,7 +162,11 @@ test.describe("Lifecycle Tests", () => {
     let secondTurnStatus = await api.getTurnStatus(secondTurnId);
     let secondTurnData = await secondTurnStatus.json();
     const startTime2 = Date.now();
-    while (secondTurnData.status !== "completed" && secondTurnData.status !== "failed" && Date.now() - startTime2 < maxWait) {
+    while (
+      secondTurnData.status !== "completed" &&
+      secondTurnData.status !== "failed" &&
+      Date.now() - startTime2 < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       secondTurnStatus = await api.getTurnStatus(secondTurnId);
       secondTurnData = await secondTurnStatus.json();
@@ -201,20 +218,24 @@ test.describe("Lifecycle Tests", () => {
     });
     expect(streamResponse.status()).toBe(200);
     const streamText = await streamResponse.text();
-    
+
     // Spec requires: Verify tool event sequence (exec_command_begin, exec_command_end)
     const streamLines = streamText.split("\n");
     const toolEvents: string[] = [];
     for (const line of streamLines) {
-      if (line.includes("exec_command_begin")) toolEvents.push("exec_command_begin");
-      if (line.includes("exec_command_end")) toolEvents.push("exec_command_end");
+      if (line.includes("exec_command_begin"))
+        toolEvents.push("exec_command_begin");
+      if (line.includes("exec_command_end"))
+        toolEvents.push("exec_command_end");
     }
-    
+
     // For "read file" scenario, tool events should be present
     expect(toolEvents.length).toBeGreaterThan(0);
     expect(toolEvents).toContain("exec_command_begin");
     expect(toolEvents).toContain("exec_command_end");
-    expect(toolEvents.indexOf("exec_command_begin")).toBeLessThan(toolEvents.indexOf("exec_command_end"));
+    expect(toolEvents.indexOf("exec_command_begin")).toBeLessThan(
+      toolEvents.indexOf("exec_command_end"),
+    );
 
     // Step 4: GET /turns/{turnId}?toolLevel=full
     // Wait for completion first
@@ -222,12 +243,16 @@ test.describe("Lifecycle Tests", () => {
     let turnData = await turnStatus.json();
     const maxWait = 30000;
     const startTime = Date.now();
-    while (turnData.status !== "completed" && turnData.status !== "failed" && Date.now() - startTime < maxWait) {
+    while (
+      turnData.status !== "completed" &&
+      turnData.status !== "failed" &&
+      Date.now() - startTime < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       turnStatus = await api.getTurnStatus(turnId);
       turnData = await turnStatus.json();
     }
-    
+
     const turnResponse = await api.getTurnStatus(turnId, {
       toolLevel: "full",
     });
@@ -236,21 +261,23 @@ test.describe("Lifecycle Tests", () => {
     // Spec requires: toolCalls array has 1 entry for readFile
     expect(Array.isArray(turnDataFull.toolCalls)).toBe(true);
     expect(turnDataFull.toolCalls.length).toBeGreaterThan(0);
-    
+
     // Verify: toolCalls[0].name = "readFile"
-    const readFileCall = turnDataFull.toolCalls.find((tc: { name: string }) => tc.name === "readFile");
+    const readFileCall = turnDataFull.toolCalls.find(
+      (tc: { name: string }) => tc.name === "readFile",
+    );
     expect(readFileCall).toBeTruthy();
     // Verify: toolCalls[0].output present
     expect(readFileCall.output).toBeTruthy();
   });
 
-test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
-  // SKIPPED: Per-turn provider overrides are intentionally not supported.
-  // Codex sessions use a fixed provider/model configuration set at conversation
-  // creation time. Changing providers mid-session (e.g., OpenAI → Anthropic)
-  // would require creating a new conversation, which breaks history continuity.
-  // This test requires switching providers between turns, which is not supported
-  // and is not planned for this integration.
+  test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
+    // SKIPPED: Per-turn provider overrides are intentionally not supported.
+    // Codex sessions use a fixed provider/model configuration set at conversation
+    // creation time. Changing providers mid-session (e.g., OpenAI → Anthropic)
+    // would require creating a new conversation, which breaks history continuity.
+    // This test requires switching providers between turns, which is not supported
+    // and is not planned for this integration.
     // Step 1: POST /conversations (openai + responses + gpt-5-codex)
     const createResponse = await api.createConversation({
       modelProviderId: "openai",
@@ -277,26 +304,33 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
     const overrideStream = await api.streamTurnEvents(overrideTurnId);
     expect(overrideStream.status()).toBe(200);
     const overrideStreamText = await overrideStream.text();
-    
+
     // Wait for override turn to complete
     let overrideTurnStatus = await api.getTurnStatus(overrideTurnId);
     let overrideTurnData = await overrideTurnStatus.json();
     const maxWait = 30000;
     const startTime1 = Date.now();
-    while (overrideTurnData.status !== "completed" && overrideTurnData.status !== "failed" && Date.now() - startTime1 < maxWait) {
+    while (
+      overrideTurnData.status !== "completed" &&
+      overrideTurnData.status !== "failed" &&
+      Date.now() - startTime1 < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       overrideTurnStatus = await api.getTurnStatus(overrideTurnId);
       overrideTurnData = await overrideTurnStatus.json();
     }
-    
+
     // Spec requires: Verify override run proves anthropic usage
     // Check stream for provider indicators
-    const hasAnthropicIndicator = overrideStreamText.toLowerCase().includes("anthropic") ||
-                                   overrideStreamText.toLowerCase().includes("claude") ||
-                                   (overrideTurnData.modelProviderId === "anthropic");
-    
+    const hasAnthropicIndicator =
+      overrideStreamText.toLowerCase().includes("anthropic") ||
+      overrideStreamText.toLowerCase().includes("claude") ||
+      overrideTurnData.modelProviderId === "anthropic";
+
     // Spec requires: prove override was honored
-    expect(hasAnthropicIndicator || overrideTurnData.modelProviderId === "anthropic").toBe(true);
+    expect(
+      hasAnthropicIndicator || overrideTurnData.modelProviderId === "anthropic",
+    ).toBe(true);
 
     // Step 3: POST /conversations/{id}/messages (no override)
     const defaultResponse = await api.submitMessage(conversationId, {
@@ -310,25 +344,32 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
     const defaultStream = await api.streamTurnEvents(defaultTurnId);
     expect(defaultStream.status()).toBe(200);
     const defaultStreamText = await defaultStream.text();
-    
+
     // Wait for default turn to complete
     let defaultTurnStatus = await api.getTurnStatus(defaultTurnId);
     let defaultTurnData = await defaultTurnStatus.json();
     const startTime2 = Date.now();
-    while (defaultTurnData.status !== "completed" && defaultTurnData.status !== "failed" && Date.now() - startTime2 < maxWait) {
+    while (
+      defaultTurnData.status !== "completed" &&
+      defaultTurnData.status !== "failed" &&
+      Date.now() - startTime2 < maxWait
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       defaultTurnStatus = await api.getTurnStatus(defaultTurnId);
       defaultTurnData = await defaultTurnStatus.json();
     }
-    
+
     // Spec requires: Verify subsequent default run proves openai usage
     // Check stream for provider indicators
-    const hasOpenAIIndicator = defaultStreamText.toLowerCase().includes("openai") ||
-                               defaultStreamText.toLowerCase().includes("gpt") ||
-                               (defaultTurnData.modelProviderId === "openai");
-    
+    const hasOpenAIIndicator =
+      defaultStreamText.toLowerCase().includes("openai") ||
+      defaultStreamText.toLowerCase().includes("gpt") ||
+      defaultTurnData.modelProviderId === "openai";
+
     // Spec requires: prove default provider was used (not override)
-    expect(hasOpenAIIndicator || defaultTurnData.modelProviderId === "openai").toBe(true);
+    expect(
+      hasOpenAIIndicator || defaultTurnData.modelProviderId === "openai",
+    ).toBe(true);
     expect(defaultTurnData.status).toBe("completed");
   });
 
@@ -441,7 +482,7 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
     if (currentEvent.id || currentEvent.data) {
       firstEvents.push(currentEvent);
     }
-    
+
     expect(firstEvents.length).toBeGreaterThanOrEqual(5);
     const firstFiveEvents = firstEvents.slice(0, 5);
     const lastEventId = firstFiveEvents[firstFiveEvents.length - 1]?.id;
@@ -449,19 +490,17 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
     // Step 5: Close connection (disconnect) - simulated by using first 5 events
     // Step 6: Reconnect: GET streamUrl with header `Last-Event-ID: {saved-id}`
     expect(lastEventId).toBeTruthy();
-    
+
     if (!lastEventId) {
       throw new Error("Expected lastEventId to be present");
     }
 
-    const secondStream = await api.streamTurnEvents(
-      turnId,
-      undefined,
-      { "Last-Event-ID": lastEventId },
-    );
+    const secondStream = await api.streamTurnEvents(turnId, undefined, {
+      "Last-Event-ID": lastEventId,
+    });
     expect(secondStream.status()).toBe(200);
     const secondStreamText = await secondStream.text();
-    
+
     // Parse second stream
     const secondEvents: Array<{ id?: string; data?: string }> = [];
     const secondLines = secondStreamText.split("\n");
@@ -481,24 +520,24 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
     if (currentEvent2.id || currentEvent2.data) {
       secondEvents.push(currentEvent2);
     }
-    
+
     // Verify: No duplicate events (second stream should start from event 6)
-    const firstFiveIds = firstFiveEvents.map(e => e.id).filter(Boolean);
-    const secondEventIds = secondEvents.map(e => e.id).filter(Boolean);
+    const firstFiveIds = firstFiveEvents.map((e) => e.id).filter(Boolean);
+    const secondEventIds = secondEvents.map((e) => e.id).filter(Boolean);
     for (const id of firstFiveIds) {
       expect(secondEventIds).not.toContain(id);
     }
-    
+
     // Verify: Events 6+ received (not 1-5)
     expect(secondEvents.length).toBeGreaterThan(0);
-    
+
     // Verify: Complete event sequence when combined with first subscription
     const combinedEvents = [...firstFiveEvents, ...secondEvents];
-    const hasComplete = combinedEvents.some(e => 
-      (e.data || "").includes("task_complete")
+    const hasComplete = combinedEvents.some((e) =>
+      (e.data || "").includes("task_complete"),
     );
     expect(hasComplete).toBe(true);
-    
+
     // Verify: Final event is task_complete
     const lastCombinedEvent = combinedEvents[combinedEvents.length - 1];
     expect((lastCombinedEvent.data || "").includes("task_complete")).toBe(true);
@@ -551,11 +590,11 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
     expect(streamB.status()).toBe(200);
     const textA = await streamA.text();
     const textB = await streamB.text();
-    
+
     // Spec requires: Both streams complete with task_complete
     expect(textA).toContain("task_complete");
     expect(textB).toContain("task_complete");
-    
+
     // Spec requires: Events from A don't appear in B's stream and vice versa
     // Verify event isolation by checking that turnIdA-specific content doesn't appear in streamB
     const parseSSE = (text: string) => {
@@ -579,36 +618,40 @@ test.skip("TC-L4: Provider Override Workflow", async ({ api }) => {
       }
       return events;
     };
-    
+
     const eventsA = parseSSE(textA);
     const eventsB = parseSSE(textB);
-    
+
     // Verify both streams have events
     expect(eventsA.length).toBeGreaterThan(0);
     expect(eventsB.length).toBeGreaterThan(0);
-    
+
     // Spec requires: Verify events stay isolated per conversation
     // Collect all event IDs from stream A
-    const eventIdsA = eventsA.map(e => e.id).filter(Boolean);
-    const eventIdsB = eventsB.map(e => e.id).filter(Boolean);
-    
+    const eventIdsA = eventsA.map((e) => e.id).filter(Boolean);
+    const eventIdsB = eventsB.map((e) => e.id).filter(Boolean);
+
     // Verify no cross-talk: event IDs from A should not appear in B
     for (const idA of eventIdsA) {
       expect(eventIdsB).not.toContain(idA);
     }
-    
+
     // Verify no cross-talk: event IDs from B should not appear in A
     for (const idB of eventIdsB) {
       expect(eventIdsA).not.toContain(idB);
     }
-    
+
     // Verify conversation-specific content doesn't cross over
     // Check that turnIdA doesn't appear in streamB and vice versa
     expect(textB).not.toContain(turnIdA);
     expect(textA).not.toContain(turnIdB);
-    
+
     // Verify both conversations independent: both complete successfully
-    expect(eventsA.some(e => (e.data || "").includes("task_complete"))).toBe(true);
-    expect(eventsB.some(e => (e.data || "").includes("task_complete"))).toBe(true);
+    expect(eventsA.some((e) => (e.data || "").includes("task_complete"))).toBe(
+      true,
+    );
+    expect(eventsB.some((e) => (e.data || "").includes("task_complete"))).toBe(
+      true,
+    );
   });
 });

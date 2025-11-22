@@ -25,29 +25,122 @@ export default defineSchema({
   .index("by_userId", ["userId"]),
 
   messages: defineTable({
+    runId: v.string(),
+    turnId: v.string(),
+    threadId: v.string(),
+    agentId: v.optional(v.string()),
+    modelId: v.string(),
+    providerId: v.string(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("in_progress"),
+      v.literal("complete"),
+      v.literal("error"),
+      v.literal("aborted"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    outputItems: v.array(
+      v.union(
+        v.object({
+          id: v.string(),
+          type: v.literal("message"),
+          content: v.string(),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
+          type: v.literal("reasoning"),
+          content: v.string(),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
+          type: v.literal("function_call"),
+          name: v.string(),
+          arguments: v.string(),
+          call_id: v.string(),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
+          type: v.literal("function_call_output"),
+          call_id: v.string(),
+          output: v.string(),
+          success: v.boolean(),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
+          type: v.literal("script_execution"),
+          code: v.string(),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
+          type: v.literal("script_execution_output"),
+          script_id: v.string(),
+          result: v.string(),
+          success: v.boolean(),
+          error: v.optional(
+            v.object({
+              code: v.string(),
+              message: v.string(),
+              stack: v.optional(v.string()),
+            }),
+          ),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
+          type: v.literal("error"),
+          code: v.string(),
+          message: v.string(),
+          details: v.optional(v.any()),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+      ),
+    ),
+    usage: v.optional(
+      v.object({
+        promptTokens: v.number(),
+        completionTokens: v.number(),
+        totalTokens: v.number(),
+      }),
+    ),
+    finishReason: v.optional(v.string()),
+    error: v.optional(
+      v.object({
+        code: v.string(),
+        message: v.string(),
+        details: v.optional(v.any()),
+      }),
+    ),
+  })
+    .index("by_runId", ["runId"])
+    .index("by_threadId", ["threadId"])
+    .index("by_turnId", ["turnId"]),
+
+  legacyMessages: defineTable({
     threadId: v.id("threads"),
-    
-    // Role: user, assistant, system
     role: v.string(),
-    
-    // Content (text)
     content: v.string(),
-    
-    // Optional: For grouping messages into a "Turn"
     turnId: v.optional(v.string()),
-    
-    // Type discriminator: "message", "tool_call", "tool_output"
     type: v.optional(v.string()),
-    
-    // Tool specific fields
     callId: v.optional(v.string()),
     toolName: v.optional(v.string()),
     toolArgs: v.optional(v.any()),
     toolOutput: v.optional(v.any()),
-    status: v.optional(v.string()), // succeeded/failed
-    
+    status: v.optional(v.string()),
     createdAt: v.number(),
   })
-  .index("by_threadId", ["threadId"])
-  .index("by_callId", ["callId"]),
+    .index("by_threadId", ["threadId"])
+    .index("by_callId", ["callId"]),
 });
