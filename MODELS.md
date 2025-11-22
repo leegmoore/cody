@@ -94,8 +94,9 @@ gpt-5-mini
 
 **Secondary (Anthropic Messages API):**
 ```
-claude-sonnet-4.5
+claude-haiku-4.5
 ```
+*Note: Haiku chosen as default for testing (faster, cheaper than Sonnet)*
 
 **Tertiary (OpenRouter):**
 ```

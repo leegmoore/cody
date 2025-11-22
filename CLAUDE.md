@@ -2,26 +2,43 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ MODEL REFERENCES - CRITICAL CONSTRAINT
+## ⚠️ VALID MODELS - ONLY USE THESE
 
-**MANDATORY RULE:** Before referencing ANY model in code, tests, docs, or conversation:
+**MANDATORY:** ONLY reference models from this list. ALL other models are FORBIDDEN.
 
-1. **READ MODELS.md FIRST** - This is the ONLY source of truth for valid model identifiers
-2. **USE EXACT STRINGS** - Copy the exact string from MODELS.md, no variations or "equivalents"
-3. **NO TRAINING DATA MODELS** - Never reference gpt-4, claude-3-opus, or other deprecated models
-4. **ASK IF UNSURE** - If you need a model example and are uncertain, ASK the user instead of guessing
-
-**VIOLATION HANDLING:**
-User will respond harshly to model hallucinations. This is a critical engineering constraint, not a preference. Model name pollution has cost dozens of hours of cleanup work.
-
-**Example of CORRECT behavior:**
-```typescript
-// ✅ CORRECT - uses approved model from MODELS.md
-const model = 'gpt-5-mini';
-
-// ❌ WRONG - references training data model
-const model = 'gpt-4o-mini'; // This model is DEPRECATED
+### OpenAI (Responses/Chat APIs)
 ```
+gpt-5, gpt-5-mini, gpt-5-nano, gpt-5-pro, gpt-5-codex, gpt-5-codex-mini
+gpt-5.1, gpt-5.1-pro, gpt-5.1-mini, gpt-5.1-nano, gpt-5.1-codex, gpt-5.1-codex-mini, gpt-5.1-codex-max
+gpt-oss-20b, gpt-oss-120b
+```
+
+### Anthropic (Messages API)
+```
+claude-opus-4.1, claude-sonnet-4.5, claude-haiku-4.5
+```
+
+### OpenRouter (Chat API)
+```
+google/gemini-3-pro-preview, google/gemini-2.5-pro, google/gemini-2.5-flash
+google/gemini-2.5-flash-lite, google/gemini-2.0-flash-001
+```
+
+### Default Testing Models (Fast/Cheap)
+```
+gpt-5-mini (OpenAI)
+claude-haiku-4.5 (Anthropic)
+google/gemini-2.5-flash (OpenRouter)
+```
+
+### FORBIDDEN - Never Reference These
+```
+❌ gpt-4, gpt-4-turbo, gpt-4o, gpt-4o-mini, gpt-3.5-turbo
+❌ claude-3-opus, claude-3-sonnet, claude-3-haiku, claude-2
+❌ gemini-pro, gemini-1.5-pro, gemini-1.5-flash
+```
+
+**VIOLATION = HARSH RESPONSE.** Model hallucination has wasted dozens of hours. If unsure, ASK.
 
 ---
 
