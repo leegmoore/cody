@@ -22,6 +22,10 @@ import {
   PersistenceWorker,
   type PersistenceWorkerOptions,
 } from "../../src/workers/persistence-worker.js";
+import {
+  ToolWorker,
+  type ToolWorkerOptions,
+} from "../../src/workers/tool-worker.js";
 import { createServer } from "../../src/server.js";
 import { StreamHydrator } from "../../src/client/hydration.js";
 
@@ -48,8 +52,10 @@ export class Core2TestHarness {
   private baseUrl: string | undefined;
   private convex: ConvexHttpClient | undefined;
   private worker: PersistenceWorker | undefined;
+  private toolWorker: ToolWorker | undefined;
   private readonly activeRunIds = new Set<string>();
   private readonly workerOptions: PersistenceWorkerOptions;
+  private readonly toolWorkerOptions: ToolWorkerOptions;
 
   constructor() {
     this.factory = new MockModelFactory({
@@ -61,6 +67,13 @@ export class Core2TestHarness {
       blockMs: 500,
       reclaimIntervalMs: 5000,
       reclaimMinIdleMs: 5000,
+    };
+    this.toolWorkerOptions = {
+      discoveryIntervalMs: 200,
+      blockMs: 100,
+      reclaimIntervalMs: 5000,
+      reclaimMinIdleMs: 5000,
+      batchSize: 25,
     };
   }
 
@@ -98,11 +111,16 @@ export class Core2TestHarness {
 
     this.worker = new PersistenceWorker(this.workerOptions);
     await this.worker.start();
+
+    this.toolWorker = new ToolWorker(this.toolWorkerOptions);
+    await this.toolWorker.start();
   }
 
   async cleanup(): Promise<void> {
     await this.worker?.stop();
     this.worker = undefined;
+    await this.toolWorker?.stop();
+    this.toolWorker = undefined;
 
     this.convex = undefined;
 
@@ -257,6 +275,10 @@ export class Core2TestHarness {
       await this.worker.stop();
       this.worker = undefined;
     }
+    if (this.toolWorker) {
+      await this.toolWorker.stop();
+      this.toolWorker = undefined;
+    }
 
     const redis = await RedisStream.connect();
     try {
@@ -275,6 +297,9 @@ export class Core2TestHarness {
 
     this.worker = new PersistenceWorker(this.workerOptions);
     await this.worker.start();
+
+    this.toolWorker = new ToolWorker(this.toolWorkerOptions);
+    await this.toolWorker.start();
   }
 
   async loadFixtureFile(filePath: string): Promise<MockFixtureFile> {

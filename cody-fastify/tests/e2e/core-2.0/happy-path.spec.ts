@@ -12,6 +12,10 @@ import {
 } from "../../../src/core/schema.js";
 import { Core2TestHarness } from "../../harness/core-harness.js";
 import type { MockFixtureFile } from "../../mocks/mock-stream-adapter.js";
+import {
+  toolRegistry,
+  type RegisteredTool,
+} from "codex-ts/src/tools/registry.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -54,15 +58,82 @@ const FIXTURES = {
 
 const harness = new Core2TestHarness();
 
+type RestoreFn = () => void;
+let restoreToolRegistry: RestoreFn | undefined;
+
+function installMockTools(): RestoreFn {
+  const originals = new Map<string, RegisteredTool>();
+
+  const overrideTool = (mock: RegisteredTool) => {
+    const existing = toolRegistry.get(mock.metadata.name);
+    if (existing) {
+      originals.set(mock.metadata.name, existing);
+    }
+    toolRegistry.register(mock);
+  };
+
+  const createMockTool = (
+    name: string,
+    execute: (
+      params: unknown,
+    ) => Promise<{ content: string; success?: boolean }>,
+  ): RegisteredTool => {
+    const existing = toolRegistry.get(name);
+    const metadata = existing?.metadata ?? {
+      name,
+      description: `Mock implementation for ${name}`,
+      requiresApproval: false,
+    };
+    return {
+      metadata: {
+        ...metadata,
+        requiresApproval: false,
+      },
+      execute,
+    };
+  };
+
+  overrideTool(
+    createMockTool("readFile", async (params: unknown) => {
+      const path =
+        (params as { path?: string; filePath?: string })?.path ??
+        (params as { path?: string; filePath?: string })?.filePath ??
+        "README.md";
+      return {
+        content: `# Mock README\n\nPretend content for ${path}`,
+        success: true,
+      };
+    }),
+  );
+
+  overrideTool(
+    createMockTool("exec", async (params: unknown) => {
+      const command = (params as { command?: string })?.command ?? "ls -l";
+      return {
+        content: `total 0\nmocked-output-for "${command}"\nmock-file.txt\nmock-dir/`,
+        success: true,
+      };
+    }),
+  );
+
+  return () => {
+    for (const tool of originals.values()) {
+      toolRegistry.register(tool);
+    }
+  };
+}
+
 describe("Core 2.0 Happy Path", () => {
   beforeAll(async () => {
     await registerFixtures();
+    restoreToolRegistry = installMockTools();
     await harness.setup();
   });
 
   afterAll(async () => {
     await harness.cleanup();
-  });
+    restoreToolRegistry?.();
+  }, 20_000);
 
   afterEach(async () => {
     await harness.reset();
@@ -96,7 +167,11 @@ describe("Core 2.0 Happy Path", () => {
 
     expect(response).toMatchObject(expected);
 
-    const persisted = await waitForPersisted(submission.runId);
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -128,7 +203,11 @@ describe("Core 2.0 Happy Path", () => {
 
     expect(response).toMatchObject(expected);
 
-    const persisted = await waitForPersisted(submission.runId);
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -162,7 +241,11 @@ describe("Core 2.0 Happy Path", () => {
     expect(response.output_items[0].type).toBe("reasoning");
     expect(response.output_items[1].type).toBe("message");
 
-    const persisted = await waitForPersisted(submission.runId);
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -196,7 +279,11 @@ describe("Core 2.0 Happy Path", () => {
     expect(response.output_items[0].type).toBe("reasoning");
     expect(response.output_items[1].type).toBe("message");
 
-    const persisted = await waitForPersisted(submission.runId);
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -226,14 +313,52 @@ describe("Core 2.0 Happy Path", () => {
       providerId: "openai",
     });
 
-    expect(response).toMatchObject(expected);
+    const { output_items: _expectedItems, ...expectedWithoutItems } = expected;
+    expect(response).toMatchObject({
+      ...expectedWithoutItems,
+      updated_at: expect.any(Number),
+      output_items: expect.any(Array),
+    });
+
     expect(response.output_items.map((item) => item.type)).toEqual([
       "function_call",
       "function_call_output",
       "message",
     ]);
 
-    const persisted = await waitForPersisted(submission.runId);
+    const functionCall = response.output_items.find(
+      (item) => item.type === "function_call",
+    );
+    expect(functionCall).toBeDefined();
+    expect(functionCall).toMatchObject({
+      type: "function_call",
+      name: "readFile",
+    });
+
+    const toolOutput = response.output_items.find(
+      (item) => item.type === "function_call_output",
+    );
+    expect(toolOutput).toBeDefined();
+    expect(toolOutput).toMatchObject({
+      type: "function_call_output",
+      success: true,
+      origin: "tool_harness",
+      output: expect.stringContaining("Mock README"),
+    });
+
+    const finalMessage = response.output_items.find(
+      (item) => item.type === "message",
+    );
+    expect(finalMessage).toBeDefined();
+    expect(finalMessage).toMatchObject({
+      content: expect.stringContaining("Fastify server"),
+    });
+
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -284,8 +409,16 @@ describe("Core 2.0 Happy Path", () => {
     });
     expect(turn2Response).toMatchObject(expectedTurn2);
 
-    const persisted1 = await waitForPersisted(turn1.runId);
-    const persisted2 = await waitForPersisted(turn2.runId);
+    const persisted1 = await waitForPersisted(
+      turn1.runId,
+      5000,
+      turn1Response.status,
+    );
+    const persisted2 = await waitForPersisted(
+      turn2.runId,
+      5000,
+      turn2Response.status,
+    );
     expectPersistedMatches(turn1Response, persisted1);
     expectPersistedMatches(turn2Response, persisted2);
     expect(persisted1.threadId).toBe(threadId);
@@ -323,7 +456,11 @@ describe("Core 2.0 Happy Path", () => {
       total_tokens: 14,
     });
 
-    const persisted = await waitForPersisted(submission.runId);
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
     expect(persisted.usage).toEqual({
       promptTokens: 8,
@@ -358,11 +495,42 @@ describe("Core 2.0 Happy Path", () => {
       providerId: "openai",
     });
 
-    expect(response).toMatchObject(expected);
-    expect(response.output_items).toHaveLength(1);
-    expect(response.output_items[0].type).toBe("function_call");
+    const { output_items: _expectedItems, ...expectedWithoutItems } = expected;
+    expect(response).toMatchObject({
+      ...expectedWithoutItems,
+      updated_at: expect.any(Number),
+      output_items: expect.any(Array),
+    });
+    expect(response.output_items.map((item) => item.type)).toEqual([
+      "function_call",
+      "function_call_output",
+    ]);
 
-    const persisted = await waitForPersisted(submission.runId);
+    const toolCall = response.output_items.find(
+      (item) => item.type === "function_call",
+    );
+    expect(toolCall).toBeDefined();
+    expect(toolCall).toMatchObject({
+      type: "function_call",
+      name: "exec",
+    });
+
+    const outputItem = response.output_items.find(
+      (item) => item.type === "function_call_output",
+    );
+    expect(outputItem).toBeDefined();
+    expect(outputItem).toMatchObject({
+      type: "function_call_output",
+      success: true,
+      origin: "tool_harness",
+      output: expect.stringContaining('mocked-output-for "ls -l"'),
+    });
+
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -402,7 +570,11 @@ describe("Core 2.0 Happy Path", () => {
     expect(response).toMatchObject(expected);
     expect(combinedEvents).toHaveLength(fixture.chunks.length);
 
-    const persisted = await waitForPersisted(submission.runId);
+    const persisted = await waitForPersisted(
+      submission.runId,
+      5000,
+      response.status,
+    );
     expectPersistedMatches(response, persisted);
   });
 
@@ -461,8 +633,8 @@ describe("Core 2.0 Happy Path", () => {
     expect(responseB).toMatchObject(expectedB);
 
     const [persistedA, persistedB] = await Promise.all([
-      waitForPersisted(resultA.runId),
-      waitForPersisted(resultB.runId),
+      waitForPersisted(resultA.runId, 5000, responseA.status),
+      waitForPersisted(resultB.runId, 5000, responseB.status),
     ]);
 
     expectPersistedMatches(responseA, persistedA);
@@ -577,11 +749,18 @@ async function registerFixtures(): Promise<void> {
   ]);
 }
 
-async function waitForPersisted(runId: string, timeoutMs = 5000) {
+async function waitForPersisted(
+  runId: string,
+  timeoutMs = 5000,
+  expectedStatus?: Response["status"],
+) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const doc = await harness.getPersistedResponse(runId);
-    if (doc) {
+    if (
+      doc &&
+      (!expectedStatus || (doc as PersistedResponse).status === expectedStatus)
+    ) {
       return doc as PersistedResponse;
     }
     await sleep(100);

@@ -133,13 +133,71 @@ export class MockStreamAdapter implements StreamAdapter {
         totalEvents: fixture.chunks.length,
       });
 
-      await this.redis.publish(event);
+      const eventId = await this.redis.publish(event);
+      const payload = event.payload;
+
+      if (
+        payload.type === "item_done" &&
+        isPlainObject(payload.final_item) &&
+        (payload.final_item as { type?: unknown }).type === "function_call"
+      ) {
+        const finalItem = payload.final_item as Extract<
+          StreamEvent["payload"],
+          { type: "item_done" }
+        >["final_item"];
+        const callId =
+          (finalItem as { call_id?: string }).call_id ??
+          (finalItem as { id?: string }).id ??
+          "";
+        if (callId) {
+          await this.waitForFunctionCallOutput(
+            placeholderContext.runId,
+            callId,
+            eventId,
+          );
+        }
+      }
+
       if (eventDelayMs > 0) {
         await delay(eventDelayMs);
       }
     }
 
     return { runId };
+  }
+
+  private async waitForFunctionCallOutput(
+    runId: string,
+    callId: string,
+    afterId: string,
+    timeoutMs = 1000,
+  ): Promise<void> {
+    const streamKey = streamKeyForRun(runId);
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const remaining = deadline - Date.now();
+      const blockMs = Math.max(Math.min(remaining, 100), 1);
+      const records = await this.redis.read(streamKey, afterId, blockMs, 20);
+
+      if (records.length) {
+        for (const record of records) {
+          const payload = record.event.payload;
+          if (
+            payload.type === "item_done" &&
+            isPlainObject(payload.final_item) &&
+            (payload.final_item as { type?: unknown }).type ===
+              "function_call_output" &&
+            (payload.final_item as { call_id?: string }).call_id === callId
+          ) {
+            return;
+          }
+        }
+        afterId = records[records.length - 1].id;
+      }
+
+      await delay(Math.min(remaining, 25));
+    }
   }
 
   private materializeEvent(

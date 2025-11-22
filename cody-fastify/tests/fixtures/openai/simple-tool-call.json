@@ -35,5 +35,8 @@
     },
     "finish_reason": null,
     "error": null
+  },
+  "stream_config": {
+    "event_delay_ms": 100
   }
 }
