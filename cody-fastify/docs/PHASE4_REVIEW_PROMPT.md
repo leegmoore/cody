@@ -8,9 +8,8 @@
 ## 1. Tool Execution Architecture
 *   **Isolation:** The `ToolWorker` must be a standalone process (or clearly separated module) listening to Redis. It must NOT be tightly coupled to the API server.
 *   **Resilience:**
-    *   **Crash Safety:** If a tool throws an error, does the worker crash? It MUST catch the error and emit an `item_start` (`function_call_output`) with `success: false`.
-    *   **Concurrency:** Does the worker handle multiple tool calls in parallel (if designed that way) or sequentially without blocking other runs?
-*   **Idempotency:** Does the worker handle duplicate `function_call` events gracefully? (Ideally yes, but check for gross negligence).
+    *   **Basic Error Handling:** If a tool throws an error, does the worker emit an `item_start` (`function_call_output`) with `success: false` (or at least an error status)? It should not silently crash the worker process.
+*   **Redis Hygiene:** Does the worker acknowledge events (`XACK`) after processing?
 
 ## 2. Security & Safety
 *   **Sandbox Integrity:** Check `src/workers/tool-worker.ts`.
