@@ -26,11 +26,10 @@ To support the Test Plan, you must implement the full CRUD surface area for V2:
 
 ## Step 3: Implement E2E Test Suite
 *   **File:** `tests/e2e/v2-lifecycle.spec.ts`
-*   **Requirement:** Implement **ALL Test Cases** defined in `v2-test-plan.md`.
-    *   **Granularity:** Do NOT group tests. For "TC-V2-1.3 - 1.6 Validation", implement **4 separate test blocks**, one for each error condition.
+*   **Requirement:** Implement **ALL 50+ Test Cases** defined in `v2-test-plan.md`.
+    *   **Granularity:** Each `TC-V2-...` entry in the `v2-test-plan.md` corresponds to a **separate `test()` block**. Do NOT group these in the Playwright code unless the `v2-test-plan.md` explicitly specifies a sub-item (e.g., `TC-V2-1.1` is one test, `TC-V2-1.2` is another).
     *   **Structure:** Use `test.describe` blocks matching the Test Plan sections.
-    *   **Naming:** Use the exact TC IDs (e.g., `test("TC-V2-1.1: Create Thread", ...)`) to allow easy auditing.
-    *   **Scope:** This includes V1 parity tests (CRUD, Pagination, Metadata) AND V2 specific tests (Streaming, Tools, Providers).
+    *   **Naming:** Use the exact TC IDs (e.g., `test("TC-V2-1.1: Create Thread - Minimal Config", ...)`) for clear auditing.
     *   **Fixtures:** Use/extend `fixtures/api-client.ts` to keep tests clean.
 
 ## Step 4: Verification
