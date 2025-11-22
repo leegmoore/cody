@@ -19,13 +19,24 @@ import { registerStreamRoutes } from "./api/routes/stream.js";
 import { registerSubmitRoutes } from "./api/routes/submit.js";
 import { AppError } from "./api/errors/api-errors.js";
 import { CodexRuntime } from "./api/services/codex-runtime.js";
+import {
+  DefaultModelFactory,
+  type ModelFactory,
+} from "./core/model-factory.js";
 
-export async function createServer() {
+export interface ServerOptions {
+  modelFactory?: ModelFactory;
+}
+
+export async function createServer(options: ServerOptions = {}) {
   const app = Fastify({
     logger: {
       level: "debug",
     },
   });
+
+  const modelFactory = options.modelFactory ?? new DefaultModelFactory();
+  app.decorate("modelFactory", modelFactory);
 
   await app.register(cors, { origin: "*" });
 

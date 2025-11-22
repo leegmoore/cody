@@ -1,0 +1,37 @@
+{
+  "description": "Turn 2 response referencing prior context",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "chunks": [
+    "event: response_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":1,\"trace_context\":{\"traceparent\":\"00-aaaa0000aaaa0000aaaa0000aaaa0000-cccc0000cccc0000cccc0000cccc0000-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_start\",\"payload\":{\"type\":\"response_start\",\"response_id\":\"{{runId}}\",\"turn_id\":\"{{turnId}}\",\"thread_id\":\"{{threadId}}\",\"model_id\":\"{{modelId}}\",\"provider_id\":\"{{providerId}}\",\"created_at\":1}}\n\n",
+    "event: item_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":2,\"trace_context\":{\"traceparent\":\"00-aaaa0000aaaa0000aaaa0000aaaa0000-cccc0000cccc0000cccc0000cccc0000-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_start\",\"payload\":{\"type\":\"item_start\",\"item_id\":\"ffff0000-ffff-0000-ffff-0000ffff0000\",\"item_type\":\"message\"}}\n\n",
+    "event: item_delta\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":3,\"trace_context\":{\"traceparent\":\"00-aaaa0000aaaa0000aaaa0000aaaa0000-cccc0000cccc0000cccc0000cccc0000-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_delta\",\"payload\":{\"type\":\"item_delta\",\"item_id\":\"ffff0000-ffff-0000-ffff-0000ffff0000\",\"delta_content\":\"Its most famous landmark is the Eiffel Tower.\"}}\n\n",
+    "event: item_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":4,\"trace_context\":{\"traceparent\":\"00-aaaa0000aaaa0000aaaa0000aaaa0000-cccc0000cccc0000cccc0000cccc0000-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_done\",\"payload\":{\"type\":\"item_done\",\"item_id\":\"ffff0000-ffff-0000-ffff-0000ffff0000\",\"final_item\":{\"id\":\"ffff0000-ffff-0000-ffff-0000ffff0000\",\"type\":\"message\",\"content\":\"Its most famous landmark is the Eiffel Tower.\",\"origin\":\"agent\"}}}\n\n",
+    "event: response_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":5,\"trace_context\":{\"traceparent\":\"00-aaaa0000aaaa0000aaaa0000aaaa0000-cccc0000cccc0000cccc0000cccc0000-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_done\",\"payload\":{\"type\":\"response_done\",\"response_id\":\"{{runId}}\",\"status\":\"complete\",\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":6,\"total_tokens\":17},\"finish_reason\":null}}\n\n"
+  ],
+  "expected_response": {
+    "id": "{{runId}}",
+    "turn_id": "{{turnId}}",
+    "thread_id": "{{threadId}}",
+    "model_id": "gpt-5-mini",
+    "provider_id": "openai",
+    "created_at": 1,
+    "updated_at": 5,
+    "status": "complete",
+    "output_items": [
+      {
+        "id": "ffff0000-ffff-0000-ffff-0000ffff0000",
+        "type": "message",
+        "content": "Its most famous landmark is the Eiffel Tower.",
+        "origin": "agent"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 11,
+      "completion_tokens": 6,
+      "total_tokens": 17
+    },
+    "finish_reason": null,
+    "error": null
+  }
+}

@@ -8,8 +8,11 @@ import {
   trace,
 } from "@opentelemetry/api";
 import { RedisStream } from "../../core/redis.js";
-import { OpenAIStreamAdapter } from "../../core/adapters/openai-adapter.js";
-import { AnthropicStreamAdapter } from "../../core/adapters/anthropic-adapter.js";
+import {
+  InvalidModelError,
+  UnknownProviderError,
+  type StreamAdapter,
+} from "../../core/model-factory.js";
 import { traceContextFromSpanContext } from "../../core/tracing.js";
 
 const tracer = trace.getTracer("codex.api.submit");
@@ -88,24 +91,38 @@ export async function registerSubmitRoutes(
         return;
       }
 
-      let adapter: OpenAIStreamAdapter | AnthropicStreamAdapter;
+      const modelFactory = app.modelFactory;
+      let adapter: StreamAdapter;
       try {
-        if (providerId.toLowerCase() === "anthropic") {
-          adapter = new AnthropicStreamAdapter({
-            model,
-            providerId,
-            redis,
-          });
-        } else {
-          adapter = new OpenAIStreamAdapter({
-            model,
-            providerId,
-            redis,
-          });
-        }
+        adapter = modelFactory.createAdapter({
+          providerId,
+          model,
+          redis,
+        });
       } catch (error) {
         await redis.close().catch(() => undefined);
-        req.log.error({ err: error }, "failed to initialize stream adapter");
+        if (error instanceof UnknownProviderError) {
+          reply.status(400).send({
+            error: {
+              code: "UNKNOWN_PROVIDER",
+              message: error.message,
+            },
+          });
+          return;
+        }
+        if (error instanceof InvalidModelError) {
+          reply.status(400).send({
+            error: {
+              code: "INVALID_MODEL",
+              message: error.message,
+            },
+          });
+          return;
+        }
+        req.log.error(
+          { err: error, providerId, model },
+          "failed to initialize stream adapter",
+        );
         reply.status(500).send({
           error: {
             code: "ADAPTER_INIT_FAILED",

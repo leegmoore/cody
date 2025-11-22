@@ -1,7 +1,16 @@
 # Test Results Summary
 
-**Date:** 2025-01-17  
-**Total Tests:** 56  
+## 2025-11-22 – Core 2.0 Happy Path Harness
+
+- Added automated coverage for TC-HP-01 through TC-HP-10 in `tests/e2e/core-2.0/happy-path.spec.ts`.
+- Executed `npx vitest run tests/e2e/core-2.0/happy-path.spec.ts` after mirroring the Fastify environment (loading `.env.local`).
+- Result: **0 passed / 10 failed**. Every test timed out at 5s and the persistence worker logged repeated `Reducer received event before response_start` errors, indicating the stream is emitting `item_*` payloads ahead of `response_start`.
+- Follow-up: investigate adapter → Redis ordering so the reducer sees `response_start` first; extend test timeouts once the stream sequencing bug is fixed.
+
+---
+
+## Historical Summary (2025-01-17)
+
 **Passed:** 39 (69.6%)  
 **Failed:** 12 (21.4%)  
 **Skipped:** 5 (8.9%) - Intentionally skipped
