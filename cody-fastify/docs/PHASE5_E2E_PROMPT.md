@@ -1,46 +1,34 @@
-# Phase 5: The Switchover - V2 API Implementation & E2E Verification
+# Phase 5: V2 API Implementation & E2E Baseline
 
-**High-Level Objective:** Build the missing V2 CRUD endpoints (`threads`, `runs`, `openrouter`) and verify the entire system with a comprehensive Playwright suite.
+**High-Level Objective:** Implement the V2 API endpoints and the comprehensive Test Suite. Establish the baseline pass/fail state.
 
 # Key Documentation
-1.  **Test Plan:** `cody-fastify/docs/v2-test-plan.md` (The **Absolute Law**. This document contains the complete specification for all tests).
+1.  **Test Plan:** `cody-fastify/docs/v2-test-plan.md` (The Absolute Law).
 2.  **Design:** `cody-fastify/docs/codex-core-2.0-tech-design.md`.
 
 # Work Plan
 
 ## Step 1: Build Missing V2 API Routes
-To pass the Test Plan, you must implement the full CRUD surface area for V2:
+Implement the code required to support the tests.
+*   **Threads (`src/api/routes/v2/threads.ts`):** Full CRUD.
+*   **Runs (`src/api/routes/v2/runs.ts`):** Status endpoint.
+*   **Adapters:** `OpenRouterStreamAdapter`.
 
-*   **Threads (`src/api/routes/v2/threads.ts`):**
-    *   `POST /threads` (Create)
-    *   `GET /threads` (List)
-    *   `GET /threads/:id` (Get - hydrates history from `messages` table)
-    *   `PATCH /threads/:id` (Update)
-    *   `DELETE /threads/:id` (Delete)
-*   **Runs (`src/api/routes/v2/runs.ts`):**
-    *   `GET /runs/:id` (Get Status/Result)
-*   **Submit/Stream:** Ensure `src/api/routes/v2/submit.ts` and `stream.ts` are registered and working.
-
-## Step 2: Build Missing Adapters
-*   **OpenRouter:** Implement `OpenRouterStreamAdapter` (Chat Completions) in `src/core/adapters/openrouter-adapter.ts` to satisfy the Provider Variety tests.
-
-## Step 3: Implement E2E Test Suite
+## Step 2: Implement E2E Test Suite
 *   **File:** `tests/e2e/v2-lifecycle.spec.ts`
-*   **Requirement:** Implement **ALL 50+ Test Cases** exactly as defined in `v2-test-plan.md`.
-    *   **Granularity:** Each `TC-V2-...` entry in the `v2-test-plan.md` corresponds to a **separate `test()` block**.
-    *   **Structure:** Use `test.describe` blocks matching the Test Plan sections.
-    *   **Naming:** Use the exact TC IDs (e.g., `test("TC-V2-1.1: Create Thread - Minimal Config", ...)`) for clear auditing.
-    *   **Dependencies:** Use `fixtures/api-client.ts` (extended for V2 routes) to keep tests clean. Do NOT look at legacy test files for requirements; `v2-test-plan.md` is the only source of truth.
+*   **Requirement:** Implement **ALL 50+ Test Cases** defined in `v2-test-plan.md`.
+*   **Constraint:** Each TC must be a separate test block. Use strict assertions matching the plan.
 
-## Step 4: Verification
-*   Run `bun run test:e2e`.
-*   **Success Criteria:** All tests in `v2-lifecycle.spec.ts` MUST pass.
-*   **Regression Check:** Legacy tests (e.g. `lifecycle.spec.ts`) must NOT be broken by your changes (i.e., do not modify V1 routes).
+## Step 3: Execution & Reporting (CRITICAL)
+*   **Action:** Run `bun run test:e2e`.
+*   **Stop Condition:**
+    *   If tests pass: Great. Report success.
+    *   **If tests fail:** **DO NOT ATTEMPT TO FIX DEEP SYSTEM ISSUES.**
+    *   **Your Goal:** Deliver the *Tests* and the *Initial Implementation*.
+    *   **Output:** Provide a detailed list of which tests failed and the error messages.
+    *   **Reasoning:** We will use a separate "Debugging Agent" to investigate failures. Your job is to establish the test harness and the code surface area.
 
 # Coding Standards
 *   **Strict TypeScript.**
-*   **NO MOCKS (Absolutely Critical):**
-    *   **Requirement:** All tests and infrastructure interactions MUST use **real Redis** and **real LLM APIs**.
-    *   Explicitly ban `ioredis-mock`, `vi.mock`, `jest.mock`, or any other mocking/stubbing framework for infrastructure.
-    *   If `REDIS_URL` is unset, the system MUST fail fast, NOT fall back to a mock.
-*   **Isolation:** Do not break V1 routes.
+*   **NO MOCKS.**
+*   **Isolation:** Do not modify V1 files.
