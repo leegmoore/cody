@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (via Cody) when working with code in this repository.
 
 ## ⚠️ VALID MODELS - ONLY USE THESE
 
@@ -46,95 +46,85 @@ google/gemini-2.5-flash (OpenRouter)
 
 **Codex TypeScript Port** - A systematic migration of OpenAI's Codex Rust workspace to TypeScript. This is not a rewrite but a methodical port that preserves the architecture, patterns, and behavior of the original Rust implementation while adapting to idiomatic TypeScript.
 
-**Current Status:** Phase 2 of Project 02 (UI Integration & Library Definition)
-- 21 core modules ported from Rust
-- 1,895+ tests passing
-- CLI foundation established (Phase 1 complete)
-- Tool integration in progress (Phase 2 active)
-
 ## Core Architecture
 
-### SQ/EQ Pattern (Submission Queue / Event Queue)
+### V2 Core Architecture: Streaming Native (cody-fastify)
 
-The Codex system uses an event-driven architecture for asynchronous communication between user and agent:
+The **cody-fastify** service implements a streaming-native core, using Redis Streams as a central event pipeline. This is the **primary development focus**.
 
+- **Design:** "Cody Core 2.0: Streaming-First Architecture" (`cody-fastify/docs/codex-core-2.0-tech-design.md`)
+- **Key Principle:** Treat the entire system as a pipeline of events, where "Thinking", "Tool Calls", and "Messages" are all typed blocks in a unified Redis Stream.
+- **Unified Data Model:** Internally uses an extended OpenAI Responses API schema for consistency across stream, persistence, and client-side hydration.
+
+### V1 Core Architecture: SQ/EQ Pattern (codex-ts)
+
+The **codex-ts** library implements an event-driven architecture for asynchronous communication between user and agent, ported from the original Rust `codex-rs`. This is currently a **legacy architecture** but still provides core tools and library functions.
+
+- **Design:** Relies on opaque state machines and a "Request/Response" mental model.
 - **Submission Queue (SQ):** User/CLI submits `Op` (operations) to the agent
 - **Event Queue (EQ):** Agent emits `EventMsg` (events) back to user/CLI
 - **Discriminated unions:** Type-safe message passing with 40+ event variants
 - **Event correlation:** Each event references its triggering submission via ID
 
-This is a Codex-specific design pattern (not a Rust language feature) that enables:
-- Progressive UI updates (thinking → tool execution → results → response)
-- Tool approval flow (exec_approval_request → user decision → submit approval)
-- Cancellation and interruption
-- Streaming tool execution visibility
+## Key Components
 
-### Key Components
+### V2 Core Components (cody-fastify)
 
-**ConversationManager** (`codex-ts/src/core/conversation-manager.ts`)
-- Primary library entry point
-- Creates and manages Codex conversations
-- Wires together auth, persistence, model clients, tool routing
+-   **RedisStream:** The backbone for event publishing and consumption.
+-   **Provider Adapters (`openai-adapter.ts`, `anthropic-adapter.ts`):** Translate vendor-specific LLM chunks into the canonical StreamEvent format.
+-   **Persistence Worker (`persistence-worker.ts`):** Reads from Redis Streams, aggregates chunks, and saves snapshots to Convex.
+-   **Stream Routes (`src/api/routes/stream.ts`):** Fastify endpoints for client SSE consumption from Redis.
+-   **Submit Routes (`src/api/routes/submit.ts`):** Fastify endpoints for initiating LLM turns and pushing initial events to Redis.
+-   **ResponseReducer:** Client-side (or worker-side) logic to hydrate `StreamEvent`s into full `Response` objects.
 
-**Codex** (`codex-ts/src/core/codex/codex.ts`)
-- High-level orchestration engine
-- Implements SQ/EQ queue pair
-- submit() operations, receive nextEvent() responses
-- Spawns sessions with configuration
+### V1 Core Components (codex-ts - Legacy Library)
 
-**Conversation** (`codex-ts/src/core/conversation.ts`)
-- User-facing conversation API
-- sendMessage(), nextEvent(), approveExec(), denyExec()
-- Wraps Codex with simpler interface
-
-**Protocol Types** (`codex-ts/src/protocol/protocol.ts`)
-- Defines all Op and EventMsg types
-- Submission, Event interfaces
-- Core discriminated unions
-
-**CLI Display** (`codex-ts/src/cli/display.ts`)
-- Event rendering layer
-- handleEvent() switch on EventMsg types
-- Tool approval prompts, progress display
+-   **ConversationManager** (`codex-ts/src/core/conversation-manager.ts`)
+    -   Primary library entry point for legacy CLI.
+    -   Creates and manages Codex conversations.
+    -   Wires together auth, persistence, model clients, tool routing.
+-   **Codex** (`codex-ts/src/core/codex/codex.ts`)
+    -   High-level orchestration engine for legacy CLI.
+    -   Implements SQ/EQ queue pair.
+-   **Conversation** (`codex-ts/src/core/conversation.ts`)
+    -   User-facing conversation API for legacy CLI.
+-   **Protocol Types** (`codex-ts/src/protocol/protocol.ts`)
+    -   Defines all Op and EventMsg types for legacy architecture.
+-   **CLI Display** (`codex-ts/src/cli/display.ts`)
+    -   Event rendering layer for legacy CLI.
 
 ## Common Development Commands
 
-### Setup
+### For cody-fastify (V2 Core)
+
+```bash
+cd cody-fastify
+npm install                    # First time only
+npm run dev                    # Start Fastify server
+npm test                       # Run Playwright E2E tests
+npm run test:verify-pipeline   # Run the V2 Core pipeline verification script
+```
+
+### For codex-ts (Legacy V1 Library)
+
 ```bash
 cd codex-ts
 npm install                    # First time only
-./scripts/setup-cody-alias.sh  # Link CLI globally as 'cody'
-```
-
-### Testing
-```bash
-npm test                       # Run all tests (1,895+ tests)
-npm test -- --watch            # Watch mode during development
-npm test -- run path/to/file   # Run specific test file
-```
-
-### Building
-```bash
+./scripts/setup-cody-alias.sh  # Link CLI globally as 'cody' (legacy)
+npm test                       # Run all tests (legacy 1,895+ tests)
 npm run build                  # TypeScript compilation to dist/
+cody --help                    # Show legacy CLI help
+cody new                       # Create new conversation (legacy)
+cody chat "message"            # Send message in conversation (legacy)
 ```
 
-### Code Quality
+### Quality Verification (Before Phase Completion)
+
+For **cody-fastify** development:
 ```bash
-npm run format                 # Auto-format with Prettier (required before commit)
-npm run format:check           # Check formatting without changes
-npm run lint                   # ESLint code quality checks
-npm run type-check             # TypeScript strict checks (tsc --noEmit)
+npm run format && npm run lint && npx tsc --noEmit && npm test
 ```
-
-### CLI Usage (after setup)
-```bash
-cody --help                    # Show CLI help
-cody new                       # Create new conversation
-cody chat "message"            # Send message in conversation
-cody list                      # List saved conversations
-```
-
-### Quality Verification (before marking phase complete)
+For **codex-ts** (if still modifying):
 ```bash
 npm run format && npm run lint && npx tsc --noEmit && npm test
 ```
@@ -142,7 +132,10 @@ All commands must succeed with 0 errors before phase completion.
 
 ## Testing Philosophy
 
-### Mocked-Service Tests (PRIMARY)
+### Library Logic Testing: Service-Mocked Tests (codex-ts, Shared Utility Functions)
+
+This methodology applies to internal library logic and utility functions that are part of `codex-ts` or shared across both `codex-ts` and `cody-fastify`.
+
 Integration-level tests in `tests/mocked-service/` are the core quality mechanism:
 - Exercise complete workflows (conversation flow, tool execution, provider switching)
 - Mock external boundaries (ModelClient, RolloutRecorder, AuthManager, network, filesystem)
@@ -150,23 +143,50 @@ Integration-level tests in `tests/mocked-service/` are the core quality mechanis
 - Written at library API boundaries as contracts are defined during planning
 - See `docs/core/contract-testing-tdd-philosophy.md` for detailed approach
 
+### Infrastructure Pipeline Testing: Real Integration Tests (cody-fastify V2 Core)
+
+This methodology applies to the new streaming-native architecture in `cody-fastify` that relies on external infrastructure like Redis and actual LLM providers.
+
+**Absolute Rule:** We do **NOT** mock infrastructure in these tests.
+- **Redis:** Tests must run against the real local Redis instance.
+- **LLMs:** Tests make real network calls to OpenAI/Anthropic (or use a record/replay proxy if strictly necessary, but never a logic-less mock).
+- **Why:** We are testing the *pipeline*, not the unit. Mocking Redis client hides serialization bugs. Mocking LLMs hides API integration issues.
+- **Tooling:** Use **Playwright** for E2E flows (`cody-fastify/tests/e2e/`). Use standalone scripts (`cody-fastify/scripts/`) for infrastructure verification.
+
 ### Unit Tests (OPTIONAL)
 Ported Rust tests in module directories are useful but not required going forward:
 - Validate individual function behavior
 - Maintained from original port
-- Continue passing but new development focuses on mocked-service tests
+- Continue passing but new development focuses on mocked-service tests or pipeline integration tests.
 
 ### Test Organization
 ```
 tests/
-├── mocked-service/    # PRIMARY - integration with mocked externals
+├── mocked-service/    # PRIMARY (for codex-ts) - integration with mocked externals
 ├── mocks/             # Shared mock implementations
-└── unit/              # Original port tests (optional)
+├── unit/              # Original port tests (optional)
+└── e2e/               # NEW (for cody-fastify) - Playwright E2E for infrastructure pipeline
 ```
 
 ## Project Structure
 
-### Port Organization (Phases 1-6)
+### Monorepo Organization
+The codebase is organized as a monorepo with two primary development areas:
+
+```
+codex-port-02/
+├── cody-fastify/  # ACTIVE: The new streaming-native V2 Core, Fastify API, Workers, and Web UI
+│   ├── src/           # New Core 2.0 implementation
+│   ├── public/        # Web UI assets
+│   ├── docs/          # V2 Core specific documentation
+│   └── tests/e2e/     # Playwright E2E tests
+└── codex-ts/      # LEGACY: The original TypeScript port of the Codex CLI and library
+    ├── src/           # V1 Core (SQ/EQ), library modules
+    ├── cli/           # Legacy CLI implementation
+    └── tests/mocked-service/ # Legacy service-mocked tests
+```
+
+### Port Organization (Legacy - Phases 1-6 of `codex-ts`)
 The TypeScript port follows the Rust workspace structure where applicable:
 
 ```
@@ -199,38 +219,25 @@ codex-ts/src/
     └── state.ts       # CLI state management
 ```
 
-### UI Integration Project (Project 02, Current)
-Project 02 wires ported modules into a working CLI called **Cody**:
-
-**Phases:**
-1. ✅ Basic Chat Flow - Single provider, API key auth, conversation loop
-2. 🔄 Tool Integration - Approval prompts, tool execution display
-3. ⏳ Multi-Provider - OpenAI (Responses, Chat), Anthropic (Messages)
-4. ⏳ Authentication - OAuth token retrieval (ChatGPT, Claude)
-5. ⏳ Persistence & Resume - JSONL save/load, conversation history
-6. ⏳ Library API Finalization - Document @openai/codex-core public surface
-7. ⏳ REST API Design (Optional) - HTTP wrapper specification
-8. ⏳ Integration Polish - Bug fixes, edge cases, UX refinements
-
 ## Development Standards
 
 ### TypeScript Requirements
-- **Strict mode enabled:** No `any` types (use `unknown` or proper types)
-- **ES Modules only:** Use `import`/`export`, not `require()`/`module.exports`
-- **Modern syntax:** Target ES2022, leverage latest JavaScript features
-- **Type safety:** Discriminated unions for variants, no implicit any
+- **Strict mode enabled:** No `any` types (use `unknown` or proper types), except where `z.any()` is explicitly used in schemas.
+- **ES Modules only:** Use `import`/`export`, not `require()`/`module.exports`.
+- **Modern syntax:** Target ES2022, leverage latest JavaScript features.
+- **Type safety:** Discriminated unions for variants, no implicit any.
 
 ### Code Style
 - **Formatting:** Prettier handles ALL formatting (non-negotiable)
   - Single quotes, 100 char width, 2 space indent, trailing commas, no semicolons
 - **Naming:** camelCase functions, PascalCase classes/types, UPPER_SNAKE_CASE constants
-- **Documentation:** JSDoc on public APIs, inline comments explain *why* not *what*
+- **Documentation:** JSDoc on public APIs, inline comments explain *why* not *what*.
 
 ### Testing Standards
-- **Baseline maintained:** Existing 1,895+ tests continue passing
-- **No skipped tests:** 0 `.skip`, 0 `.todo` in suite
-- **New functionality:** Add mocked-service tests at library boundaries
-- **Fast execution:** All tests complete in <5 seconds
+- **Baseline maintained:** Existing 1,895+ tests (for `codex-ts`) continue passing.
+- **No skipped tests:** 0 `.skip`, 0 `.todo` in suite.
+- **New functionality:** Add appropriate tests (service-mocked for library logic, real integration for V2 pipeline).
+- **Fast execution:** Library tests <5 seconds. V2 Pipeline E2E tests may be slower due to external dependencies but should be optimized.
 
 ### Rust → TypeScript Patterns
 ```typescript
@@ -253,8 +260,7 @@ const items: User[] = [];
 const cache = new Map<string, Value>();
 ```
 
-
-## Tool System Architecture
+## Tool System Architecture (V1 Legacy - codex-ts)
 
 Tools use a registry pattern with approval callbacks:
 
@@ -279,15 +285,13 @@ type ToolApprovalCallback = (
 
 ## Important Architectural Constraints
 
-1. **Ported module stability:** Core modules from Phases 1-6 provide foundation. Changes only when integration reveals genuine issues.
-
-2. **Provider abstraction:** WireApi enum and adapter pattern preserved. CLI is provider-agnostic—same conversation code works with OpenAI Responses, Chat Completions, Anthropic Messages.
-
-3. **Event-driven UI:** All UI updates driven by EventMsg types from protocol. CLI layer subscribes to events, doesn't poll or directly access state.
-
-4. **Stateless operations:** Library API designed for future REST wrapper. Async/Promise-based patterns map to HTTP request/response.
-
-5. **Tool system unchanged:** ToolRegistry and ToolRouter from Phase 3-4 used as-is. CLI adds display layer, not tool execution changes.
+1.  **Monorepo Strategy:** The project is a monorepo containing `codex-ts` (legacy library) and `cody-fastify` (active V2 Core development).
+2.  **V2 Core as Primary Focus:** All new development should target `cody-fastify` and its streaming-native architecture.
+3.  **V1 Library Stability:** `codex-ts` core modules provide foundation. Changes only when integration reveals genuine issues. Avoid adding new features to `codex-ts` CLI.
+4.  **Provider Abstraction:** WireApi enum and adapter pattern preserved. Ensure `cody-fastify` adapters (OpenAI, Anthropic) normalize to the canonical `StreamEvent` format.
+5.  **Event-driven UI:** All UI updates for the Web UI will be driven by Server-Sent Events (SSE) consuming from Redis Streams.
+6.  **Stateless Operations:** Library API designed for future REST wrapper. Async/Promise-based patterns map to HTTP request/response.
+7.  **Tool System (Legacy):** `codex-ts` ToolRegistry and ToolRouter from Phase 3-4 used as-is for the V1 CLI. The V2 Core will integrate tool execution via events on the Redis Stream.
 
 ## Git Workflow
 
@@ -323,20 +327,25 @@ git commit -m "fix(display): handle tool execution timeout event"
 - OpenAI Responses API
 - OpenAI Chat Completions API
 - Anthropic Messages API
+- OpenRouter
 
 ### Authentication
 - API keys: OpenAI, Anthropic, OpenRouter
 - OAuth tokens: ChatGPT (~/.codex), Claude (~/.claude)
 - Token refresh handled by respective CLI apps (not implemented here)
 
+### Core 2.0 Infrastructure
+- **Redis:** Used for event streaming and transient storage (`ioredis` client).
+- **Convex:** Used for persistent storage of `Response` objects.
+- **Langfuse:** For observability and tracing integration.
+
 ### MCP (Model Context Protocol)
 - `@modelcontextprotocol/sdk` for MCP server integration
 - Configuration in ~/.codex/config.toml
-- See `docs/projects/02-ui-integration-phases/PRD.md` for MCP details
 
 ## Known Patterns
 
-### Event Loop Pattern
+### Event Loop Pattern (Legacy - codex-ts)
 ```typescript
 // Core pattern in CLI display layer
 async function renderConversationUntilComplete(conversation: Conversation) {
@@ -383,17 +392,16 @@ async function cleanup(conversation: Conversation) {
 
 ## Debugging
 
-### Tracing / Verbose Logging
-Set environment variables for detailed tracing:
-```bash
-RUST_LOG=debug cody chat "message"  # Detailed logs
-RUST_LOG=trace cody chat "message"  # Very detailed logs
-```
+### Tracing / Verbose Logging (OpenTelemetry / Langfuse - cody-fastify)
 
-### Test Debugging
+Utilize OpenTelemetry and Langfuse for distributed tracing across the V2 Core.
+Span names: `submit.stream`, `projector.applyEvent` etc.
+Context propagation via `trace_context` in `StreamEvent`.
+
+### Test Debugging (cody-fastify)
 ```bash
-npm test -- --reporter=verbose      # Detailed test output
-npm test -- run path/to/test.ts     # Run single test file
+npm test --workspace=cody-fastify -- --reporter=verbose      # Detailed test output
+npm test --workspace=cody-fastify -- path/to/e2e-test.spec.ts  # Run specific E2E test file
 ```
 
 ### TypeScript Compilation Debugging
