@@ -27,6 +27,7 @@ To support the Test Plan, you must implement the full CRUD surface area for V2:
 ## Step 3: Implement E2E Test Suite
 *   **File:** `tests/e2e/v2-lifecycle.spec.ts`
 *   **Requirement:** Implement **ALL Test Cases** defined in `v2-test-plan.md`.
+    *   **Granularity:** Do NOT group tests. For "TC-V2-1.3 - 1.6 Validation", implement **4 separate test blocks**, one for each error condition.
     *   **Structure:** Use `test.describe` blocks matching the Test Plan sections.
     *   **Naming:** Use the exact TC IDs (e.g., `test("TC-V2-1.1: Create Thread", ...)`) to allow easy auditing.
     *   **Scope:** This includes V1 parity tests (CRUD, Pagination, Metadata) AND V2 specific tests (Streaming, Tools, Providers).
@@ -38,5 +39,8 @@ To support the Test Plan, you must implement the full CRUD surface area for V2:
 
 # Coding Standards
 *   **Strict TypeScript.**
-*   **NO MOCKS** (Real Redis/Convex/LLM).
+*   **NO MOCKS (Absolutely Critical):**
+    *   **Requirement:** All tests and infrastructure interactions MUST use **real Redis** and **real LLM APIs**.
+    *   Explicitly ban `ioredis-mock`, `vi.mock`, `jest.mock`, or any other mocking/stubbing framework for infrastructure.
+    *   If `REDIS_URL` is unset, the system MUST fail fast, NOT fall back to a mock.
 *   **Isolation:** Do not break V1 routes.
