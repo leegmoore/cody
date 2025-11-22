@@ -123,4 +123,28 @@ These simulate real user interactions.
     *   **Action:** Query Convex `messages` table by `runId`.
     *   **Assert:** The persisted record matches the stream output perfectly.
         *   `status`: `complete`
-        *   `outputItems`: Contains the exact sequence of reasoning, tool calls, outputs, and messages.
+---
+
+## 6. Tool Inventory Validation (Full Coverage)
+
+These tests verify that every available tool is correctly wired and executable via the V2 pipeline.
+
+*   **TC-V2-16: Tool - List Directory**
+    *   **Action:** Submit "List files in the current directory".
+    *   **Assert:** `item_start` (`function_call`: `listDir`) -> `item_done` (`function_call_output`).
+    *   **Assert:** Output contains known files (e.g., `package.json`).
+
+*   **TC-V2-17: Tool - Grep Files**
+    *   **Action:** Submit "Search for 'version' in package.json".
+    *   **Assert:** `item_start` (`function_call`: `grepFiles`) -> `item_done` (`function_call_output`).
+    *   **Assert:** Output contains the grep matches.
+
+*   **TC-V2-18: Tool - Apply Patch**
+    *   **Action:** Submit "Create a temp file 'patch_test.txt' with 'hello', then patch it to say 'world'."
+    *   **Assert:** Sequence of `fs_write` -> `applyPatch` -> `fs_read`.
+    *   **Assert:** Final read returns "world".
+
+*   **TC-V2-19: Tool - File Search**
+    *   **Action:** Submit "Find the file named 'v2-test-plan.md'".
+    *   **Assert:** `item_start` (`function_call`: `fileSearch`).
+    *   **Assert:** Output contains the correct path `cody-fastify/docs/v2-test-plan.md`.
