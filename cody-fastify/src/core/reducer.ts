@@ -177,7 +177,7 @@ export class ResponseReducer {
       output_items: [],
       usage: undefined,
       finish_reason: null,
-      error: undefined,
+      error: null,
     };
     this.itemBuffers.clear();
     this.processedEventIds.clear();

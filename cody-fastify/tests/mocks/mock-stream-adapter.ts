@@ -6,10 +6,12 @@ import {
   createTraceContext,
 } from "../../src/core/tracing.js";
 import {
+  streamKeyForRun,
   StreamEventSchema,
   type StreamEvent,
   type TraceContext,
 } from "../../src/core/schema.js";
+import { PROJECTOR_CONSUMER_GROUP } from "../../src/core/redis.js";
 import {
   type FixtureRegistration,
   type MockAdapterFactory,
@@ -97,6 +99,11 @@ export class MockStreamAdapter implements StreamAdapter {
       providerId: this.providerId,
       modelId: this.modelId,
     };
+
+    await this.redis.ensureGroup(
+      streamKeyForRun(runId),
+      PROJECTOR_CONSUMER_GROUP,
+    );
 
     for (let idx = 0; idx < fixture.chunks.length; idx += 1) {
       const chunk = fixture.chunks[idx];

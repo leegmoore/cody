@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { StreamEvent, StreamEventSchema, streamKeyForRun } from "./schema.js";
 
+export const PROJECTOR_CONSUMER_GROUP = "codex-projector-group";
+
 type RedisClientLike = {
   xadd: (...args: Array<string | number | Buffer>) => Promise<string>;
   xread: (...args: Array<string | number | Buffer>) => Promise<unknown>;

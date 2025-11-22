@@ -8,7 +8,11 @@ import {
   trace,
 } from "@opentelemetry/api";
 import { ConvexWriter } from "../core/persistence/convex-writer.js";
-import { RedisStream, type RedisStreamGroupRecord } from "../core/redis.js";
+import {
+  PROJECTOR_CONSUMER_GROUP,
+  RedisStream,
+  type RedisStreamGroupRecord,
+} from "../core/redis.js";
 import { ResponseReducer } from "../core/reducer.js";
 import { REDIS_STREAM_KEY_PREFIX } from "../core/schema.js";
 
@@ -28,7 +32,7 @@ export interface PersistenceWorkerOptions {
   reclaimMinIdleMs?: number;
 }
 
-const DEFAULT_GROUP_NAME = "codex-projector-group";
+const DEFAULT_GROUP_NAME = PROJECTOR_CONSUMER_GROUP;
 
 export class PersistenceWorker {
   private readonly groupName: string;
@@ -185,6 +189,23 @@ export class PersistenceWorker {
           if (!this.running) break;
         }
       } catch (error) {
+        if (this.isNoGroupError(error)) {
+          const redis = this.redis;
+          if (redis) {
+            for (const stream of streams) {
+              try {
+                await redis.ensureGroup(stream, this.groupName);
+              } catch (ensureError) {
+                console.error(
+                  "[projector] ensureGroup failed after NOGROUP",
+                  ensureError,
+                );
+              }
+            }
+          }
+          await sleep(200);
+          continue;
+        }
         console.error("[projector] readGroup error", error);
         await sleep(1000);
       }
@@ -287,5 +308,10 @@ export class PersistenceWorker {
     do {
       await this.discoverOnce();
     } while (this.running && this.discoveryCursor !== "0");
+  }
+
+  private isNoGroupError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    return error.message.includes("NOGROUP");
   }
 }

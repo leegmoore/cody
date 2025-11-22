@@ -9,53 +9,53 @@ import { z } from "zod";
 // OutputItem variants
 // ---------------------------------------------------------------------------
 export const MessageItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("message"),
   content: z.string(),
   origin: z.enum(["user", "agent", "system"]).default("agent"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const ReasoningItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("reasoning"),
   content: z.string(),
   origin: z.enum(["agent", "system"]).default("agent"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const FunctionCallItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("function_call"),
   name: z.string(),
   arguments: z.string(), // JSON string
-  call_id: z.string().uuid(),
+  call_id: z.string(),
   origin: z.enum(["agent"]).default("agent"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const FunctionCallOutputItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("function_call_output"),
-  call_id: z.string().uuid(),
+  call_id: z.string(),
   output: z.string(),
   success: z.boolean(),
   origin: z.enum(["system", "tool_harness"]).default("system"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const ScriptExecutionItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("script_execution"),
   code: z.string(),
   origin: z.enum(["agent"]).default("agent"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const ScriptExecutionOutputItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("script_execution_output"),
-  script_id: z.string().uuid(),
+  script_id: z.string(),
   result: z.string(), // JSON string
   success: z.boolean(),
   error: z
@@ -66,17 +66,17 @@ export const ScriptExecutionOutputItemSchema = z.object({
     })
     .optional(),
   origin: z.enum(["system", "script_harness"]).default("system"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const ErrorItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: z.literal("error"),
   code: z.string(),
   message: z.string(),
   details: z.any().optional(),
   origin: z.enum(["agent", "system", "provider"]).default("system"),
-  correlation_id: z.string().uuid().optional(),
+  correlation_id: z.string().optional(),
 });
 
 export const OutputItemSchema = z.discriminatedUnion("type", [
@@ -117,7 +117,7 @@ export const ResponseSchema = z.object({
       message: z.string(),
       details: z.any().optional(),
     })
-    .optional(),
+    .nullable(),
 });
 
 // ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ const StreamEventPayloadSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("item_start"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     item_type: z.enum([
       "message",
       "reasoning",
@@ -165,38 +165,38 @@ const StreamEventPayloadSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("item_delta"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     delta_content: z.string(),
   }),
   z.object({
     type: z.literal("item_done"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     final_item: OutputItemSchema,
   }),
   z.object({
     type: z.literal("item_error"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     error: ErrorObjectSchema,
   }),
   z.object({
     type: z.literal("item_cancelled"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     reason: z.string().optional(),
   }),
   z.object({
     type: z.literal("script_execution_start"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     code: z.string(),
   }),
   z.object({
     type: z.literal("script_execution_done"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     result: z.string(),
     success: z.boolean(),
   }),
   z.object({
     type: z.literal("script_execution_error"),
-    item_id: z.string().uuid(),
+    item_id: z.string(),
     error: ErrorObjectSchema,
   }),
   z.object({

@@ -12,13 +12,16 @@ import {
   type MockFixtureFile,
 } from "../mocks/mock-stream-adapter.js";
 import {
+  REDIS_STREAM_KEY_PREFIX,
   StreamEventSchema,
   type StreamEvent,
   type Response,
 } from "../../src/core/schema.js";
-import { streamKeyForRun } from "../../src/core/schema.js";
 import { RedisStream } from "../../src/core/redis.js";
-import { PersistenceWorker } from "../../src/workers/persistence-worker.js";
+import {
+  PersistenceWorker,
+  type PersistenceWorkerOptions,
+} from "../../src/workers/persistence-worker.js";
 import { createServer } from "../../src/server.js";
 import { StreamHydrator } from "../../src/client/hydration.js";
 
@@ -46,12 +49,19 @@ export class Core2TestHarness {
   private convex: ConvexHttpClient | undefined;
   private worker: PersistenceWorker | undefined;
   private readonly activeRunIds = new Set<string>();
+  private readonly workerOptions: PersistenceWorkerOptions;
 
   constructor() {
     this.factory = new MockModelFactory({
       adapterFactory: createMockStreamAdapter,
     });
     this.hydrator = new StreamHydrator();
+    this.workerOptions = {
+      discoveryIntervalMs: 200,
+      blockMs: 500,
+      reclaimIntervalMs: 5000,
+      reclaimMinIdleMs: 5000,
+    };
   }
 
   get modelFactory(): MockModelFactory {
@@ -79,7 +89,14 @@ export class Core2TestHarness {
     }
     this.convex = new ConvexHttpClient(convexUrl);
 
-    this.worker = new PersistenceWorker();
+    const redis = await RedisStream.connect();
+    try {
+      await this.deleteAllRunStreams(redis);
+    } finally {
+      await redis.close();
+    }
+
+    this.worker = new PersistenceWorker(this.workerOptions);
     await this.worker.start();
   }
 
@@ -236,26 +253,50 @@ export class Core2TestHarness {
   }
 
   async reset(): Promise<void> {
-    if (!this.activeRunIds.size) return;
+    if (this.worker) {
+      await this.worker.stop();
+      this.worker = undefined;
+    }
 
     const redis = await RedisStream.connect();
     try {
-      for (const runId of this.activeRunIds) {
-        const streamKey = streamKeyForRun(runId);
-        await redis.deleteStream(streamKey);
-        if (this.convex) {
-          await this.convex.mutation(api.messages.deleteByRunId, { runId });
-        }
-      }
+      await this.deleteAllRunStreams(redis);
     } finally {
       await redis.close();
-      this.activeRunIds.clear();
     }
+
+    if (this.convex) {
+      for (const runId of this.activeRunIds) {
+        await this.convex.mutation(api.messages.deleteByRunId, { runId });
+      }
+    }
+
+    this.activeRunIds.clear();
+
+    this.worker = new PersistenceWorker(this.workerOptions);
+    await this.worker.start();
   }
 
   async loadFixtureFile(filePath: string): Promise<MockFixtureFile> {
     const raw = await readFile(filePath, "utf-8");
     return JSON.parse(raw) as MockFixtureFile;
+  }
+
+  private async deleteAllRunStreams(redis: RedisStream): Promise<void> {
+    let cursor = "0";
+    do {
+      const { cursor: nextCursor, keys } = await redis.scanStreams(
+        `${REDIS_STREAM_KEY_PREFIX}:*:events`,
+        cursor,
+        100,
+      );
+      if (keys.length) {
+        for (const key of keys) {
+          await redis.deleteStream(key);
+        }
+      }
+      cursor = nextCursor;
+    } while (cursor !== "0");
   }
 }
 
