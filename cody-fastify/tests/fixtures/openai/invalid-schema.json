@@ -1,0 +1,18 @@
+{
+  "description": "TC-ER-12 invalid schema (missing item_id)",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "generated_by": "scripts/generate-edge-fixtures.ts",
+  "generated_at": "2025-11-23T01:21:53.740Z",
+  "scenario": "TC-ER-12",
+  "chunks": [
+    "event: response_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":1,\"trace_context\":{\"traceparent\":\"00-feedfacefeedfacefeedfacefeedface-cafebabecafebabe-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_start\",\"payload\":{\"response_id\":\"{{runId}}\",\"turn_id\":\"{{turnId}}\",\"thread_id\":\"{{threadId}}\",\"model_id\":\"{{modelId}}\",\"provider_id\":\"{{providerId}}\",\"created_at\":1,\"type\":\"response_start\"}}\n\n",
+    "event: item_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":2,\"trace_context\":{\"traceparent\":\"00-feedfacefeedfacefeedfacefeedface-cafebabecafebabe-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_start\",\"payload\":{\"type\":\"item_start\",\"item_type\":\"message\",\"note\":\"Missing item_id should trip schema validation\"}}\n\n",
+    "event: item_delta\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":3,\"trace_context\":{\"traceparent\":\"00-feedfacefeedfacefeedfacefeedface-cafebabecafebabe-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_delta\",\"payload\":{\"item_id\":\"dddddddd-dddd-4ddd-dddd-dddddddddddd\",\"delta_content\":\"This should never appear\",\"type\":\"item_delta\"}}\n\n",
+    "event: item_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":4,\"trace_context\":{\"traceparent\":\"00-feedfacefeedfacefeedfacefeedface-cafebabecafebabe-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_done\",\"payload\":{\"item_id\":\"dddddddd-dddd-4ddd-dddd-dddddddddddd\",\"final_item\":{\"id\":\"dddddddd-dddd-4ddd-dddd-dddddddddddd\",\"type\":\"message\",\"content\":\"Invalid schema turn\",\"origin\":\"agent\"},\"type\":\"item_done\"}}\n\n",
+    "event: response_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":5,\"trace_context\":{\"traceparent\":\"00-feedfacefeedfacefeedfacefeedface-cafebabecafebabe-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_done\",\"payload\":{\"response_id\":\"{{runId}}\",\"status\":\"complete\",\"usage\":{\"prompt_tokens\":16,\"completion_tokens\":8,\"total_tokens\":24},\"finish_reason\":null,\"type\":\"response_done\"}}\n\n"
+  ],
+  "metadata": {
+    "missing_field": "item_id"
+  }
+}

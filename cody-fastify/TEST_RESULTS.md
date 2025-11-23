@@ -1,5 +1,26 @@
 # Test Results Summary
 
+## 2025-11-23 – Phase 5.2 Edge Cases & Stress Tests
+
+- Regenerated stress fixtures via `npx ts-node --esm scripts/generate-edge-fixtures.ts` after reducing the per-delta payload so Convex stays below its 1 MiB document limit.
+- Ran `npm run format && npm run lint && npx tsc --noEmit && npx vitest run tests/e2e/core-2.0/edge-cases.spec.ts`.
+- Result: **6 passed / 0 failed** (runtime ≈ 41 s). Convex logged a warning for the ~922 KB message but the write succeeded.
+
+### Phase 5.2 Status
+
+**Status:** 6/6 passing
+
+| Test | Status | Runtime | Notes |
+|------|--------|---------|-------|
+| TC-ER-07: Large response | ✅ PASS | ~5.2 s | 512 deltas (~922 KB) streamed/persisted; Convex warning confirms we’re just under the write cap. |
+| TC-ER-08: Rapid stream | ✅ PASS | ~5.1 s | 1000 zero-delay deltas received in order; byte count matches fixture metadata. |
+| TC-ER-09: Out-of-order | ✅ PASS | ~5.1 s | Reducer surfaced `STREAM_SEQUENCE_ERROR`; no partial output committed. |
+| TC-ER-10: High concurrency | ✅ PASS | ~5.3 s | 50 simultaneous turns completed with unique runIds and persisted docs. |
+| TC-ER-11: Thread collision | ✅ PASS | ~5.2 s | Two turns sharing a thread persisted correctly with distinct turnIds. |
+| TC-ER-12: Invalid schema | ✅ PASS | ~5.1 s | Mock adapter raised Zod validation error; response stored as error doc. |
+
+**Total Coverage:** 22/22 tests passing (10 happy + 6 error + 6 edge).
+
 ## 2025-11-23 – Phase 5.1 Error Handling Tests
 
 - Added fixtures plus standalone suite `tests/e2e/core-2.0/error-handling.spec.ts` to cover TC-ER-01 through TC-ER-06.

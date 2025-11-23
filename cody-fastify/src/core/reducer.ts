@@ -21,6 +21,7 @@ export class ResponseReducer {
   private current: MutableResponse | undefined;
   private readonly itemBuffers = new Map<string, ItemBuffer>();
   private readonly processedEventIds = new Set<string>();
+  private hasSequenceViolation = false;
 
   apply(event: StreamEvent): Response | undefined {
     const payloadType = event.payload.type;
@@ -38,6 +39,17 @@ export class ResponseReducer {
       return this.snapshot();
     }
     this.processedEventIds.add(event.event_id);
+
+    if (
+      this.hasSequenceViolation &&
+      (payloadType === "item_start" ||
+        payloadType === "item_delta" ||
+        payloadType === "item_done" ||
+        payloadType === "item_error" ||
+        payloadType === "item_cancelled")
+    ) {
+      return this.snapshot();
+    }
 
     let mutated = false;
     switch (payloadType) {
@@ -63,15 +75,31 @@ export class ResponseReducer {
 
       case "item_delta": {
         const buf = this.itemBuffers.get(event.payload.item_id);
-        if (buf) {
-          buf.chunks.push(event.payload.delta_content);
-          this.refreshBufferedItem(event.payload.item_id);
+        if (!buf) {
+          this.markSequenceViolation(
+            event,
+            event.payload.item_id,
+            "Received item_delta before item_start",
+          );
           mutated = true;
+          break;
         }
+        buf.chunks.push(event.payload.delta_content);
+        this.refreshBufferedItem(event.payload.item_id);
+        mutated = true;
         break;
       }
 
       case "item_done": {
+        if (!this.itemBuffers.has(event.payload.item_id)) {
+          this.markSequenceViolation(
+            event,
+            event.payload.item_id,
+            "Received item_done without item_start",
+          );
+          mutated = true;
+          break;
+        }
         const finalItem = cloneDeep(event.payload.final_item);
         this.upsertOutputItem(finalItem);
         this.itemBuffers.delete(event.payload.item_id);
@@ -110,8 +138,15 @@ export class ResponseReducer {
 
       case "response_done": {
         const current = this.ensureResponse();
-        current.status = event.payload.status;
-        current.finish_reason = event.payload.finish_reason;
+        if (current.status !== "error" && current.status !== "aborted") {
+          current.status = event.payload.status;
+        }
+        if (
+          current.finish_reason === null ||
+          current.finish_reason === undefined
+        ) {
+          current.finish_reason = event.payload.finish_reason;
+        }
         if (event.payload.usage) {
           current.usage = event.payload.usage;
         }
@@ -181,6 +216,7 @@ export class ResponseReducer {
     };
     this.itemBuffers.clear();
     this.processedEventIds.clear();
+    this.hasSequenceViolation = false;
   }
 
   private ensureResponse(): MutableResponse {
@@ -241,5 +277,27 @@ export class ResponseReducer {
         correlation_id: buffer.meta.correlation_id as string | undefined,
       });
     }
+  }
+
+  private markSequenceViolation(
+    event: StreamEvent,
+    itemId: string,
+    message: string,
+  ): void {
+    const current = this.ensureResponse();
+    current.status = "error";
+    current.error = {
+      code: "STREAM_SEQUENCE_ERROR",
+      message,
+      details: {
+        itemId,
+        eventId: event.event_id,
+        eventType: event.payload.type,
+      },
+    };
+    current.finish_reason = "stream_error";
+    this.removeOutputItem(itemId);
+    this.itemBuffers.delete(itemId);
+    this.hasSequenceViolation = true;
   }
 }

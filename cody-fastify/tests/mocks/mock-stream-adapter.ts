@@ -12,6 +12,7 @@ import {
   type TraceContext,
 } from "../../src/core/schema.js";
 import { PROJECTOR_CONSUMER_GROUP } from "../../src/core/redis.js";
+import { ZodError } from "zod";
 import {
   type FixtureRegistration,
   type MockAdapterFactory,
@@ -29,6 +30,7 @@ export interface MockFixtureFile {
   stream_config?: {
     event_delay_ms?: number;
   };
+  metadata?: Record<string, unknown>;
 }
 
 interface PlaceholderContext {
@@ -99,75 +101,165 @@ export class MockStreamAdapter implements StreamAdapter {
       providerId: this.providerId,
       modelId: this.modelId,
     };
+    let emittedResponseStart = false;
 
     await this.redis.ensureGroup(
       streamKeyForRun(runId),
       PROJECTOR_CONSUMER_GROUP,
     );
 
-    for (let idx = 0; idx < fixture.chunks.length; idx += 1) {
-      const chunk = fixture.chunks[idx];
-      const parsed = parseSseChunk(chunk);
-      if (!parsed?.data || parsed.data === "[DONE]") {
-        continue;
-      }
-      const rawEvent = safeJson(parsed.data, (error) => {
-        const reason =
-          error instanceof Error ? error.message : String(error ?? "unknown");
-        console.warn(
-          `[mock-stream-adapter] Skipping malformed chunk ${idx} from ${registration.filePath}: ${reason}`,
-        );
-      });
-      if (!rawEvent) {
-        continue;
-      }
-
-      const trace = isTraceContext(rawEvent.trace_context)
-        ? (rawEvent.trace_context as TraceContext)
-        : idx === 0
-          ? baseTrace
-          : childTraceContext(currentTrace);
-      currentTrace = trace;
-
-      const event = this.materializeEvent(rawEvent, {
-        ...placeholderContext,
-        traceContext: trace,
-        fixture: registration,
-        eventIndex: idx,
-        totalEvents: fixture.chunks.length,
-      });
-
-      const eventId = await this.redis.publish(event);
-      const payload = event.payload;
-
-      if (
-        payload.type === "item_done" &&
-        isPlainObject(payload.final_item) &&
-        (payload.final_item as { type?: unknown }).type === "function_call"
-      ) {
-        const finalItem = payload.final_item as Extract<
-          StreamEvent["payload"],
-          { type: "item_done" }
-        >["final_item"];
-        const callId =
-          (finalItem as { call_id?: string }).call_id ??
-          (finalItem as { id?: string }).id ??
-          "";
-        if (callId) {
-          await this.waitForFunctionCallOutput(
-            placeholderContext.runId,
-            callId,
-            eventId,
+    try {
+      for (let idx = 0; idx < fixture.chunks.length; idx += 1) {
+        const chunk = fixture.chunks[idx];
+        const parsed = parseSseChunk(chunk);
+        if (!parsed?.data || parsed.data === "[DONE]") {
+          continue;
+        }
+        const rawEvent = safeJson(parsed.data, (error) => {
+          const reason =
+            error instanceof Error ? error.message : String(error ?? "unknown");
+          console.warn(
+            `[mock-stream-adapter] Skipping malformed chunk ${idx} from ${registration.filePath}: ${reason}`,
           );
+        });
+        if (!rawEvent) {
+          continue;
+        }
+
+        const trace = isTraceContext(rawEvent.trace_context)
+          ? (rawEvent.trace_context as TraceContext)
+          : idx === 0
+            ? baseTrace
+            : childTraceContext(currentTrace);
+        currentTrace = trace;
+
+        const event = this.materializeEvent(rawEvent, {
+          ...placeholderContext,
+          traceContext: trace,
+          fixture: registration,
+          eventIndex: idx,
+          totalEvents: fixture.chunks.length,
+        });
+
+        if (event.payload.type === "response_start") {
+          emittedResponseStart = true;
+        }
+
+        const eventId = await this.redis.publish(event);
+        const payload = event.payload;
+
+        if (
+          payload.type === "item_done" &&
+          isPlainObject(payload.final_item) &&
+          (payload.final_item as { type?: unknown }).type === "function_call"
+        ) {
+          const finalItem = payload.final_item as Extract<
+            StreamEvent["payload"],
+            { type: "item_done" }
+          >["final_item"];
+          const callId =
+            (finalItem as { call_id?: string }).call_id ??
+            (finalItem as { id?: string }).id ??
+            "";
+          if (callId) {
+            await this.waitForFunctionCallOutput(
+              placeholderContext.runId,
+              callId,
+              eventId,
+            );
+          }
+        }
+
+        if (eventDelayMs > 0) {
+          await delay(eventDelayMs);
         }
       }
-
-      if (eventDelayMs > 0) {
-        await delay(eventDelayMs);
-      }
+    } catch (error) {
+      console.error(
+        `[mock-stream-adapter] Fixture stream failed for ${registration.filePath}`,
+        error,
+      );
+      await this.publishFatalStreamError({
+        context: placeholderContext,
+        traceContext: currentTrace,
+        scenarioId: registration.scenarioId,
+        emittedResponseStart,
+        error,
+      });
+      throw error;
     }
 
     return { runId };
+  }
+
+  private async publishFatalStreamError(options: {
+    context: PlaceholderContext;
+    traceContext: TraceContext;
+    scenarioId?: string;
+    emittedResponseStart: boolean;
+    error: unknown;
+  }): Promise<void> {
+    const { context, traceContext, scenarioId, emittedResponseStart, error } =
+      options;
+    const events: StreamEvent[] = [];
+    const now = Date.now();
+
+    try {
+      if (!emittedResponseStart) {
+        events.push(
+          StreamEventSchema.parse({
+            event_id: randomUUID(),
+            timestamp: now,
+            trace_context: traceContext,
+            run_id: context.runId,
+            type: "response_start",
+            payload: {
+              type: "response_start",
+              response_id: context.runId,
+              turn_id: context.turnId,
+              thread_id: context.threadId,
+              model_id: context.modelId,
+              provider_id: context.providerId,
+              created_at: now,
+            },
+          }),
+        );
+      }
+
+      const errorMessage = formatFatalError(error);
+
+      events.push(
+        StreamEventSchema.parse({
+          event_id: randomUUID(),
+          timestamp: now + events.length + 1,
+          trace_context: traceContext,
+          run_id: context.runId,
+          type: "response_error",
+          payload: {
+            type: "response_error",
+            response_id: context.runId,
+            error: {
+              code: "MOCK_STREAM_VALIDATION_ERROR",
+              message: errorMessage,
+              details: {
+                scenarioId,
+                providerId: context.providerId,
+                modelId: context.modelId,
+              },
+            },
+          },
+        }),
+      );
+
+      for (const event of events) {
+        await this.redis.publish(event);
+      }
+    } catch (publishError) {
+      console.error(
+        "[mock-stream-adapter] Failed to publish fatal stream error",
+        publishError,
+      );
+    }
   }
 
   private async waitForFunctionCallOutput(
@@ -304,6 +396,22 @@ function safeJson(
     onError?.(error);
     return undefined;
   }
+}
+
+function formatFatalError(error: unknown): string {
+  if (error instanceof ZodError) {
+    const details = error.issues
+      .map((issue) => {
+        const path = issue.path.join(".") || "payload";
+        return `${path}: ${issue.message}`;
+      })
+      .join("; ");
+    return `Fixture validation failed: ${details}`;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error ?? "unknown error");
 }
 
 function resolvePlaceholders<T>(value: T, context: PlaceholderContext): T {

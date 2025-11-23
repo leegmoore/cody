@@ -14,7 +14,7 @@ import {
   type RedisStreamGroupRecord,
 } from "../core/redis.js";
 import { ResponseReducer } from "../core/reducer.js";
-import { REDIS_STREAM_KEY_PREFIX } from "../core/schema.js";
+import { REDIS_STREAM_KEY_PREFIX, type StreamEvent } from "../core/schema.js";
 
 const tracer = trace.getTracer("codex.projector");
 
@@ -30,6 +30,7 @@ export interface PersistenceWorkerOptions {
   batchSize?: number;
   reclaimIntervalMs?: number;
   reclaimMinIdleMs?: number;
+  persistIntermediateSnapshots?: boolean;
 }
 
 const DEFAULT_GROUP_NAME = PROJECTOR_CONSUMER_GROUP;
@@ -58,6 +59,7 @@ export class PersistenceWorker {
   private readonly streams = new Set<string>();
   private readonly streamOffsets = new Map<string, string>();
   private discoveryCursor = "0";
+  private readonly persistIntermediateSnapshots: boolean;
 
   constructor(private readonly config: PersistenceWorkerOptions = {}) {
     this.groupName = config.groupName ?? DEFAULT_GROUP_NAME;
@@ -73,6 +75,8 @@ export class PersistenceWorker {
       reclaimIntervalMs: config.reclaimIntervalMs ?? 15000,
       reclaimMinIdleMs: config.reclaimMinIdleMs ?? 60000,
     };
+    this.persistIntermediateSnapshots =
+      config.persistIntermediateSnapshots ?? true;
   }
 
   async start(): Promise<void> {
@@ -254,7 +258,7 @@ export class PersistenceWorker {
       async (span) => {
         try {
           const snapshot = reducer.apply(record.event);
-          if (snapshot) {
+          if (snapshot && this.shouldPersist(record.event.payload.type)) {
             await writer.persist(snapshot);
           }
           if (
@@ -313,5 +317,16 @@ export class PersistenceWorker {
   private isNoGroupError(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
     return error.message.includes("NOGROUP");
+  }
+
+  private shouldPersist(type: StreamEvent["payload"]["type"]): boolean {
+    if (this.persistIntermediateSnapshots) {
+      return true;
+    }
+    return (
+      type === "response_done" ||
+      type === "response_error" ||
+      type === "turn_aborted_by_user"
+    );
   }
 }

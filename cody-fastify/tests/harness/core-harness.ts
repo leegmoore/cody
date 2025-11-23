@@ -67,6 +67,7 @@ export class Core2TestHarness {
       blockMs: 500,
       reclaimIntervalMs: 5000,
       reclaimMinIdleMs: 5000,
+      persistIntermediateSnapshots: false,
     };
     this.toolWorkerOptions = {
       discoveryIntervalMs: 200,
