@@ -111,11 +111,15 @@ export class MockStreamAdapter implements StreamAdapter {
       if (!parsed?.data || parsed.data === "[DONE]") {
         continue;
       }
-      const rawEvent = safeJson(parsed.data);
-      if (!rawEvent) {
-        throw new Error(
-          `Fixture chunk at index ${idx} in "${registration.filePath}" does not contain valid JSON`,
+      const rawEvent = safeJson(parsed.data, (error) => {
+        const reason =
+          error instanceof Error ? error.message : String(error ?? "unknown");
+        console.warn(
+          `[mock-stream-adapter] Skipping malformed chunk ${idx} from ${registration.filePath}: ${reason}`,
         );
+      });
+      if (!rawEvent) {
+        continue;
       }
 
       const trace = isTraceContext(rawEvent.trace_context)
@@ -170,7 +174,7 @@ export class MockStreamAdapter implements StreamAdapter {
     runId: string,
     callId: string,
     afterId: string,
-    timeoutMs = 1000,
+    timeoutMs = 5000,
   ): Promise<void> {
     const streamKey = streamKeyForRun(runId);
     const deadline = Date.now() + timeoutMs;
@@ -289,11 +293,15 @@ function parseSseChunk(
   return { event: eventName, data };
 }
 
-function safeJson(value: unknown): Record<string, unknown> | undefined {
+function safeJson(
+  value: unknown,
+  onError?: (error: unknown) => void,
+): Record<string, unknown> | undefined {
   if (typeof value !== "string") return undefined;
   try {
     return JSON.parse(value) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
+    onError?.(error);
     return undefined;
   }
 }

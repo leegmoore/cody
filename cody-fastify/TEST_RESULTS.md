@@ -1,5 +1,24 @@
 # Test Results Summary
 
+## 2025-11-23 – Phase 5.1 Error Handling Tests
+
+- Added fixtures plus standalone suite `tests/e2e/core-2.0/error-handling.spec.ts` to cover TC-ER-01 through TC-ER-06.
+- Ran `CONVEX_URL=http://127.0.0.1:3210 npx vitest run tests/e2e/core-2.0/error-handling.spec.ts` after wiring tool timeouts and malformed chunk handling.
+- Result: **6 passed / 0 failed** (runtime ≈ 52s).
+
+### Phase 5.1 Status
+
+| Test | Status | Notes |
+|------|--------|-------|
+| TC-ER-01: LLM error | ✅ PASS | `response_error` surfaced with code `invalid_prompt`. |
+| TC-ER-02: Tool failure | ✅ PASS | Tool output flagged `success=false`, error string propagated. |
+| TC-ER-03: Tool timeout | ✅ PASS | ToolWorker enforces 2s timeout and emits failure output. |
+| TC-ER-04: Malformed chunk | ✅ PASS | Mock adapter logs/ignores bad chunk; stream completes. |
+| TC-ER-05: Empty message | ✅ PASS | Empty content treated as valid message. |
+| TC-ER-06: Provider mismatch | ✅ PASS | Submit returns HTTP 400/`INVALID_MODEL`. |
+
+**Bugs Found:** None – all six scenarios passed with new harness protections.
+
 ## 2025-11-22 – Core 2.0 Happy Path Harness
 
 - Added automated coverage for TC-HP-01 through TC-HP-10 in `tests/e2e/core-2.0/happy-path.spec.ts`.
@@ -143,4 +162,3 @@
 3. **Fix error handling** - Return 404 instead of 500 for not found cases
 4. **Fix delete operation** - Ensure conversations are actually removed
 5. **Verify API keys** - Ensure all required keys are in `.env` file
-

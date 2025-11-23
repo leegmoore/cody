@@ -52,6 +52,7 @@ export interface ToolWorkerOptions {
   reclaimIntervalMs?: number;
   reclaimMinIdleMs?: number;
   approximateMaxLen?: number;
+  toolTimeoutMs?: number;
 }
 
 const DEFAULT_GROUP_NAME = "codex-tool-workers";
@@ -88,6 +89,7 @@ export class ToolWorker {
   private readonly scriptRegistry: ScriptToolRegistry;
   private readonly approvalBridge = new SimpleApprovalBridge(true);
   private readonly scriptLimits: ScriptExecutionLimits = DEFAULT_SCRIPT_LIMITS;
+  private readonly toolTimeoutMs: number;
 
   private redis: RedisStream | undefined;
   private running = false;
@@ -117,6 +119,7 @@ export class ToolWorker {
   constructor(private readonly config: ToolWorkerOptions = {}) {
     this.toolRouter = new ToolRouter();
     this.scriptRegistry = new LegacyToolRegistryAdapter();
+    this.toolTimeoutMs = config.toolTimeoutMs ?? 30_000;
 
     this.streamPattern = config.streamPattern ?? "codex:run:*:events";
     this.groupName = config.groupName ?? DEFAULT_GROUP_NAME;
@@ -357,10 +360,7 @@ export class ToolWorker {
 
     let output: ResponseItem | undefined;
     try {
-      const results = await this.toolRouter.executeFunctionCalls([callItem], {
-        skipApproval: true,
-      });
-      output = results[0];
+      output = await this.executeFunctionCallWithTimeout(callItem);
     } catch (error) {
       output = this.buildToolFailure(callId, error);
     }
@@ -388,6 +388,22 @@ export class ToolWorker {
       final_item: outputItem,
     });
     await redis.publish(doneEvent);
+  }
+
+  private async executeFunctionCallWithTimeout(
+    callItem: Extract<ResponseItem, { type: "function_call" }>,
+  ): Promise<ResponseItem> {
+    const results = await withTimeout(
+      this.toolRouter.executeFunctionCalls([callItem], {
+        skipApproval: true,
+      }),
+      this.toolTimeoutMs,
+      `Tool execution timed out after ${this.toolTimeoutMs}ms`,
+    );
+    if (!results.length) {
+      throw new Error("Tool router returned no output");
+    }
+    return results[0];
   }
 
   private serializeToolOutput(payload: FunctionCallOutputPayload): string {
@@ -730,4 +746,29 @@ export class ToolWorker {
   private clearRunState(runId: string): void {
     this.processedItems.delete(runId);
   }
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  if (!timeoutMs || timeoutMs <= 0) {
+    return promise;
+  }
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+    (timer as NodeJS.Timeout).unref?.();
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
 }

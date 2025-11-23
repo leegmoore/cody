@@ -1,0 +1,34 @@
+{
+  "description": "Stream skips malformed chunk but still completes",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "chunks": [
+    "event: response_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":1,\"trace_context\":{\"traceparent\":\"00-44444444444444444444444444444444-55555555555555555555555555555555-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_start\",\"payload\":{\"type\":\"response_start\",\"response_id\":\"{{runId}}\",\"turn_id\":\"{{turnId}}\",\"thread_id\":\"{{threadId}}\",\"model_id\":\"{{modelId}}\",\"provider_id\":\"{{providerId}}\",\"created_at\":1}}\n\n",
+    "event: item_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":2,\"trace_context\":{\"traceparent\":\"00-44444444444444444444444444444444-55555555555555555555555555555555-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_start\",\"payload\":{\"type\":\"item_start\",\"item_id\":\"dddd9999-aaaa-bbbb-cccc-dddddddddddd\",\"item_type\":\"message\"}}\n\n",
+    "event: item_delta\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":3,\"trace_context\":{\"traceparent\":\"00-44444444444444444444444444444444-55555555555555555555555555555555-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_delta\",\"payload\":{\"type\":\"item_delta\",\"item_id\":\"dddd9999-aaaa-bbbb-cccc-dddddddddddd\",\"delta_content\":\"Hello before the glitch. \"}}\n\n",
+    "event: item_delta\ndata: {not-json\n\n",
+    "event: item_delta\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":6,\"trace_context\":{\"traceparent\":\"00-44444444444444444444444444444444-55555555555555555555555555555555-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_delta\",\"payload\":{\"type\":\"item_delta\",\"item_id\":\"dddd9999-aaaa-bbbb-cccc-dddddddddddd\",\"delta_content\":\"But the stream keeps going.\"}}\n\n",
+    "event: item_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":7,\"trace_context\":{\"traceparent\":\"00-44444444444444444444444444444444-55555555555555555555555555555555-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_done\",\"payload\":{\"type\":\"item_done\",\"item_id\":\"dddd9999-aaaa-bbbb-cccc-dddddddddddd\",\"final_item\":{\"id\":\"dddd9999-aaaa-bbbb-cccc-dddddddddddd\",\"type\":\"message\",\"content\":\"Hello before the glitch. But the stream keeps going.\",\"origin\":\"agent\"}}}\n\n",
+    "event: response_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":8,\"trace_context\":{\"traceparent\":\"00-44444444444444444444444444444444-55555555555555555555555555555555-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_done\",\"payload\":{\"type\":\"response_done\",\"response_id\":\"{{runId}}\",\"status\":\"complete\",\"finish_reason\":null}}\n\n"
+  ],
+  "expected_response": {
+    "id": "{{runId}}",
+    "turn_id": "{{turnId}}",
+    "thread_id": "{{threadId}}",
+    "model_id": "gpt-5-mini",
+    "provider_id": "openai",
+    "created_at": 1,
+    "updated_at": 8,
+    "status": "complete",
+    "output_items": [
+      {
+        "id": "dddd9999-aaaa-bbbb-cccc-dddddddddddd",
+        "type": "message",
+        "content": "Hello before the glitch. But the stream keeps going.",
+        "origin": "agent"
+      }
+    ],
+    "finish_reason": null,
+    "error": null
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "description": "LLM response_error event for invalid prompt",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "chunks": [
+    "event: response_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":1,\"trace_context\":{\"traceparent\":\"00-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ffffffffffffffffffffffffffffffff-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_start\",\"payload\":{\"type\":\"response_start\",\"response_id\":\"{{runId}}\",\"turn_id\":\"{{turnId}}\",\"thread_id\":\"{{threadId}}\",\"model_id\":\"{{modelId}}\",\"provider_id\":\"{{providerId}}\",\"created_at\":1}}\n\n",
+    "event: response_error\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":3,\"trace_context\":{\"traceparent\":\"00-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ffffffffffffffffffffffffffffffff-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_error\",\"payload\":{\"type\":\"response_error\",\"response_id\":\"{{runId}}\",\"error\":{\"code\":\"invalid_prompt\",\"message\":\"Prompt violates content policy\",\"details\":{\"type\":\"invalid_request_error\"}}}}\n\n"
+  ],
+  "expected_response": {
+    "id": "{{runId}}",
+    "turn_id": "{{turnId}}",
+    "thread_id": "{{threadId}}",
+    "model_id": "gpt-5-mini",
+    "provider_id": "openai",
+    "created_at": 1,
+    "updated_at": 3,
+    "status": "error",
+    "output_items": [],
+    "finish_reason": null,
+    "error": {
+      "code": "invalid_prompt",
+      "message": "Prompt violates content policy",
+      "details": {
+        "type": "invalid_request_error"
+      }
+    }
+  }
+}

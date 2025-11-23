@@ -1,0 +1,34 @@
+{
+  "description": "LLM triggers slowTool which exceeds worker timeout",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "chunks": [
+    "event: response_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":1,\"trace_context\":{\"traceparent\":\"00-77777777777777777777777777777777-88888888888888888888888888888888-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_start\",\"payload\":{\"type\":\"response_start\",\"response_id\":\"{{runId}}\",\"turn_id\":\"{{turnId}}\",\"thread_id\":\"{{threadId}}\",\"model_id\":\"{{modelId}}\",\"provider_id\":\"{{providerId}}\",\"created_at\":1}}\n\n",
+    "event: item_start\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":2,\"trace_context\":{\"traceparent\":\"00-77777777777777777777777777777777-88888888888888888888888888888888-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_start\",\"payload\":{\"type\":\"item_start\",\"item_id\":\"cccc3333-4444-5555-6666-777777777777\",\"item_type\":\"function_call\",\"name\":\"slowTool\"}}\n\n",
+    "event: item_delta\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":3,\"trace_context\":{\"traceparent\":\"00-77777777777777777777777777777777-88888888888888888888888888888888-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_delta\",\"payload\":{\"type\":\"item_delta\",\"item_id\":\"cccc3333-4444-5555-6666-777777777777\",\"delta_content\":\"{\\\"durationMs\\\": 10000}\"}}\n\n",
+    "event: item_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":4,\"trace_context\":{\"traceparent\":\"00-77777777777777777777777777777777-88888888888888888888888888888888-01\"},\"run_id\":\"{{runId}}\",\"type\":\"item_done\",\"payload\":{\"type\":\"item_done\",\"item_id\":\"cccc3333-4444-5555-6666-777777777777\",\"final_item\":{\"id\":\"cccc3333-4444-5555-6666-777777777777\",\"type\":\"function_call\",\"name\":\"slowTool\",\"arguments\":\"{\\\"durationMs\\\": 10000}\",\"call_id\":\"cccc3333-4444-5555-6666-777777777777\",\"origin\":\"agent\"}}}\n\n",
+    "event: response_done\ndata: {\"event_id\":\"{{randomUUID}}\",\"timestamp\":9,\"trace_context\":{\"traceparent\":\"00-77777777777777777777777777777777-88888888888888888888888888888888-01\"},\"run_id\":\"{{runId}}\",\"type\":\"response_done\",\"payload\":{\"type\":\"response_done\",\"response_id\":\"{{runId}}\",\"status\":\"complete\",\"finish_reason\":null}}\n\n"
+  ],
+  "expected_response": {
+    "id": "{{runId}}",
+    "turn_id": "{{turnId}}",
+    "thread_id": "{{threadId}}",
+    "model_id": "gpt-5-mini",
+    "provider_id": "openai",
+    "created_at": 1,
+    "updated_at": 9,
+    "status": "complete",
+    "output_items": [
+      {
+        "id": "cccc3333-4444-5555-6666-777777777777",
+        "type": "function_call",
+        "name": "slowTool",
+        "arguments": "{\"durationMs\": 10000}",
+        "call_id": "cccc3333-4444-5555-6666-777777777777",
+        "origin": "agent"
+      }
+    ],
+    "finish_reason": null,
+    "error": null
+  }
+}

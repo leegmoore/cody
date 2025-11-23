@@ -12,10 +12,7 @@ import {
 } from "../../../src/core/schema.js";
 import { Core2TestHarness } from "../../harness/core-harness.js";
 import type { MockFixtureFile } from "../../mocks/mock-stream-adapter.js";
-import {
-  toolRegistry,
-  type RegisteredTool,
-} from "codex-ts/src/tools/registry.js";
+import { installMockTools, type RestoreFn } from "./mock-tools.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,70 +55,7 @@ const FIXTURES = {
 
 const harness = new Core2TestHarness();
 
-type RestoreFn = () => void;
 let restoreToolRegistry: RestoreFn | undefined;
-
-function installMockTools(): RestoreFn {
-  const originals = new Map<string, RegisteredTool>();
-
-  const overrideTool = (mock: RegisteredTool) => {
-    const existing = toolRegistry.get(mock.metadata.name);
-    if (existing) {
-      originals.set(mock.metadata.name, existing);
-    }
-    toolRegistry.register(mock);
-  };
-
-  const createMockTool = (
-    name: string,
-    execute: (
-      params: unknown,
-    ) => Promise<{ content: string; success?: boolean }>,
-  ): RegisteredTool => {
-    const existing = toolRegistry.get(name);
-    const metadata = existing?.metadata ?? {
-      name,
-      description: `Mock implementation for ${name}`,
-      requiresApproval: false,
-    };
-    return {
-      metadata: {
-        ...metadata,
-        requiresApproval: false,
-      },
-      execute,
-    };
-  };
-
-  overrideTool(
-    createMockTool("readFile", async (params: unknown) => {
-      const path =
-        (params as { path?: string; filePath?: string })?.path ??
-        (params as { path?: string; filePath?: string })?.filePath ??
-        "README.md";
-      return {
-        content: `# Mock README\n\nPretend content for ${path}`,
-        success: true,
-      };
-    }),
-  );
-
-  overrideTool(
-    createMockTool("exec", async (params: unknown) => {
-      const command = (params as { command?: string })?.command ?? "ls -l";
-      return {
-        content: `total 0\nmocked-output-for "${command}"\nmock-file.txt\nmock-dir/`,
-        success: true,
-      };
-    }),
-  );
-
-  return () => {
-    for (const tool of originals.values()) {
-      toolRegistry.register(tool);
-    }
-  };
-}
 
 describe("Core 2.0 Happy Path", () => {
   beforeAll(async () => {

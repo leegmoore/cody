@@ -74,6 +74,7 @@ export class Core2TestHarness {
       reclaimIntervalMs: 5000,
       reclaimMinIdleMs: 5000,
       batchSize: 25,
+      toolTimeoutMs: 2_000,
     };
   }
 
