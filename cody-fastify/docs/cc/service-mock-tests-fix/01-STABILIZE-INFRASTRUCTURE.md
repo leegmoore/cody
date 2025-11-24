@@ -13,6 +13,73 @@ You are a senior TypeScript/Node.js developer responsible for **restoring and st
 
 ---
 
+## EXECUTION PHILOSOPHY
+
+**This is a small, surgical fix. Not a refactor.**
+
+**Scope:**
+- Fix environment loading (vitest.config.ts)
+- Fix missing imports (happy-path.spec.ts)
+- Get TC-HP-01 passing consistently
+- **Total expected changes: <50 lines across 2-3 files**
+
+**Approach:**
+- Read error messages to understand WHAT is broken
+- Identify WHERE the fix goes
+- Apply MINIMAL change to fix it
+- Verify it works
+- Move on
+
+**Anti-patterns to avoid:**
+- Don't refactor test harness or workers
+- Don't add new abstractions or helper functions
+- Don't "improve" code that isn't broken
+- Don't fix tests beyond TC-HP-01 (those are later slices)
+
+**Simplicity check:** If you've written >100 lines of code, you've gone too far. Stop and reassess.
+
+---
+
+## CRITICAL CONSTRAINT: NO MOCKING (Except LLM Responses)
+
+**Absolute Rule:** Mock ONLY LLM API responses. Everything else is REAL.
+
+**What's Mocked** ✅:
+- LLM API responses (OpenAI, Anthropic) via MockModelFactory
+- Fixtures provide pre-written LLM responses (simple-message.json, etc.)
+
+**What's REAL** (Do NOT Mock) ❌:
+- Redis connection and streams (connects to localhost:6379)
+- Convex client and database queries (connects to real dev server)
+- PersistenceWorker and ToolWorker (actually run and process events)
+- Tool implementations (readFile actually reads files, exec actually runs commands)
+- Fastify server (programmatically started, real HTTP)
+- SSE streaming (real EventSource, real events)
+- ResponseReducer and hydration logic (real aggregation)
+
+**Verification Question for Your Report:**
+"What is mocked in these tests?"
+
+**Acceptable Answer:** "Only LLM API responses via MockModelFactory fixtures"
+
+**Unacceptable Answer:** "LLM responses plus [anything else]"
+
+**If you mock anything beyond LLM responses, you MUST disclose it in your completion report. Undisclosed mocking will be rejected.**
+
+**Examples of Violations:**
+```typescript
+// ❌ WRONG - Mocking tools
+toolRegistry.register({name: 'readFile', execute: async () => ({output: 'fake'})});
+
+// ❌ WRONG - Mocking workers
+const mockWorker = {start: () => {}, process: () => {}};
+
+// ❌ WRONG - Mocking infrastructure
+vi.mock('redis'); vi.mock('convex');
+```
+
+---
+
 ## PROJECT CONTEXT
 
 **Cody Core 2.0** is a streaming-native agent architecture that processes LLM turns through a Redis Streams pipeline with Convex persistence.
@@ -30,9 +97,8 @@ You are a senior TypeScript/Node.js developer responsible for **restoring and st
 **What Happened (The Drift):**
 Recent work attempted to "unmock" tool execution but introduced confusion:
 1. Tool implementation mocking was added (installMockTools) despite explicit "no mocks" rule
-2. Multiple agents attempted fixes, introduced regressions
-3. Import statements broken during cleanup
-4. Tests now failing on infrastructure issues, not logic issues
+2. Multiple agents attempted fixes, introduced regressions (broke imports during cleanup)
+3. Tests now failing on infrastructure issues, not logic issues
 
 **Current Reality:**
 - Tests load and run (environment partially working)
@@ -45,7 +111,7 @@ Recent work attempted to "unmock" tool execution but introduced confusion:
 ## CURRENT PHASE
 
 **Phase:** Service Mock Tests - Slice 1
-**Objective:** Stabilize test infrastructure to achieve consistent, reliable test loading and execution for the simplest test case (TC-HP-01).
+**Objective:** Stabilize test infrastructure for the simplest test case (TC-HP-01).
 
 **FUNCTIONAL OUTCOME:**
 After this slice, TC-HP-01 (Simple message turn) passes consistently 5 times in a row, demonstrating that basic infrastructure (Fastify, Redis, Convex, MockAdapter, PersistenceWorker, SSE, Hydration) works reliably without mocking any infrastructure components.
@@ -60,178 +126,210 @@ After this slice, TC-HP-01 (Simple message turn) passes consistently 5 times in 
 - `src/core/redis.ts` - RedisStream wrapper
 - `src/workers/persistence-worker.ts` - Consumes Redis, writes Convex
 - `src/workers/tool-worker.ts` - Processes function_call events
-- `src/core/adapters/openai-adapter.ts` - OpenAI normalization
-- `src/core/adapters/anthropic-adapter.ts` - Anthropic normalization
 
 ✅ **Test Infrastructure Exists:**
-- `tests/harness/core-harness.ts` - Test harness orchestrator
+- `tests/harness/core-harness.ts` - Test harness orchestrator (369 lines)
 - `tests/mocks/mock-stream-adapter.ts` - Mocked LLM responses
-- `src/core/model-factory.ts` - Factory pattern for DI
-- `src/client/hydration.ts` - StreamHydrator for SSE consumption
+- `src/core/model-factory.ts` - Factory pattern for test/prod adapters
 
 ✅ **Test Suites Written:**
 - `tests/e2e/core-2.0/happy-path.spec.ts` - 10 happy path tests
-- `tests/e2e/core-2.0/error-handling.spec.ts` - 6 error tests
-- `tests/e2e/core-2.0/edge-cases.spec.ts` - 6 edge case tests
+- 22 total tests across 3 suites
 
 ✅ **Local Environment:**
 - Redis running on localhost:6379
-- Convex dev server running (or URL configured)
-- Bun/Node.js environment
+- Convex dev server running
+- .env.local has CONVEX_URL configured
 
 ---
 
 ## STATE LOADING (READ THESE FIRST)
 
-### FIRST: Understand the Testing Philosophy
+**Essential Context** (in order):
 
-1. **Core 2.0 Design:** `docs/codex-core-2.0-tech-design.md` (Appendix A)
-   - Read the "NO MOCKS" rule (tests must use real Redis, real Convex)
-   - Understand canonical StreamEvent → Response flow
-   - Note: Only LLM API calls are mocked
+1. **Why we're here:** `docs/cc/UNMOCK-TOOLS-PROMPT.md`
+   - Understand history: tool mocking was added, then rejected
+   - Learn principle: only LLM responses are mocked
+   - Critical for avoiding same mistake
 
-2. **Test Harness Design:** `docs/cc/v2-custom-harness-cc.md`
-   - Understand Core2TestHarness lifecycle (setup, cleanup, reset)
-   - Review what's mocked (only LLM responses via MockModelFactory)
-   - Review what's real (Redis, Convex, workers, Fastify)
+2. **Current harness:** `tests/harness/core-harness.ts`
+   - Review setup(), cleanup(), reset() methods
+   - Understand harness lifecycle
+   - Note: Line 320 has bug (ToolWorker created without scriptToolRegistry param)
 
-3. **Unmock Tools Doc:** `docs/cc/UNMOCK-TOOLS-PROMPT.md`
-   - Understand the history: tool mocking was incorrectly added
-   - Review the principle: ToolWorker runs real, tool handlers execute real
-   - This is CRITICAL context for understanding current state
+3. **Current tests:** `tests/e2e/core-2.0/happy-path.spec.ts`
+   - Review test structure
+   - Find TC-HP-01 (the one we're stabilizing)
+   - Check for missing imports at top of file
 
-### THEN: Review Current Implementation
+**Reference Documentation** (if needed):
+- Architecture: `docs/codex-core-2.0-tech-design.md` (Appendix A has schemas)
+- Test design: `docs/cc/v2-custom-harness-cc.md` (harness philosophy)
 
-4. **Test Harness:** `tests/harness/core-harness.ts`
-   - Review setup() method (lines 89-123)
-   - Review cleanup() method (lines 125-140)
-   - Review reset() method (lines 279-322)
-   - **CRITICAL**: Note line 320 bug (ToolWorker created without scriptToolRegistry)
+**Focus:** Understand current state and recent problems. Full architecture understanding not required for this targeted fix.
 
-5. **Happy Path Tests:** `tests/e2e/core-2.0/happy-path.spec.ts`
-   - Review current test structure
-   - Note any missing imports
-   - Note TC-HP-01 (simplest test we'll stabilize)
+---
 
-6. **Vitest Config:** `vitest.config.ts` and `vitest.setup.ts`
-   - Review environment configuration
-   - Check if CONVEX_URL is loaded
-   - Check for any setup/teardown hooks
+## KNOWN ISSUES (From Latest Test Run)
+
+Based on test run showing 11 passed / 11 failed:
+
+**Issue 1: Persistence Timeouts**
+- **Affected tests**: TC-HP-02 through TC-HP-07
+- **Error**: "Timed out waiting for persisted response for {runId}"
+- **Symptom**: SSE streams complete, hydration works, but Convex query returns null
+- **Likely cause**: PersistenceWorker not saving OR waitForPersisted timeout too short
+- **Defer to**: Slice 2 (we'll debug this after infrastructure stable)
+
+**Issue 2: Tool Execution Missing**
+- **Affected test**: TC-HP-08
+- **Error**: Expected ['function_call', 'function_call_output'] but got ['function_call']
+- **Symptom**: ToolWorker not emitting function_call_output events
+- **Defer to**: Slice 3 (we'll debug after persistence fixed)
+
+**Issue 3: Environment/Import Issues**
+- **Potential**: CONVEX_URL not loading, missing imports causing ReferenceError
+- **Address in**: This slice
 
 ---
 
 ## TASK SPECIFICATION
 
-Stabilize the test infrastructure in **3 focused sub-tasks**:
+Stabilize test infrastructure in **3 focused tasks**:
 
-### **Task 1: Environment Configuration** (~30 min)
+### **Task 1: Fix Environment Configuration** (~30 min)
 
-**Deliverables:**
+**Problem:**
+Test environment doesn't have access to CONVEX_URL and other variables from .env.local file.
 
-1. **Vitest Config** (`vitest.config.ts`) - Fix environment loading
-   - Ensure CONVEX_URL loaded from .env.local
-   - Add explicit env variable forwarding
-   - Verify other required vars (OPENAI_API_KEY, etc.)
+**Location:** `vitest.config.ts` (top of file, before defineConfig)
 
-2. **Verification Script** - Quick check before tests
-   - Check Redis connectivity (localhost:6379)
-   - Check CONVEX_URL is set
-   - Report configuration status
+**Required Changes:**
+1. Load environment variables from .env.local using dotenv package
+2. Forward CONVEX_URL to test environment via defineConfig({ test: { env: {...} } })
+3. Forward REDIS_URL with default fallback to localhost:6379
+4. Increase testTimeout from default 5s to 10_000ms
 
-**Integration:** Tests will load environment correctly, no CONVEX_URL errors
+**Pattern Reference:**
+Check how production code loads environment (src/server.ts or package.json scripts).
+Follow similar pattern for test configuration.
+
+**Success Criteria:**
+Running tests should not produce "CONVEX_URL must be set" error.
 
 ---
 
 ### **Task 2: Fix Missing Imports** (~15 min)
 
-**Deliverables:**
+**Problem:**
+Import statements may be missing from test file, causing ReferenceError during test load.
 
-1. **Happy Path Tests** (`tests/e2e/core-2.0/happy-path.spec.ts`)
-   - Ensure these imports exist at top of file:
-     ```typescript
-     import { randomUUID } from "node:crypto";
-     import { dirname, join } from "node:path";
-     import { fileURLToPath } from "node:url";
-     ```
-   - Verify __filename, __dirname, FIXTURE_ROOT are defined
-   - Check for any other missing imports
+**Location:** `tests/e2e/core-2.0/happy-path.spec.ts` (lines 1-20)
 
-**Integration:** Tests load without ReferenceError
+**Required Imports:**
+Verify these Node.js utilities are imported:
+- `randomUUID` from node:crypto
+- `dirname`, `join` from node:path
+- `fileURLToPath` from node:url
+- Vitest functions (afterAll, beforeAll, describe, expect, test)
+
+**Verify Usage:**
+Check that these constants are defined after imports:
+- `__filename` using fileURLToPath
+- `__dirname` using dirname
+- `FIXTURE_ROOT` using join
+
+**Success Criteria:**
+TypeScript compilation of test file succeeds without ReferenceError.
 
 ---
 
-### **Task 3: Verify TC-HP-01 Infrastructure** (~45 min)
+### **Task 3: Verify TC-HP-01 Stability** (~45 min)
 
-**Deliverables:**
+**Problem:**
+Need to confirm basic infrastructure works reliably before fixing other tests.
 
-1. **Run TC-HP-01 Only** - Isolate simplest test
-   - Command: `npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"`
-   - Verify it passes
-   - Check logs for errors (NOGROUP, timeouts)
+**Test:** TC-HP-01 (Simple message turn - OpenAI)
 
-2. **Debug Infrastructure If Fails:**
-   - Add logging to harness.setup() showing:
-     - Fastify listening on port
-     - Redis connected
-     - Convex client initialized
-     - Workers started
-   - Check worker logs during test
-   - Verify events flow: MockAdapter → Redis → PersistenceWorker → Convex
+**What it validates:**
+- MockAdapter publishes StreamEvents to Redis
+- PersistenceWorker consumes and saves to Convex
+- SSE streams events to test client
+- StreamHydrator builds Response object
+- Response matches expected structure
+- Persisted Response in Convex matches hydrated Response
 
-3. **Validate Consistency:**
-   - Run TC-HP-01 five times in a row
-   - All must pass
-   - No flaky failures
+**Approach:**
 
-**Success Criteria:** TC-HP-01 passes 5/5 times
+1. **Run test individually:**
+   ```bash
+   npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
+   ```
+
+2. **If fails, diagnose:**
+   - Read error output carefully
+   - Identify failure point (environment, loading, execution, assertion)
+   - Add minimal logging to harness.setup() if needed
+   - Check Redis: `redis-cli KEYS "codex:run:*"`
+   - Check Convex has data
+
+3. **Apply minimal fix for identified issue**
+
+4. **Achieve consistency:**
+   Run test 5 times consecutively - all must pass
+
+**Success Criteria:**
+TC-HP-01 passes 5/5 consecutive runs with no flaky failures.
 
 ---
 
 ## WORKFLOW STEPS
 
-### **Step-by-Step Process:**
+**Step-by-step execution:**
 
-1. **Check Current Environment**
+1. **Verify environment files exist:**
    ```bash
    cd cody-fastify
    cat .env.local | grep CONVEX_URL
-   redis-cli ping  # Verify Redis
+   redis-cli ping
    ```
 
-2. **Fix vitest.config.ts**
-   - Add dotenv config loading
-   - Forward CONVEX_URL to test environment
-   - Add other required vars (OPENAI_API_KEY, etc.)
+2. **Fix vitest.config.ts** (Task 1)
+   - Add environment loading
+   - Forward required variables
+   - Increase timeout
 
-3. **Verify Missing Imports**
-   - Read happy-path.spec.ts lines 1-30
-   - Check for randomUUID, dirname, join, fileURLToPath imports
-   - Add if missing
+3. **Fix imports** (Task 2)
+   - Check happy-path.spec.ts for missing imports
+   - Add any that are missing
+   - Verify file compiles
 
-4. **Run Simplest Test**
+4. **Run TC-HP-01** (Task 3)
    ```bash
    npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
    ```
 
-5. **Debug If Fails**
-   - Read error output carefully
-   - Add console.log in harness.setup() if needed
-   - Check Redis streams exist: `redis-cli KEYS "codex:run:*"`
-   - Check Convex has data (if test completes)
+5. **Debug if needed:**
+   - Add targeted logging
+   - Identify failure point
+   - Apply minimal fix
 
-6. **Achieve 5/5 Success Rate**
+6. **Consistency check:**
    ```bash
    for i in {1..5}; do
      npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
-     echo "Run $i complete"
+     echo "Run $i: $?"
    done
    ```
 
-7. **Document Status**
-   - Update TEST_RESULTS.md with Slice 1 status
-   - Note what was fixed
-   - Note current pass rate
-   - List any remaining concerns
+7. **Clean up:**
+   - Remove any diagnostic logging
+   - Verify format/lint/typecheck
+
+8. **Document:**
+   - Update TEST_RESULTS.md
+   - Note fixes applied
+   - Report current state
 
 ---
 
@@ -239,296 +337,64 @@ Stabilize the test infrastructure in **3 focused sub-tasks**:
 
 ### **Mandatory Rules:**
 
-1. **NO MOCKING except LLM API calls**
-   - ❌ DO NOT mock Redis
-   - ❌ DO NOT mock Convex
-   - ❌ DO NOT mock workers (PersistenceWorker, ToolWorker)
-   - ❌ DO NOT mock tool implementations (readFile, exec, etc.)
-   - ✅ ONLY mock LLM responses (via MockModelFactory)
-   - **This is absolute. Violations will be rejected.**
+1. **NO MOCKING except LLM responses** (see CRITICAL CONSTRAINT section above)
 
-2. **Use existing test harness patterns**
-   - DO NOT create new mocking abstractions
-   - DO NOT refactor test harness (unless required for fix)
-   - Use Core2TestHarness as-is
-   - Keep changes minimal and focused
+2. **Minimal changes only**
+   - Fix environment loading: ~10 lines
+   - Fix imports: ~5 lines
+   - Total: <50 lines
+   - If you're writing >100 lines, stop and ask
 
-3. **Fix imports, don't remove functionality**
-   - If imports are missing, add them back
-   - Don't delete code to "fix" import errors
-   - Verify file paths are correct
+3. **Don't refactor working code**
+   - Test harness works (don't change it)
+   - Workers work (don't modify them)
+   - Only fix what's broken for TC-HP-01
 
-4. **Follow established patterns from working commits**
-   - Reference commit 2eb06137 (10/10 passing before tool mocking)
-   - Don't introduce new patterns
-   - Keep it simple
+4. **Follow existing patterns**
+   - Check how other parts of codebase load environment
+   - Use established import patterns
+   - Don't introduce new approaches
+
+5. **Verify incrementally**
+   - Test after each fix
+   - Don't batch changes
+   - Catch issues early
 
 ### **INTERRUPT PROTOCOL**
 
 **STOP and ask for clarification if:**
-- You're unsure whether something counts as "mocking infrastructure"
-- vitest.config.ts environment loading is unclear
-- Redis or Convex connection patterns are ambiguous
-- Test is failing for reasons you can't diagnose from logs
-- You need to modify worker code to fix test issues
+- Unclear whether something counts as "mocking infrastructure"
+- Environment loading pattern is ambiguous
+- Test fails for unclear reasons after fixes
+- Need to modify worker or harness code
 
 **DO NOT:**
-- Add ANY mocking of tools, workers, Redis, or Convex
-- Create mock abstractions like installMockTools, mockToolWorker, etc.
-- Modify worker code unless absolutely necessary
-- Make assumptions about environment configuration
-- Skip verification steps to save time
+- Mock tools, workers, Redis, or Convex
+- Create new mocking utilities
+- Refactor test harness
+- Skip verification steps
 
 ---
 
-## CRITICAL CONSTRAINTS
+## KNOWN ISSUES DETAIL
 
-### **The "No Mocks" Rule - What It Means**
+**From Latest Test Run** (11 passed / 11 failed):
 
-**ONLY Mock LLM API Responses:**
-```typescript
-// ✅ CORRECT - Mock OpenAI/Anthropic API via MockModelFactory
-const factory = new MockModelFactory({
-  adapterFactory: createMockStreamAdapter
-});
-// Fixtures provide fake LLM responses
-```
+**TC-HP-01**: ✅ Currently passing (when environment/imports correct)
+**TC-HP-02 to TC-HP-07**: ❌ "Timed out waiting for persisted response"
+**TC-HP-08**: ❌ Missing function_call_output (tool execution issue)
+**TC-HP-09 to TC-HP-10**: ❌ Various (reconnection, concurrency)
 
-**Everything Else is REAL:**
-```typescript
-// ✅ CORRECT - Real infrastructure
-const redis = await RedisStream.connect(); // Real Redis
-const convex = new ConvexHttpClient(url); // Real Convex
-const worker = new PersistenceWorker(); // Real worker
-await worker.start(); // Actually runs
+**Root causes:**
+- Environment variables not loading correctly
+- Import statements missing from cleanup
+- Persistence/tool issues (address in later slices)
 
-// ✅ CORRECT - Real tool execution
-// When LLM fixture requests readFile:
-// 1. ToolWorker sees function_call in real Redis
-// 2. ToolWorker executes REAL readFile function
-// 3. Real file is read from disk
-// 4. ToolWorker emits REAL function_call_output to Redis
-```
-
-**What You CANNOT Do:**
-```typescript
-// ❌ WRONG - Mocking tool implementations
-toolRegistry.register({
-  name: 'readFile',
-  execute: async () => ({ output: 'mocked content' }) // NO!
-});
-
-// ❌ WRONG - Mocking workers
-const mockWorker = {
-  start: () => {},
-  process: () => 'fake output'
-}; // NO!
-
-// ❌ WRONG - Mocking Redis
-vi.mock('redis', () => ({ /* fake */ })); // NO!
-```
-
----
-
-## KNOWN ISSUES (Current Failures)
-
-Based on latest test run (11 passed / 11 failed):
-
-**Issue 1: Persistence Timeouts**
-- **Tests affected**: TC-HP-02, TC-HP-03, TC-HP-04, TC-HP-05, TC-HP-06, TC-HP-07
-- **Error**: "Timed out waiting for persisted response for {runId}"
-- **Root cause**: PersistenceWorker not saving to Convex OR waitForPersisted timeout too short
-- **Evidence**: Events stream (SSE works) but Convex query returns nothing
-
-**Issue 2: Tool Execution Missing**
-- **Test affected**: TC-HP-08
-- **Error**: Expected ['function_call', 'function_call_output'] but got ['function_call']
-- **Root cause**: ToolWorker not executing or not emitting function_call_output
-- **Evidence**: function_call appears but no corresponding output
-
-**Issue 3: NOGROUP Errors in Logs**
-- **Pattern**: "NOGROUP No such key or consumer group 'codex-projector-group'"
-- **When**: During worker auto-claim operations
-- **Impact**: Workers might not be processing events reliably
-- **Root cause**: Consumer groups deleted with streams, not recreated properly
-
----
-
-## TASK SPECIFICATION
-
-### **Task 1: Fix Environment Configuration** (~30 min)
-
-**Current Problem:**
-CONVEX_URL and other environment variables may not be loading in test context.
-
-**File:** `vitest.config.ts`
-
-**Current State:**
-```typescript
-// Might be missing env loading
-export default defineConfig({
-  test: {
-    // ... config
-  }
-});
-```
-
-**Required Fix:**
-```typescript
-import { defineConfig } from 'vitest/config';
-import { config as loadEnv } from 'dotenv';
-
-// Load .env.local for test environment
-loadEnv({ path: '.env.local' });
-
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    setupFiles: ['./vitest.setup.ts'],
-    // Explicitly forward critical env vars
-    env: {
-      CONVEX_URL: process.env.CONVEX_URL,
-      REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
-    },
-    testTimeout: 10_000, // Increase from default 5s
-  },
-});
-```
-
-**Verification:**
-```bash
-# Should print CONVEX_URL value
-CONVEX_URL=$(grep CONVEX_URL .env.local | cut -d '=' -f2)
-echo "CONVEX_URL: $CONVEX_URL"
-
-# Run test with env debug
-npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
-# Should NOT see "CONVEX_URL must be set" error
-```
-
----
-
-### **Task 2: Fix Missing Imports** (~15 min)
-
-**Current Problem:**
-Import statements may be missing from test files, causing ReferenceError.
-
-**File:** `tests/e2e/core-2.0/happy-path.spec.ts`
-
-**Required Imports (Lines 1-15):**
-```typescript
-import { randomUUID } from "node:crypto";
-import { setTimeout as sleep } from "node:timers/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  test,
-} from "vitest";
-
-import {
-  StreamEventSchema,
-  type Response,
-  type StreamEvent,
-} from "../../../src/core/schema.js";
-import { Core2TestHarness } from "../../harness/core-harness.js";
-import type { MockFixtureFile } from "../../mocks/mock-stream-adapter.js";
-```
-
-**Then verify these are used:**
-```typescript
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const FIXTURE_ROOT = join(__dirname, "../../fixtures");
-```
-
-**Verification:**
-```bash
-# Should compile without errors
-npx tsc --noEmit tests/e2e/core-2.0/happy-path.spec.ts
-```
-
----
-
-### **Task 3: Run and Debug TC-HP-01** (~45 min)
-
-**Goal:** Get the simplest test passing consistently
-
-**File:** `tests/e2e/core-2.0/happy-path.spec.ts`
-
-**The Test:**
-```typescript
-test("TC-HP-01: Simple message turn (OpenAI)", async () => {
-  // This test:
-  // 1. Submits simple prompt via /api/v2/submit
-  // 2. MockAdapter emits simple-message fixture to Redis
-  // 3. PersistenceWorker consumes and saves to Convex
-  // 4. SSE streams events to test
-  // 5. Hydrates into Response object
-  // 6. Verifies Response structure
-  // 7. Verifies Convex has same Response
-});
-```
-
-**Debug Steps If Fails:**
-
-1. **Add Harness Logging** (if needed):
-   ```typescript
-   // In core-harness.ts setup() method
-   console.log('[harness] Fastify listening on', this.baseUrl);
-   console.log('[harness] Convex connected to', convexUrl);
-   console.log('[harness] PersistenceWorker started');
-   ```
-
-2. **Check Redis During Test:**
-   ```bash
-   # In another terminal, watch Redis during test run
-   redis-cli MONITOR
-   # Should see XADD commands (events being published)
-   ```
-
-3. **Check Event Flow:**
-   - MockAdapter should emit response_start, item_start, item_delta, item_done, response_done
-   - PersistenceWorker should consume these events
-   - Convex should have document with runId
-   - SSE should stream all events to test
-   - Hydration should build complete Response
-
-4. **Common Failure Modes:**
-   - **Timeout**: PersistenceWorker not running or not persisting
-   - **NOGROUP**: Consumer group not created
-   - **No events**: MockAdapter not publishing or Redis not connected
-   - **Schema error**: Events don't match StreamEventSchema
-
-**Success Criteria:**
-```bash
-# Run test 5 times
-for i in {1..5}; do
-  npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
-  if [ $? -ne 0 ]; then
-    echo "FAILED on run $i"
-    exit 1
-  fi
-done
-echo "SUCCESS: 5/5 passing"
-```
+**This slice addresses:** Environment and imports only
 
 ---
 
 ## CODE QUALITY STANDARDS
-
-### **Mandatory Quality Gates:**
-
-- ✅ **TypeScript**: Zero errors (`npx tsc --noEmit`)
-- ✅ **ESLint**: Zero errors (`npm run lint`)
-- ✅ **Format**: Prettier compliant (`npm run format`)
-- ✅ **Test**: TC-HP-01 passes 5/5 times
 
 ### **Verification Command:**
 ```bash
@@ -538,188 +404,177 @@ npx tsc --noEmit && \
 npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
 ```
 
-**All commands must succeed (exit code 0) before declaring slice complete.**
+**All commands must succeed.**
+
+### **Consistency Check:**
+```bash
+for i in {1..5}; do
+  npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
+done
+```
+
+**All 5 runs must pass.**
 
 ---
 
 ## SESSION COMPLETION CHECKLIST
 
-### **Before ending session:**
+**Before declaring complete:**
 
-1. ✅ **Run verification command** (above)
-   ```bash
-   npm run format && npm run lint && npx tsc --noEmit
-   npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
-   ```
+1. ✅ Run verification command (format, lint, typecheck, test)
+2. ✅ Run consistency check (5 consecutive passes)
+3. ✅ Update TEST_RESULTS.md with Slice 1 status
+4. ✅ Commit changes with descriptive message
+5. ✅ Submit completion report (format below)
 
-2. ✅ **Run consistency check** (5 consecutive passes)
-   ```bash
-   for i in {1..5}; do
-     npx vitest run tests/e2e/core-2.0/happy-path.spec.ts -t "TC-HP-01"
-   done
-   ```
+---
 
-3. ✅ **Document results in TEST_RESULTS.md:**
-   ```markdown
-   ## [Date] - Slice 1: Infrastructure Stabilization
+## COMPLETION REPORT FORMAT
 
-   **Tests:** TC-HP-01 passing 5/5 consecutive runs
-   **Runtime:** ~X seconds per run
-   **Fixes Applied:**
-   - [List what was fixed]
+Provide this structured report when done:
 
-   **Issues Remaining:**
-   - [List known issues for next slices]
+```markdown
+# SLICE 1 COMPLETION REPORT
 
-   **Environment:**
-   - CONVEX_URL: [status]
-   - Redis: [status]
-   - Workers: [status]
-   ```
+## Summary
+[1-2 sentences: what was fixed]
 
-4. ✅ **Commit work:**
-   ```bash
-   git add -A
-   git commit -m "fix(test): Slice 1 - stabilize test infrastructure
+## Changes Applied
 
-   Fixed environment loading, missing imports, and basic harness connectivity.
-   TC-HP-01 now passes consistently 5/5 times.
+### Change 1: [Description]
+- **File:** [path]
+- **Purpose:** [why this fix was needed]
+- **Approach:** [what you did]
+- **Lines modified:** ~X lines
 
-   Fixes:
-   - vitest.config.ts: Added CONVEX_URL environment loading
-   - happy-path.spec.ts: Restored missing imports
-   - Verified Redis/Convex connectivity
+### Change 2: [Description]
+...
 
-   Results: TC-HP-01 passing 5/5 consecutive runs
+## Test Results
 
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
+### TC-HP-01 Consistency Check
+| Run | Status | Runtime | Notes |
+|-----|--------|---------|-------|
+| 1   | ✅/❌   | Xs      |       |
+| 2   | ✅/❌   | Xs      |       |
+| 3   | ✅/❌   | Xs      |       |
+| 4   | ✅/❌   | Xs      |       |
+| 5   | ✅/❌   | Xs      |       |
 
-   Co-Authored-By: Claude <noreply@anthropic.com>"
-   ```
+**Pass Rate:** X/5
 
-5. ✅ **Report summary to user:**
-   - TC-HP-01 status: X/5 passing
-   - Fixes applied: [list]
-   - Environment status: [Redis, Convex, Workers]
-   - Issues found: [list]
-   - Ready for Slice 2: [YES/NO with reasoning]
+## Quality Gates
+
+- Format (npm run format): ✅/❌
+- Lint (npm run lint): ✅/❌
+- TypeCheck (npx tsc): ✅/❌
+- Test (TC-HP-01): ✅/❌
+
+## Environment Status
+
+- CONVEX_URL: ✅ Loaded from .env.local / ❌ [issue]
+- Redis (localhost:6379): ✅ Connected / ❌ [issue]
+- Workers: ✅ Started / ❌ [issue]
+
+## Mocking Verification
+
+**Question:** What is mocked in these tests?
+
+**Answer:** [Your answer here]
+
+**Confirmation:**
+- [x] Only LLM API responses are mocked
+- [ ] Other things are mocked: [list if any]
+
+## Issues for Next Slice
+
+[List any remaining issues observed - these are expected and OK]
+
+## Line Count
+
+**Total lines modified:** ~X lines
+
+**Breakdown:**
+- vitest.config.ts: ~X lines
+- happy-path.spec.ts: ~X lines
+- Other: ~X lines
+
+**Simplicity check:** Under 50 lines total ✅/❌
+
+## Ready for Slice 2?
+
+**YES/NO** - [Brief reasoning]
+```
 
 ---
 
 ## STARTING POINT
 
-**BEGIN by:**
+**Begin by:**
 
-1. Reading `vitest.config.ts` and checking environment configuration
-2. Reading `happy-path.spec.ts` lines 1-30 to verify imports
-3. Running TC-HP-01 once to see current failure mode
-4. Applying fixes based on observed errors
-5. Achieving 5/5 consecutive passes
+1. Reading current `vitest.config.ts` to understand configuration
+2. Checking `.env.local` to see what environment variables exist
+3. Reading `happy-path.spec.ts` lines 1-30 to check for missing imports
+4. Running TC-HP-01 once to observe current behavior
+5. Applying fixes based on observed errors
 
-**Focus on:** Minimal fixes to get TC-HP-01 stable. Don't fix other tests yet. Don't refactor. Just stabilize the foundation.
+**Focus:** Get TC-HP-01 stable. Everything else is later slices.
 
 ---
 
 ## EXPECTED OUTCOME
 
 After this session:
-- ✅ vitest.config.ts loads CONVEX_URL and other env vars correctly
-- ✅ happy-path.spec.ts has all required imports
+
+**Code Changes:**
+- ✅ vitest.config.ts: ~10 lines (environment loading)
+- ✅ happy-path.spec.ts: ~5 lines (missing imports)
+- ✅ Total: <50 lines modified
+
+**Test Results:**
 - ✅ TC-HP-01 passes 5/5 consecutive times
-- ✅ No CONVEX_URL errors in logs
-- ✅ Clear documentation of what was fixed
+- ✅ No environment errors
+- ✅ No import errors
+- ⏳ Other tests still failing (expected - address in later slices)
 
-**Realistic Expectations:**
-- Other tests (TC-HP-02 through TC-HP-10) will still fail - this is expected
-- NOGROUP errors might still appear in logs - we'll address in Slice 2
-- Tool execution (TC-HP-05, TC-HP-08) won't work yet - we'll fix in Slice 3
+**Not Expected in This Slice:**
+- ❌ Fixing persistence timeouts (that's Slice 2)
+- ❌ Fixing tool execution (that's Slice 3)
+- ❌ Refactoring harness or workers
+- ❌ Adding new abstractions
 
-**The goal is a stable foundation**, not a complete fix. Get TC-HP-01 reliable, then we build from there.
+**Reality Check:**
+If you've modified >100 lines or changed worker code, you've gone beyond slice scope. This should be a quick, targeted infrastructure fix.
 
 ---
 
-## OUTPUT REPORT FORMAT
+## DEBUGGING GUIDANCE
 
-After completing work, provide this structured report:
+**If TC-HP-01 fails after environment/import fixes:**
 
-```markdown
-# SLICE 1 COMPLETION REPORT
+**Diagnostic approach:**
+1. Check what error message says
+2. Add minimal console.log to harness.setup():
+   ```typescript
+   console.log('[harness] Fastify port:', port);
+   console.log('[harness] Convex URL:', convexUrl);
+   console.log('[harness] Workers started');
+   ```
+3. Run test again, observe logs
+4. Identify which component fails (Fastify, Redis, Convex, Worker)
+5. Apply targeted fix
 
-## Summary
-[1-2 sentence overview of what was done]
+**Common issues:**
+- CONVEX_URL still not loading → check dotenv path
+- Redis not connecting → verify Redis running
+- Worker not starting → check worker initialization
+- Events not flowing → check MockAdapter publishing
 
-## Fixes Applied
-
-### Fix 1: [Name]
-- **File:** [path]
-- **Lines:** [specific lines]
-- **Change:** [what was changed]
-- **Reason:** [why this was necessary]
-
-### Fix 2: [Name]
-...
-
-## Test Results
-
-### TC-HP-01 Consistency Check
-| Run | Result | Runtime | Notes |
-|-----|--------|---------|-------|
-| 1   | ✅/❌  | Xs      |       |
-| 2   | ✅/❌  | Xs      |       |
-| 3   | ✅/❌  | Xs      |       |
-| 4   | ✅/❌  | Xs      |       |
-| 5   | ✅/❌  | Xs      |       |
-
-**Pass Rate:** X/5
-
-## Verification Command Results
-
-```bash
-npm run format  # ✅/❌
-npm run lint    # ✅/❌
-npx tsc         # ✅/❌
-TC-HP-01 test   # ✅/❌
-```
-
-## Environment Status
-
-- **CONVEX_URL:** [set/missing] - [value or error]
-- **Redis Connection:** [success/failed] - [details]
-- **Convex Connection:** [success/failed] - [details]
-- **Workers Started:** [yes/no] - [which workers]
-
-## Issues Discovered
-
-### Issue 1: [Name]
-- **Severity:** Critical/High/Medium/Low
-- **Description:** [what's wrong]
-- **Impact:** [which tests affected]
-- **Recommended Fix:** [for future slice]
-
-### Issue 2: [Name]
-...
-
-## Recommendations for Next Slice
-
-**Ready to proceed:** YES/NO
-
-**If YES:**
-- Slice 2 can focus on: [specific area]
-- Expected to fix: [which tests]
-
-**If NO:**
-- Blockers: [list blockers]
-- Need clarification on: [list questions]
-
-## Mocking Verification
-
-**CONFIRM:** The following is the COMPLETE list of what is mocked in these tests:
-- [x] LLM API responses (OpenAI, Anthropic) via MockModelFactory
-- [ ] Nothing else
-
-**If anything else is mocked, LIST IT HERE:**
-- [None / or list items]
-```
+**For each issue:**
+- Fix the specific problem
+- Don't add workarounds or mocks
+- Verify fix works
+- Remove diagnostic logging
 
 ---
 
@@ -727,81 +582,44 @@ TC-HP-01 test   # ✅/❌
 
 ### **Environment Loading Pattern**
 
-The correct pattern for vitest environment loading:
+Vitest needs environment variables loaded before configuration:
 
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import { config } from 'dotenv';
+**Approach:**
+1. Import dotenv at top of vitest.config.ts
+2. Call config({ path: '.env.local' }) before defineConfig
+3. Forward process.env.CONVEX_URL to test.env object
+4. This makes CONVEX_URL available in test processes
 
-// Load environment before config
-config({ path: '.env.local' });
+**Reference:** Check how production server loads environment
 
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    setupFiles: ['./vitest.setup.ts'],
-    // Forward vars to test env
-    env: {
-      CONVEX_URL: process.env.CONVEX_URL,
-    },
-  },
-});
-```
+---
 
-### **Debugging Persistence Issues**
+### **Import Pattern**
 
-If TC-HP-01 times out on `waitForPersisted`:
+Standard imports for test files using fixtures:
 
-1. **Check PersistenceWorker is running:**
-   ```typescript
-   // Add to harness.setup() after worker.start()
-   console.log('[harness] PersistenceWorker started:', this.worker.isRunning());
-   ```
+**Required utilities:**
+- Node crypto (for randomUUID)
+- Node path (for dirname, join, fileURLToPath)
+- Vitest test functions
+- Schema types from src/core/schema.ts
+- Harness from tests/harness/core-harness.ts
 
-2. **Check Redis has events:**
-   ```bash
-   redis-cli XLEN "codex:run:{runId}:events"
-   # Should show > 0 messages
-   ```
-
-3. **Check Convex query:**
-   ```typescript
-   // In test, add debug logging
-   const persisted = await harness.getPersistedResponse(runId);
-   console.log('[test] Persisted response:', persisted);
-   ```
-
-4. **Check consumer group:**
-   ```bash
-   redis-cli XINFO GROUPS "codex:run:{runId}:events"
-   # Should show codex-projector-group exists
-   ```
+**Pattern:** Check other test files (error-handling.spec.ts, edge-cases.spec.ts) for reference
 
 ---
 
 ## SUCCESS CRITERIA
 
-**Slice 1 is COMPLETE when:**
-- ✅ vitest.config.ts loads environment correctly
-- ✅ All test files have required imports
+**Slice 1 Complete When:**
+- ✅ vitest.config.ts loads environment from .env.local
+- ✅ happy-path.spec.ts has all required imports
 - ✅ TC-HP-01 passes 5/5 consecutive times
-- ✅ No environment errors in test output
+- ✅ No environment or import errors
 - ✅ Format, lint, typecheck all pass
-- ✅ Report submitted with mocking verification
+- ✅ Completion report submitted
+
+**Total changes:** <50 lines
+**Total time:** 1-2 hours
 
 **Do not proceed to Slice 2 until all criteria met.**
-
----
-
-## CRITICAL REMINDERS
-
-1. **NO MOCKING** except LLM responses - this is non-negotiable
-2. **Minimal changes** - fix only what's broken for TC-HP-01
-3. **Verify incrementally** - test after each fix
-4. **Ask if uncertain** - don't assume or guess
-5. **Real infrastructure** - Redis, Convex, workers must be real
-6. **Report honestly** - if something is mocked, admit it in report
-
-The goal is **one passing test with real infrastructure**, not "make tests pass by any means necessary."
