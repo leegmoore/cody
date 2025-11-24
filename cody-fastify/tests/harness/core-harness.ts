@@ -17,7 +17,7 @@ import {
   type StreamEvent,
   type Response,
 } from "../../src/core/schema.js";
-import { RedisStream, PROJECTOR_CONSUMER_GROUP } from "../../src/core/redis.js";
+import { RedisStream } from "../../src/core/redis.js";
 import {
   PersistenceWorker,
   type PersistenceWorkerOptions,
@@ -28,7 +28,8 @@ import {
 } from "../../src/workers/tool-worker.js";
 import { createServer } from "../../src/server.js";
 import { StreamHydrator } from "../../src/client/hydration.js";
-import type { ToolRegistry as ScriptToolRegistry } from "codex-ts/src/core/script-harness/tool-facade.js";
+import type { ToolRegistry } from "codex-ts/src/tools/registry.js";
+// Original import removed: import type { ToolRegistry as ScriptToolRegistry } from "codex-ts/src/core/script-harness/tool-facade.js";
 
 const DEFAULT_SSE_TIMEOUT_MS = 30_000;
 
@@ -57,9 +58,9 @@ export class Core2TestHarness {
   private readonly activeRunIds = new Set<string>();
   private readonly workerOptions: PersistenceWorkerOptions;
   private readonly toolWorkerOptions: ToolWorkerOptions;
-  private readonly scriptToolRegistry: ScriptToolRegistry | undefined;
+  private readonly scriptToolRegistry: ToolRegistry | undefined; // Changed from ScriptToolRegistry
 
-  constructor(scriptToolRegistry?: ScriptToolRegistry) {
+  constructor(scriptToolRegistry?: ToolRegistry) { // Changed from ScriptToolRegistry
     this.factory = new MockModelFactory({
       adapterFactory: createMockStreamAdapter,
     });
@@ -118,7 +119,10 @@ export class Core2TestHarness {
     await this.worker.start();
 
     // Pass the custom scriptToolRegistry to ToolWorker
-    this.toolWorker = new ToolWorker(this.toolWorkerOptions, this.scriptToolRegistry);
+    this.toolWorker = new ToolWorker(
+      this.toolWorkerOptions,
+      this.scriptToolRegistry,
+    );
     await this.toolWorker.start();
   }
 

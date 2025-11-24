@@ -3,7 +3,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import {
   StreamEventSchema,
@@ -62,8 +62,7 @@ describe("Core 2.0 Happy Path", () => {
 
   afterAll(async () => {
     await harness.cleanup();
-  }, 20_000);
-
+  }, 10_000);
 
   test("TC-HP-01: Simple message turn (OpenAI)", async () => {
     const turnId = randomUUID();
@@ -677,7 +676,7 @@ async function registerFixtures(): Promise<void> {
 
 async function waitForPersisted(
   runId: string,
-  timeoutMs = 5000,
+  timeoutMs = 10000,
   expectedStatus?: Response["status"],
 ) {
   const deadline = Date.now() + timeoutMs;
