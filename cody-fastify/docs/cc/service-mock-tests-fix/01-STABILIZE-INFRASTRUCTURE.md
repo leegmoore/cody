@@ -424,7 +424,7 @@ done
 1. ✅ Run verification command (format, lint, typecheck, test)
 2. ✅ Run consistency check (5 consecutive passes)
 3. ✅ Update TEST_RESULTS.md with Slice 1 status
-4. ✅ Commit changes with descriptive message
+4. ✅ Stage changes (git add -A) but do NOT commit
 5. ✅ Submit completion report (format below)
 
 ---
