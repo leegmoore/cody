@@ -622,4 +622,4 @@ Standard imports for test files using fixtures:
 **Total changes:** <50 lines
 **Total time:** 1-2 hours
 
-**Do not proceed to Slice 2 until all criteria met.**
+**After completing all criteria, submit your completion report and await user review.**
