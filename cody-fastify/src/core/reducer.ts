@@ -124,6 +124,12 @@ export class ResponseReducer {
 
       case "item_cancelled": {
         this.removeOutputItem(event.payload.item_id);
+        this.upsertOutputItem({
+          id: event.payload.item_id,
+          type: "cancelled",
+          reason: event.payload.reason,
+          origin: "system",
+        });
         this.itemBuffers.delete(event.payload.item_id);
         mutated = true;
         break;

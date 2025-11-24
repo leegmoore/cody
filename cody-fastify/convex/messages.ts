@@ -44,6 +44,13 @@ const outputItemValue = v.union(
   }),
   v.object({
     id: v.string(),
+    type: v.literal("cancelled"),
+    reason: v.optional(v.string()),
+    origin: v.string(),
+    correlation_id: v.optional(v.string()),
+  }),
+  v.object({
+    id: v.string(),
     type: v.literal("script_execution"),
     code: v.string(),
     origin: v.string(),
@@ -123,6 +130,13 @@ type NormalizedOutputItem =
     }
   | {
       id: string;
+      type: "cancelled";
+      reason?: string;
+      origin: string;
+      correlation_id?: string;
+    }
+  | {
+      id: string;
       type: "script_execution";
       code: string;
       origin: string;
@@ -177,6 +191,8 @@ function isNormalizedOutputItem(value: unknown): value is NormalizedOutputItem {
         typeof item.success === "boolean" &&
         typeof item.origin === "string"
       );
+    case "cancelled":
+      return typeof item.origin === "string";
     case "script_execution":
       return typeof item.code === "string" && typeof item.origin === "string";
     case "script_execution_output":
@@ -346,6 +362,18 @@ export const getByRunId = query({
   },
 });
 
+export const listByThread = query({
+  args: { threadId: v.string() },
+  handler: async (ctx, args) => {
+    const docs = await ctx.db
+      .query("messages")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .collect();
+
+    return docs.sort((a, b) => a.createdAt - b.createdAt);
+  },
+});
+
 export const deleteByRunId = mutation({
   args: { runId: v.string() },
   handler: async (ctx, args) => {
@@ -355,6 +383,20 @@ export const deleteByRunId = mutation({
       .unique();
     if (existing) {
       await ctx.db.delete(existing._id);
+    }
+  },
+});
+
+export const deleteByThreadId = mutation({
+  args: { threadId: v.string() },
+  handler: async (ctx, args) => {
+    const docs = await ctx.db
+      .query("messages")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .collect();
+
+    for (const doc of docs) {
+      await ctx.db.delete(doc._id);
     }
   },
 });

@@ -17,7 +17,7 @@ import {
   type StreamEvent,
   type Response,
 } from "../../src/core/schema.js";
-import { RedisStream } from "../../src/core/redis.js";
+import { RedisStream, PROJECTOR_CONSUMER_GROUP } from "../../src/core/redis.js";
 import {
   PersistenceWorker,
   type PersistenceWorkerOptions,
@@ -28,6 +28,7 @@ import {
 } from "../../src/workers/tool-worker.js";
 import { createServer } from "../../src/server.js";
 import { StreamHydrator } from "../../src/client/hydration.js";
+import type { ToolRegistry as ScriptToolRegistry } from "codex-ts/src/core/script-harness/tool-facade.js";
 
 const DEFAULT_SSE_TIMEOUT_MS = 30_000;
 
@@ -56,8 +57,9 @@ export class Core2TestHarness {
   private readonly activeRunIds = new Set<string>();
   private readonly workerOptions: PersistenceWorkerOptions;
   private readonly toolWorkerOptions: ToolWorkerOptions;
+  private readonly scriptToolRegistry: ScriptToolRegistry | undefined;
 
-  constructor() {
+  constructor(scriptToolRegistry?: ScriptToolRegistry) {
     this.factory = new MockModelFactory({
       adapterFactory: createMockStreamAdapter,
     });
@@ -77,6 +79,7 @@ export class Core2TestHarness {
       batchSize: 25,
       toolTimeoutMs: 2_000,
     };
+    this.scriptToolRegistry = scriptToolRegistry; // Store the custom registry
   }
 
   get modelFactory(): MockModelFactory {
@@ -114,7 +117,8 @@ export class Core2TestHarness {
     this.worker = new PersistenceWorker(this.workerOptions);
     await this.worker.start();
 
-    this.toolWorker = new ToolWorker(this.toolWorkerOptions);
+    // Pass the custom scriptToolRegistry to ToolWorker
+    this.toolWorker = new ToolWorker(this.toolWorkerOptions, this.scriptToolRegistry);
     await this.toolWorker.start();
   }
 
@@ -285,6 +289,19 @@ export class Core2TestHarness {
     const redis = await RedisStream.connect();
     try {
       await this.deleteAllRunStreams(redis);
+      // Ensure consumer group exists for the next run
+      // Since we delete streams, the group is gone.
+      // However, the worker creates the group when it discovers streams.
+      // But if the worker starts before any streams exist, it might not create the group?
+      // No, when submit() happens, a stream is created.
+      // The worker discovers it.
+      // The worker calls ensureGroup.
+      // So it should be fine.
+      // The issue might be that the worker's internal state `this.streams` isn't cleared?
+      // We recreate the worker: `this.worker = new PersistenceWorker(...)`.
+      // So state is clear.
+      // Maybe we need to wait for the worker to be ready?
+      // Let's add a small delay after start.
     } finally {
       await redis.close();
     }

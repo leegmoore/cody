@@ -1,289 +1,87 @@
-import { state, ensureToolCall, applyToolCallUpdates } from './state.js';
-import { 
-    updateStatus, addAgentMessage, updateAgentMessage, finalizeAgentMessage, 
-    addReasoningMessage, addSystemMessage, 
-    syncToolCallUI, delayedToolUpdate, removeThinkingPlaceholder, mapToolStatus,
-    handleThinkingStarted, handleThinkingDelta, handleThinkingCompleted
+import { ResponseReducer } from './reducer.bundle.js';
+import { state } from './state.js';
+import {
+    updateStatus,
+    addSystemMessage,
+    removeThinkingPlaceholder,
+    renderResponseItems
 } from './ui.js';
-import { normalizeTurnId, formatToolCallJson } from './utils.js';
 
-// Cyclic dependency: stream.js calls loadConversations, which is in app.js
-// But app.js calls stream.js (streamTurn).
-// To break this, we can pass a callback or use a custom event.
-// Or simply attach loadConversations to state/window?
-// For now, I'll dispatch a custom event 'turn-complete' on window, and app.js can listen.
+const STREAM_EVENT_TYPES = [
+    'response_start',
+    'item_start',
+    'item_delta',
+    'item_done',
+    'item_error',
+    'item_cancelled',
+    'response_done',
+    'response_error',
+    'usage_update',
+    'turn_aborted_by_user',
+];
 
-export function parseStreamEventData(raw) {
-    if (!raw) return {};
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return {};
-    }
-}
-
-function handleToolCallBeginEvent(data = {}) {
-    const targetTurnId = normalizeTurnId(data.turnId) || state.currentTurnId;
-    const call = ensureToolCall(data.callId, {
-        toolName: data.toolName,
-        arguments: data.arguments,
-        status: 'in_progress',
-        type: 'tool',
-        startedAt: Date.now(),
-        turnId: targetTurnId,
-    });
-    applyToolCallUpdates(call, {
-        toolName: data.toolName,
-        arguments: data.arguments,
-        status: 'in_progress',
-        type: 'tool',
-    });
-    syncToolCallUI(call);
-}
-
-function handleToolCallEndEvent(data = {}) {
-    delayedToolUpdate(data.callId, data.turnId, {
-        status: data.status ? mapToolStatus(data.status) : 'completed',
-        output: data.output,
-        completedAt: Date.now(),
-    });
-}
-
-function handleExecCommandBeginEvent(data = {}) {
-    const targetTurnId = normalizeTurnId(data.turnId) || state.currentTurnId;
-    const call = ensureToolCall(data.callId, {
-        toolName: data.toolName || 'Command',
-        arguments: data.arguments,
-        status: 'in_progress',
-        type: 'exec',
-        startedAt: Date.now(),
-        turnId: targetTurnId,
-    });
-    applyToolCallUpdates(call, {
-        toolName: data.toolName || 'Command',
-        arguments: data.arguments,
-        type: 'exec',
-        status: 'in_progress',
-    });
-    syncToolCallUI(call);
-}
-
-function handleExecCommandOutputDeltaEvent(data = {}) {
-    if (!data.callId && !data.execId) return;
-    const chunk = data.output ?? data.delta ?? data.text ?? '';
-    const targetTurnId = normalizeTurnId(data.turnId) || state.currentTurnId;
-    const call = ensureToolCall(data.callId || data.execId, {
-        toolName: data.toolName || 'Command',
-        type: 'exec',
-        turnId: targetTurnId,
-    });
-    applyToolCallUpdates(call, {
-        toolName: data.toolName || call.toolName,
-        type: 'exec',
-    });
-    if (chunk) {
-        if (call.output == null) {
-            call.output = chunk;
-        } else if (typeof call.output === 'string' && typeof chunk === 'string') {
-            call.output += chunk;
-        } else if (typeof chunk === 'string') {
-            call.output = `${formatToolCallJson(call.output)}
-${chunk}`;
-        } else {
-            call.output = chunk;
-        }
-    }
-    syncToolCallUI(call);
-}
-
-function handleExecCommandEndEvent(data = {}) {
-    delayedToolUpdate(data.callId || data.execId, data.turnId, {
-        status: data.status ? mapToolStatus(data.status) : 'completed',
-        output: data.output,
-        completedAt: Date.now(),
-    });
-}
-
-function handleTsExecBeginEvent(data = {}) {
-    const targetTurnId = normalizeTurnId(data.turnId) || state.currentTurnId;
-    const call = ensureToolCall(data.execId, {
-        toolName: data.label || 'Code Execution',
-        arguments: data.source,
-        type: 'ts_exec',
-        status: 'in_progress',
-        startedAt: Date.now(),
-        turnId: targetTurnId,
-    });
-    applyToolCallUpdates(call, {
-        toolName: data.label || 'Code Execution',
-        arguments: data.source,
-        type: 'ts_exec',
-        status: 'in_progress',
-    });
-    syncToolCallUI(call);
-}
-
-function handleTsExecEndEvent(data = {}) {
-    delayedToolUpdate(data.execId, data.turnId, {
-        status: data.status ? mapToolStatus(data.status) : 'completed',
-        output: data.output,
-        completedAt: Date.now(),
-    });
-}
-
-export function streamTurn(turnId) {
-    // Close existing connection if any
+export function streamRun(runId, context) {
     if (state.eventSource) {
         state.eventSource.close();
     }
 
-    const streamUrl = `${state.API_BASE}/turns/${turnId}/stream-events?thinkingLevel=full&toolLevel=full&toolFormat=full`;
-    console.log('Connecting to SSE stream:', streamUrl);
-    state.eventSource = new EventSource(streamUrl);
+    const streamUrl = `${state.API_BASE}/stream/${runId}`;
+    const eventSource = new EventSource(streamUrl);
+    const reducer = new ResponseReducer();
+    state.eventSource = eventSource;
 
-    let currentAgentMessageId = null;
-    let agentMessageText = '';
-
-    state.eventSource.addEventListener('task_started', (e) => {
-        console.log('Task started:', e.data);
-        updateStatus('Processing...', 'yellow');
-    });
-
-    state.eventSource.addEventListener('agent_message', (e) => {
-        removeThinkingPlaceholder();
-        console.log('Agent message event received:', e.data);
+    const handleEvent = (event) => {
         try {
-            const data = JSON.parse(e.data);
-            
-            if (!currentAgentMessageId) {
-                currentAgentMessageId = addAgentMessage('');
-                agentMessageText = '';
+            const parsed = JSON.parse(event.data);
+            const snapshot = reducer.apply(parsed);
+            if (!snapshot) return;
+
+            removeThinkingPlaceholder();
+            renderResponseItems(snapshot.output_items || [], {
+                runId,
+                threadId: context.threadId,
+                status: snapshot.status,
+            });
+
+            if (snapshot.status === 'complete') {
+                finalize('complete');
             }
-            
-            const messageText = data.message || data.text || '';
-            agentMessageText += messageText;
-            updateAgentMessage(currentAgentMessageId, agentMessageText);
-        } catch (error) {
-            console.error('Error parsing agent_message:', error, e.data);
-        }
-    });
-
-    state.eventSource.addEventListener('agent_reasoning', (e) => {
-        removeThinkingPlaceholder();
-        try {
-            const data = JSON.parse(e.data);
-            const text = data.text || data.message || data.content || '';
-            if (text) {
-                addReasoningMessage(text);
+            if (snapshot.status === 'error') {
+                finalize('error', snapshot.error?.message);
             }
         } catch (error) {
-            console.error('Error parsing agent_reasoning:', error);
-        }
-    });
-
-    state.eventSource.addEventListener('thinking_started', (e) => {
-        removeThinkingPlaceholder();
-        handleThinkingStarted(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('thinking_delta', (e) => {
-        handleThinkingDelta(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('thinking_completed', (e) => {
-        handleThinkingCompleted(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('tool_call_begin', (e) => {
-        removeThinkingPlaceholder();
-        handleToolCallBeginEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('tool_call_end', (e) => {
-        handleToolCallEndEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('exec_command_begin', (e) => {
-        removeThinkingPlaceholder();
-        handleExecCommandBeginEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('exec_command_output_delta', (e) => {
-        handleExecCommandOutputDeltaEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('exec_command_end', (e) => {
-        handleExecCommandEndEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('ts_exec_begin', (e) => {
-        removeThinkingPlaceholder();
-        handleTsExecBeginEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('ts_exec_end', (e) => {
-        handleTsExecEndEvent(parseStreamEventData(e.data));
-    });
-
-    state.eventSource.addEventListener('task_complete', (e) => {
-        console.log('Task complete:', e.data);
-        updateStatus('Connected', 'green');
-        const sendButton = document.getElementById('sendButton');
-        if (sendButton) sendButton.disabled = false;
-        
-        if (currentAgentMessageId) {
-            finalizeAgentMessage(currentAgentMessageId);
-        }
-        
-        state.eventSource.close();
-        state.eventSource = null;
-        
-        // Notify app to reload conversations
-        window.dispatchEvent(new CustomEvent('turn-complete'));
-    });
-
-    state.eventSource.addEventListener('turn_aborted', (e) => {
-        const data = JSON.parse(e.data);
-        console.log('Turn aborted:', data);
-        addSystemMessage('Turn was aborted: ' + (data.reason || 'Unknown reason'));
-        updateStatus('Connected', 'green');
-        const sendButton = document.getElementById('sendButton');
-        if (sendButton) sendButton.disabled = false;
-        
-        state.eventSource.close();
-        state.eventSource = null;
-        
-        window.dispatchEvent(new CustomEvent('turn-complete'));
-    });
-
-    state.eventSource.addEventListener('error', (e) => {
-        console.error('Stream error:', e);
-        updateStatus('Error', 'red');
-        const sendButton = document.getElementById('sendButton');
-        if (sendButton) sendButton.disabled = false;
-        
-        if (state.eventSource) {
-            state.eventSource.close();
-            state.eventSource = null;
-        }
-    });
-
-    state.eventSource.onerror = (e) => {
-        console.error('EventSource error:', e);
-        // Check if connection was closed by server (readyState 2)
-        if (state.eventSource?.readyState === EventSource.CLOSED) {
-            console.log('SSE connection closed by server');
-            updateStatus('Connected', 'green');
-        } else {
-            updateStatus('Connection Error', 'red');
-        }
-        
-        const sendButton = document.getElementById('sendButton');
-        if (sendButton) sendButton.disabled = false;
-        
-        if (state.eventSource) {
-            state.eventSource.close();
-            state.eventSource = null;
+            console.error('Failed to process stream event', error);
         }
     };
+
+    STREAM_EVENT_TYPES.forEach((type) => {
+        eventSource.addEventListener(type, handleEvent);
+    });
+
+    eventSource.onerror = (err) => {
+        console.error('Stream error', err);
+        finalize('error', 'Stream connection failed');
+    };
+
+    function finalize(status, errorMessage) {
+        if (eventSource) {
+            STREAM_EVENT_TYPES.forEach((type) => {
+                eventSource.removeEventListener(type, handleEvent);
+            });
+            eventSource.close();
+        }
+        state.eventSource = null;
+        const sendButton = document.getElementById('sendButton');
+        if (sendButton) sendButton.disabled = false;
+
+        if (status === 'error' && errorMessage) {
+            addSystemMessage(errorMessage);
+            updateStatus('Error', 'red');
+        } else {
+            updateStatus('Connected', 'green');
+        }
+
+        state.runAgentAnchors.delete(runId);
+        window.dispatchEvent(new CustomEvent('run-complete', { detail: { runId } }));
+    }
 }

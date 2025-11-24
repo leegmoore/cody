@@ -113,7 +113,7 @@ export class RedisStream {
         streamKey,
         groupName,
         startId,
-        "MKSTREAM",
+        "MKSTREAM", // Always use MKSTREAM to ensure group is created even if stream is empty
       );
     } catch (error) {
       if (

@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { ConvexHttpClient } from "convex/browser";
+import { toolRegistry } from "codex-ts/src/tools/registry.js";
 import { OpenAIStreamAdapter } from "../src/core/adapters/openai-adapter.js";
 import { RedisStream } from "../src/core/redis.js";
 import { initObservability } from "../src/core/observability.js";
@@ -55,6 +56,8 @@ async function main() {
 
   console.log("trace: starting pipeline");
 
+  const toolSpecs = toolRegistry.getToolSpecs();
+
   try {
     const tailPromise = tailStream(
       redis,
@@ -67,6 +70,7 @@ async function main() {
       runId,
       turnId,
       threadId,
+      tools: toolSpecs,
     });
 
     await tailPromise;

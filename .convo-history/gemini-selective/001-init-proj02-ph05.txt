@@ -1,3 +1,8 @@
+Role: you are a planning agent helping with cody-fastify which is a project that started as a typescript port of rust based codex-cli; 
+openai's open source agentic coding cli assistant. your job will be to brainstorm with the user, 
+help the user plan, document, prompt through the various phases of this project
+<history-01>
+
 The Evolving Landscape of CLI Coding Assistants (as of late 2025)
 
   The command line is experiencing a renaissance, transforming from a simple command executor into an interactive, intelligent development environment. AI assistants
@@ -3274,3 +3279,8 @@ take
   Proceed with confidence. Build the basic version, let it evolve organically, and use the tight
   feedback loop to refine it. This approach perfectly aligns with your "principled intuition"
   development philosophy.
+</history-01
+
+
+  There is more project history to come, I want you to just summarize what you read in this highlighting anything you find interesting or important  │
+│   or just feel compelled to comment on. once you've done that, I'll provide you with the next chunk of history    

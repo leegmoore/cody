@@ -1,3 +1,4 @@
+import type { ToolSpec } from "codex-ts/src/core/client/client-common.js";
 import { AnthropicStreamAdapter } from "./adapters/anthropic-adapter.js";
 import { OpenAIStreamAdapter } from "./adapters/openai-adapter.js";
 import { RedisStream } from "./redis.js";
@@ -9,8 +10,23 @@ import type { TraceContext } from "./schema.js";
  */
 const VALID_PROVIDER_MODELS = {
   openai: new Set(["gpt-5-mini", "gpt-5-codex"]),
-  anthropic: new Set(["claude-haiku-4.5", "claude-sonnet-4.5"]),
+  anthropic: new Set([
+    "claude-haiku-4.5",
+    "claude-haiku-4-5",
+    "claude-sonnet-4.5",
+    "claude-sonnet-4-5",
+  ]),
 } as const;
+const MODEL_CANONICAL_OVERRIDES: Record<
+  SupportedProvider,
+  Record<string, string>
+> = {
+  openai: {},
+  anthropic: {
+    "claude-haiku-4.5": "claude-haiku-4-5",
+    "claude-sonnet-4.5": "claude-sonnet-4-5",
+  },
+};
 
 type SupportedProvider = keyof typeof VALID_PROVIDER_MODELS;
 
@@ -24,6 +40,7 @@ export interface StreamAdapterParams {
   threadId?: string;
   agentId?: string;
   traceContext?: TraceContext;
+  tools?: ToolSpec[];
 }
 
 /**
@@ -91,9 +108,11 @@ export class DefaultModelFactory implements ModelFactory {
     const provider = normalizeProvider(options.providerId);
     assertModelAllowed(provider, options.model);
 
+    const canonicalModel = canonicalModelId(provider, options.model);
+
     if (provider === "openai") {
       return new OpenAIStreamAdapter({
-        model: options.model,
+        model: canonicalModel,
         providerId: provider,
         redis: options.redis,
         apiKey: this.options.openai?.apiKey,
@@ -102,7 +121,7 @@ export class DefaultModelFactory implements ModelFactory {
     }
 
     return new AnthropicStreamAdapter({
-      model: options.model,
+      model: canonicalModel,
       providerId: provider,
       redis: options.redis,
       apiKey: this.options.anthropic?.apiKey,
@@ -247,6 +266,10 @@ function assertModelAllowed(provider: SupportedProvider, model: string): void {
 
 function bucketKey(provider: SupportedProvider, model: string): string {
   return `${provider}:${model}`;
+}
+
+function canonicalModelId(provider: SupportedProvider, model: string): string {
+  return MODEL_CANONICAL_OVERRIDES[provider][model] ?? model;
 }
 
 export { VALID_PROVIDER_MODELS };

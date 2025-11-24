@@ -1,36 +1,39 @@
-import { normalizeTurnId } from './utils.js';
+import { normalizeRunId } from './utils.js';
 
 export const state = {
-    currentConversationId: null,
+    currentThreadId: null,
+    currentRunId: null,
     eventSource: null,
     messageHistory: [],
-    currentTurnId: null,
     activeThinkingId: null,
     toolCalls: [],
     toolCallModalCallId: null,
     pendingCompletionId: null,
     toolCallTimelines: new Map(),
     thinkingBlocks: new Map(),
-    fallbackTurnCounter: 0,
+    fallbackRunCounter: 0,
     toolCallSequence: 0,
-    API_BASE: 'http://localhost:4010/api/v1',
+    pendingUserMessages: [],
+    renderedItems: new Map(),
+    runAgentAnchors: new Map(),
+    API_BASE: 'http://localhost:4010/api/v2',
     TOOL_CARD_STACK_OFFSETS: { x: 8, y: 23 },
     TOOL_CARD_BASE_HEIGHT: 80,
 };
 
-export function resolveTurnId(preferred) {
-    const normalized = normalizeTurnId(preferred);
+export function resolveRunId(preferred) {
+    const normalized = normalizeRunId(preferred);
     if (normalized) {
         return normalized;
     }
-    state.fallbackTurnCounter += 1;
-    return `turnless-${state.fallbackTurnCounter}`;
+    state.fallbackRunCounter += 1;
+    return `runless-${state.fallbackRunCounter}`;
 }
 
 export function ensureToolCall(callId, defaults = {}) {
     const id = callId || `tool-${Date.now()}`;
     let existing = state.toolCalls.find((tc) => tc.callId === id);
-    const preferredTurnId = normalizeTurnId(defaults.turnId) || state.currentTurnId;
+    const preferredRunId = normalizeRunId(defaults.runId) || state.currentRunId;
 
     if (!existing) {
         existing = {
@@ -42,12 +45,12 @@ export function ensureToolCall(callId, defaults = {}) {
             type: defaults.type || 'tool',
             startedAt: defaults.startedAt || Date.now(),
             completedAt: defaults.completedAt ?? null,
-            turnId: resolveTurnId(preferredTurnId),
+            runId: resolveRunId(preferredRunId),
             sequence: ++state.toolCallSequence,
         };
         state.toolCalls.push(existing);
-    } else if (!existing.turnId) {
-        existing.turnId = resolveTurnId(preferredTurnId);
+    } else if (!existing.runId) {
+        existing.runId = resolveRunId(preferredRunId);
     }
 
     return existing;

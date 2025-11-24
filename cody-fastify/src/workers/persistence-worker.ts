@@ -135,25 +135,39 @@ export class PersistenceWorker {
       if (!this.running) break;
       const redis = this.redis;
       if (!redis) continue;
-      for (const stream of this.streams) {
-        if (!this.running) break;
-        try {
-          const records = await redis.autoClaim(
-            stream,
-            this.groupName,
-            this.consumerName,
-            this.options.reclaimMinIdleMs,
-          );
-          if (!records.length) continue;
-          for (const record of records) {
-            await this.processAndAck(record);
-            if (!this.running) break;
-          }
-        } catch (error) {
-          console.error("[projector] auto-claim error", error);
-        }
-      }
-    }
+              for (const stream of this.streams) {
+                if (!this.running) break;
+                try {
+                  const records = await redis.autoClaim(
+                    stream,
+                    this.groupName,
+                    this.consumerName,
+                    this.options.reclaimMinIdleMs,
+                  );
+                  if (!records.length) continue;
+                  for (const record of records) {
+                    await this.processAndAck(record);
+                    if (!this.running) break;
+                  }
+                } catch (error) {
+                  if (this.isNoGroupError(error)) {
+                    const redis = this.redis;
+                    if (redis) {
+                      try {
+                        await redis.ensureGroup(stream, this.groupName);
+                      } catch (ensureError) {
+                        console.error(
+                          "[projector] ensureGroup failed after NOGROUP in reclaimLoop",
+                          ensureError,
+                        );
+                      }
+                    }
+                    await sleep(200); // Small delay before next iteration
+                    continue; // Continue to next stream or next reclaim loop iteration
+                  }
+                  console.error("[projector] auto-claim error", error);
+                }
+              }    }
   }
 
   private async consumeLoop(): Promise<void> {

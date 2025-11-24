@@ -29,7 +29,10 @@ import {
   serializeFunctionCallOutputPayload,
   type FunctionCallOutputPayload,
 } from "codex-ts/src/protocol/models.js";
-import { toolRegistry as legacyToolRegistry } from "codex-ts/src/tools/registry.js";
+import {
+  toolRegistry as legacyToolRegistry,
+  type ToolRegistry,
+} from "codex-ts/src/tools/registry.js";
 import { RedisStream, type RedisStreamGroupRecord } from "../core/redis.js";
 import {
   StreamEventSchema,
@@ -58,7 +61,7 @@ export interface ToolWorkerOptions {
 const DEFAULT_GROUP_NAME = "codex-tool-workers";
 
 class LegacyToolRegistryAdapter implements ScriptToolRegistry {
-  constructor(private readonly base = legacyToolRegistry) {}
+  constructor(private readonly base: ToolRegistry = legacyToolRegistry) {}
 
   get(name: string): ScriptToolDefinition | undefined {
     const registered = this.base.get(name);
@@ -116,9 +119,13 @@ export class ToolWorker {
   private readonly streamOffsets = new Map<string, string>();
   private discoveryCursor = "0";
 
-  constructor(private readonly config: ToolWorkerOptions = {}) {
-    this.toolRouter = new ToolRouter();
-    this.scriptRegistry = new LegacyToolRegistryAdapter();
+  constructor(
+    private readonly config: ToolWorkerOptions = {},
+    registry?: ToolRegistry,
+  ) {
+    const effectiveRegistry = registry ?? legacyToolRegistry;
+    this.toolRouter = new ToolRouter({ registry: effectiveRegistry });
+    this.scriptRegistry = new LegacyToolRegistryAdapter(effectiveRegistry);
     this.toolTimeoutMs = config.toolTimeoutMs ?? 30_000;
 
     this.streamPattern = config.streamPattern ?? "codex:run:*:events";

@@ -18,13 +18,36 @@ async function main() {
 
   initObservability({ serviceName: "core2-verify-sse" });
 
-  console.log("[verify] submitting prompt");
+  console.log("[verify] creating thread");
+  const threadRes = await fetch(`${baseUrl}/api/v2/threads`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      modelProviderId: "openai",
+      modelProviderApi: "responses",
+      model: process.env.CORE2_MODEL ?? "gpt-5-mini",
+      title: "Verify SSE",
+    }),
+  });
+
+  if (!threadRes.ok) {
+    const text = await threadRes.text();
+    throw new Error(
+      `failed to create thread: ${threadRes.status} ${text || "unknown"}`,
+    );
+  }
+
+  const { threadId } = (await threadRes.json()) as { threadId: string };
+
+  console.log("[verify] submitting prompt", { threadId });
   const submitRes = await fetch(`${baseUrl}/api/v2/submit`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, threadId }),
   });
 
   if (!submitRes.ok) {
@@ -99,4 +122,3 @@ void main().catch((error) => {
   console.error("[verify] failed:", error);
   process.exit(1);
 });
-

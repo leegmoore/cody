@@ -11,18 +11,16 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { registerConversationRoutes } from "./api/routes/conversations.js";
-import { registerMessageRoutes } from "./api/routes/messages.js";
-import { registerTurnRoutes } from "./api/routes/turns.js";
-import { registerRunRoutes } from "./api/routes/runs.js";
 import { registerStreamRoutes } from "./api/routes/stream.js";
 import { registerSubmitRoutes } from "./api/routes/submit.js";
+import { registerThreadRoutes } from "./api/routes/threads.js";
+import { registerRunStatusRoutes } from "./api/routes/run-status.js";
 import { AppError } from "./api/errors/api-errors.js";
-import { CodexRuntime } from "./api/services/codex-runtime.js";
 import {
   DefaultModelFactory,
   type ModelFactory,
 } from "./core/model-factory.js";
+import { PersistenceWorker } from "./workers/persistence-worker.js";
 
 export interface ServerOptions {
   modelFactory?: ModelFactory;
@@ -34,6 +32,8 @@ export async function createServer(options: ServerOptions = {}) {
       level: "debug",
     },
   });
+
+  let persistenceWorker: PersistenceWorker | undefined;
 
   const modelFactory = options.modelFactory ?? new DefaultModelFactory();
   app.decorate("modelFactory", modelFactory);
@@ -59,31 +59,30 @@ export async function createServer(options: ServerOptions = {}) {
   const codexHome = process.env.CODY_HOME ?? join(tmpdir(), "cody-runtime");
   await mkdir(codexHome, { recursive: true });
   process.env.CODY_HOME ??= codexHome;
-  const cwd = process.cwd();
-  const codexRuntime = new CodexRuntime({ codexHome, cwd });
+  const _cwd = process.cwd();
 
-  // Store runtime in app instance for access in routes
-  app.decorate("codexRuntime", codexRuntime);
+  try {
+    persistenceWorker = new PersistenceWorker();
+    await persistenceWorker.start();
+    app.log.info("Persistence worker started");
+  } catch (error) {
+    app.log.warn(
+      { err: error },
+      "Persistence worker disabled (set CONVEX_URL to enable)",
+    );
+    persistenceWorker = undefined;
+  }
 
+  app.addHook("onClose", async () => {
+    if (persistenceWorker) {
+      await persistenceWorker.stop().catch(() => undefined);
+    }
+  });
   app.get("/health", async () => ({
     status: "ok",
     timestamp: new Date().toISOString(),
     version: "0.1.0",
   }));
-
-  // Register API routes with Zod validation
-  app.register(
-    (sub) => {
-      sub.setValidatorCompiler(validatorCompiler);
-      sub.setSerializerCompiler(serializerCompiler);
-
-      registerConversationRoutes(sub);
-      registerMessageRoutes(sub);
-      registerTurnRoutes(sub);
-      registerRunRoutes(sub);
-    },
-    { prefix: "/api/v1" },
-  );
 
   app.register(
     (sub) => {
@@ -92,6 +91,8 @@ export async function createServer(options: ServerOptions = {}) {
 
       registerSubmitRoutes(sub);
       registerStreamRoutes(sub);
+      registerThreadRoutes(sub);
+      registerRunStatusRoutes(sub);
     },
     { prefix: "/api/v2" },
   );

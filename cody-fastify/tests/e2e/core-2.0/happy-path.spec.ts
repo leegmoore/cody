@@ -12,7 +12,6 @@ import {
 } from "../../../src/core/schema.js";
 import { Core2TestHarness } from "../../harness/core-harness.js";
 import type { MockFixtureFile } from "../../mocks/mock-stream-adapter.js";
-import { installMockTools, type RestoreFn } from "./mock-tools.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -55,23 +54,16 @@ const FIXTURES = {
 
 const harness = new Core2TestHarness();
 
-let restoreToolRegistry: RestoreFn | undefined;
-
 describe("Core 2.0 Happy Path", () => {
   beforeAll(async () => {
     await registerFixtures();
-    restoreToolRegistry = installMockTools();
     await harness.setup();
   });
 
   afterAll(async () => {
     await harness.cleanup();
-    restoreToolRegistry?.();
   }, 20_000);
 
-  afterEach(async () => {
-    await harness.reset();
-  });
 
   test("TC-HP-01: Simple message turn (OpenAI)", async () => {
     const turnId = randomUUID();
@@ -277,7 +269,7 @@ describe("Core 2.0 Happy Path", () => {
       type: "function_call_output",
       success: true,
       origin: "tool_harness",
-      output: expect.stringContaining("Mock README"),
+      output: expect.stringContaining("# Cody Fastify"),
     });
 
     const finalMessage = response.output_items.find(
@@ -457,7 +449,7 @@ describe("Core 2.0 Happy Path", () => {
       type: "function_call_output",
       success: true,
       origin: "tool_harness",
-      output: expect.stringContaining('mocked-output-for "ls -l"'),
+      output: expect.stringContaining("total 384"), // Expect first line of ls -l output
     });
 
     const persisted = await waitForPersisted(

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { ToolSpec } from "codex-ts/src/core/client/client-common.js";
 import { RedisStream } from "../redis.js";
 import {
   OutputItem,
@@ -6,6 +7,7 @@ import {
   StreamEventSchema,
   TraceContext,
 } from "../schema.js";
+import { formatToolsForAnthropicMessages } from "../tools/schema-formatter.js";
 import { childTraceContext, createTraceContext } from "../tracing.js";
 
 interface AnthropicAdapterOptions {
@@ -24,11 +26,17 @@ interface StreamParams {
   threadId?: string;
   agentId?: string;
   traceContext?: TraceContext;
+  tools?: ToolSpec[];
 }
+
+type StreamableItemType = Extract<
+  OutputItem["type"],
+  "message" | "reasoning" | "function_call"
+>;
 
 type ItemAccumulator = {
   id: string;
-  type: OutputItem["type"];
+  type: StreamableItemType;
   content: string[];
   name?: string;
   callId?: string;
@@ -76,9 +84,22 @@ export class AnthropicStreamAdapter {
     });
     await this.redis.publish(responseStart);
 
-    const reqBody = {
+    const formattedTools =
+      params.tools && params.tools.length > 0
+        ? formatToolsForAnthropicMessages(params.tools)
+        : undefined;
+    const reqBody: {
+      model: string;
+      max_tokens: number;
+      stream: true;
+      messages: Array<{
+        role: "user";
+        content: Array<{ type: "text"; text: string }>;
+      }>;
+      tools?: ReturnType<typeof formatToolsForAnthropicMessages>;
+    } = {
       model: this.model,
-      max_output_tokens: this.maxOutputTokens,
+      max_tokens: this.maxOutputTokens,
       stream: true,
       messages: [
         {
@@ -86,15 +107,22 @@ export class AnthropicStreamAdapter {
           content: [{ type: "text" as const, text: params.prompt }],
         },
       ],
+      tools: formattedTools,
     };
+
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "x-api-key": this.apiKey,
+      "anthropic-version": "2023-06-01",
+    };
+    if (formattedTools) {
+      headers["anthropic-beta"] =
+        process.env.ANTHROPIC_BETA_TOOLS ?? "tools-2024-04-04";
+    }
 
     const res = await fetch(this.baseUrl, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": this.apiKey,
-        "anthropic-version": "2023-06-01",
-      },
+      headers,
       body: JSON.stringify(reqBody),
     });
 
@@ -118,6 +146,7 @@ export class AnthropicStreamAdapter {
     const decoder = new TextDecoder();
     const buffer: string[] = [];
     const items = new Map<string, ItemAccumulator>();
+    const blockIndexToItemId = new Map<number, string>();
     let finishReason: string | null = null;
     let usage: { input_tokens?: number; output_tokens?: number } | undefined;
 
@@ -166,7 +195,15 @@ export class AnthropicStreamAdapter {
           case "content_block_start": {
             const blockInfo = asObject(dataJson.content_block);
             if (!blockInfo) break;
-            const itemId = ensureItemId(blockInfo.id);
+            const blockIndex = getNumber(dataJson.index);
+            const existingId =
+              typeof blockIndex === "number"
+                ? blockIndexToItemId.get(blockIndex)
+                : undefined;
+            const itemId = existingId ?? ensureItemId(getString(blockInfo?.id));
+            if (typeof blockIndex === "number") {
+              blockIndexToItemId.set(blockIndex, itemId);
+            }
             if (blockInfo.type === "text") {
               const accumulator = ensureItem(items, itemId, "message");
               await this.publishItemStartIfNeeded(trace, runId, accumulator);
@@ -187,10 +224,14 @@ export class AnthropicStreamAdapter {
           }
 
           case "content_block_delta": {
-            const blockInfo = asObject(dataJson.content_block);
             const delta = asObject(dataJson.delta);
-            if (!blockInfo || !delta) break;
-            const itemId = ensureItemId(blockInfo.id);
+            if (!delta) break;
+            const blockIndex = getNumber(dataJson.index);
+            const itemId =
+              typeof blockIndex === "number"
+                ? blockIndexToItemId.get(blockIndex)
+                : undefined;
+            if (!itemId) break;
             const accumulator = items.get(itemId);
             if (!accumulator) break;
 
@@ -225,23 +266,30 @@ export class AnthropicStreamAdapter {
           }
 
           case "content_block_stop": {
-            const blockInfo = asObject(dataJson.content_block);
-            if (!blockInfo) break;
-            const itemId = ensureItemId(blockInfo.id);
+            const blockIndex = getNumber(dataJson.index);
+            const itemId =
+              typeof blockIndex === "number"
+                ? blockIndexToItemId.get(blockIndex)
+                : undefined;
+            if (!itemId) break;
             const accumulator = items.get(itemId);
             if (!accumulator) break;
+            const blockInfo = asObject(dataJson.content_block);
 
             if (accumulator.type === "function_call") {
               const finalArgs =
                 accumulator.argumentsChunks?.join("") ??
-                (typeof blockInfo.input === "string"
+                (typeof blockInfo?.input === "string"
                   ? blockInfo.input
-                  : JSON.stringify(blockInfo.input ?? {}));
+                  : JSON.stringify(blockInfo?.input ?? {}));
               accumulator.content = [finalArgs];
               accumulator.callId = accumulator.callId ?? itemId;
             }
             await this.publishItemDone(trace, runId, accumulator);
             items.delete(itemId);
+            if (typeof blockIndex === "number") {
+              blockIndexToItemId.delete(blockIndex);
+            }
             break;
           }
 
@@ -472,4 +520,12 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
     return value as Record<string, unknown>;
   }
   return undefined;
+}
+
+function getString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function getNumber(value: unknown): number | undefined {
+  return typeof value === "number" ? value : undefined;
 }

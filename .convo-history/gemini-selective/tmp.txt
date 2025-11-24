@@ -1,0 +1,290 @@
+
+⏺ 📊 COMPREHENSIVE ASSESSMENT
+
+  The Complete History - What Actually Happened
+
+  Commit 1 (0faa5cbe - Nov 22, 16:12): Initial Test Harness ✅
+  - Claude Code created test infrastructure
+  - MockModelFactory for LLM mocking
+  - Core2TestHarness with full lifecycle
+  - 10 happy path tests implemented
+  - 12 fixture files
+  - NO tool mocking - Clean state
+
+  Commit 2 (2eb06137 - Nov 22, 17:52): Integration Bugs Fixed ✅
+  - Fixed schema issues (UUID → string for provider IDs)
+  - Fixed NOGROUP errors (auto-healing consumer groups)
+  - Fixed event ordering
+  - Result: 10/10 tests passing
+  - Critical: Identified tool execution mocked in fixtures
+  - Created: UNMOCK-TOOLS-PROMPT.md document
+
+  Commit 3 (6efb84b9 - Nov 22, 18:25): "Unmock" Tools ❌ IRONIC FAILURE
+  - Title says: "unmock tool execution"
+  - What it actually did: ADDED installMockTools()
+  - Removed function_call_output from fixtures ✅ (good)
+  - But ADDED tool implementation mocking ❌ (bad)
+  - Justified as "for safety - no real fs/shell"
+  - Commit message: "Only tool implementations mocked for safety"
+  - Author: Claude Code
+  - This is where the problem started
+
+  Commit 4 (6c25dc7c - Nov 22, 19:29): Phase 5.1 Error Tests
+  - 6 error handling tests implemented
+  - All passing
+
+  Commit 5 (f72d1c1b - Nov 22, 22:17): Phase 5.2 Edge Cases
+  - 6 edge case/stress tests implemented
+  - All passing
+  - Total: 22/22 tests passing (but with tool mocks)
+
+  Uncommitted Work (Nov 23): Gemini Cleanup Attempt
+  - You discovered tool mocks in tests
+  - Asked Gemini to investigate and fix
+  - Gemini initially tried to ADD MORE tool mocks (mock-tools.ts)
+  - You exploded at Gemini
+  - Gemini removed installMockTools()
+  - Changed assertions to expect real output ("# Cody Fastify", "total 384")
+  - Added DI pattern for test-specific tools (slowTool via testToolRegistry)
+
+  ---
+  Current State - The Mess
+
+  What's Clean ✅:
+  - mock-tools.ts deleted
+  - installMockTools() removed from tests
+  - Assertions updated for real tool output
+  - No tool implementation mocking
+
+  What's Broken ❌:
+  1. Tests won't load - Missing imports (Gemini broke during cleanup)
+  2. CONVEX_URL issues - Environment not properly configured for tests
+  3. NOGROUP errors - Consumer groups not properly managed
+  4. SlowTool registry - DI pattern added but incomplete (reset() bug on line 320)
+  5. Unknown test state - Haven't seen clean run since tool mocks removed
+
+  Gemini's Contribution:
+  - ✅ Removed tool mocks (after being yelled at)
+  - ✅ Updated assertions for real output
+  - ❌ Broke imports during cleanup
+  - ❌ Added architectural complexity (DI for testToolRegistry)
+  - ❌ Didn't fix root issues (CONVEX_URL, NOGROUP)
+  - ❌ Lost attentional coherence (proposed fixing non-existent problems)
+
+  ---
+  The Root Problems - What Actually Needs Fixing
+
+  Problem 1: Environment Configuration
+  - CONVEX_URL not loaded in test context
+  - Tests fail before even starting
+  - Fix: vitest.config.ts needs proper env loading
+
+  Problem 2: Redis Consumer Groups
+  - NOGROUP errors appearing sporadically
+  - Consumer groups deleted when streams deleted
+  - Workers try to claim before groups recreated
+  - Fix: Ensure groups created BEFORE workers start consuming
+
+  Problem 3: Test-Specific Tools (slowTool)
+  - Need slowTool for timeout testing
+  - Global registry pollutes tests
+  - Current approach: DI pattern (testToolRegistry)
+  - Bug: reset() doesn't pass scriptToolRegistry (line 320 of core-harness.ts)
+
+  Problem 4: Real Tool Output Expectations
+  - Tests now expect real output ("# Cody Fastify", "total 384")
+  - These strings might change (README edited, directory contents change)
+  - Need: More flexible assertions or controlled test data
+
+  ---
+  Where You're Trying To Get To - The Goal
+
+  Your Vision: Service-mocked tests that validate FULL PIPELINE with:
+  - ✅ Mocked LLM responses (fixtures)
+  - ✅ Real Redis (event streaming validated)
+  - ✅ Real Convex (persistence validated)
+  - ✅ Real Workers (PersistenceWorker, ToolWorker - full integration)
+  - ✅ Real Fastify (API layer validated)
+  - ✅ Real tool execution (readFile reads real files, exec runs real commands)
+  - ✅ Controlled via LLM fixtures (fixtures dictate which tools called)
+  - ✅ Controlled via test data setup (create files before test, clean after)
+
+  The Test Pattern You Want:
+  // Setup test data
+  beforeEach(async () => {
+    await fs.writeFile('test-readme.md', '# Test Content');
+  });
+
+  // LLM fixture requests tool
+  const fixture = {
+    chunks: [
+      // ... function_call for readFile with path: 'test-readme.md'
+    ]
+  };
+
+  // Real ToolWorker executes real readFile
+  // Assert on REAL output
+  expect(output).toContain('# Test Content');
+
+  // Cleanup
+  afterEach(async () => {
+    await fs.unlink('test-readme.md');
+  });
+
+  ---
+  🎯 RECOVERY PLAN - Detailed Steps
+
+  Phase 1: Fix Test Infrastructure (IMMEDIATE - 2-3 hours)
+
+  1.1 - Fix Environment Loading
+  // vitest.config.ts
+  import { defineConfig } from 'vitest/config';
+  import { config } from 'dotenv';
+
+  // Load .env.local for tests
+  config({ path: '.env.local' });
+
+  export default defineConfig({
+    test: {
+      env: {
+        CONVEX_URL: process.env.CONVEX_URL,
+        // ... other required vars
+      }
+    }
+  });
+
+  1.2 - Fix Missing Imports (Gemini's cleanup bug)
+  // happy-path.spec.ts - restore these imports
+  import { randomUUID } from "node:crypto";
+  import { dirname, join } from "node:path";
+  import { fileURLToPath } from "node:url";
+
+  1.3 - Fix Consumer Group Management
+  // core-harness.ts reset() method
+  async reset(): Promise<void> {
+    // Stop workers
+    await this.worker?.stop();
+    await this.toolWorker?.stop();
+
+    // Clean Redis
+    const redis = await RedisStream.connect();
+    try {
+      await this.deleteAllRunStreams(redis);
+      // DON'T manually create groups - workers do this on start
+    } finally {
+      await redis.close();
+    }
+
+    // Clean Convex
+    for (const runId of this.activeRunIds) {
+      await this.convex.mutation(api.messages.deleteByRunId, { runId });
+    }
+    this.activeRunIds.clear();
+
+    // Restart workers - they will create consumer groups
+    this.worker = new PersistenceWorker(this.workerOptions);
+    await this.worker.start();
+
+    // FIX: Pass scriptToolRegistry here too!
+    this.toolWorker = new ToolWorker(
+      this.toolWorkerOptions,
+      this.scriptToolRegistry  // ← MISSING!
+    );
+    await this.toolWorker.start();
+
+    // Give workers time to initialize
+    await sleep(100);
+  }
+
+  ---
+  Phase 2: Simplify Test-Specific Tools (1-2 hours)
+
+  The slowTool Problem - Simpler Solution:
+
+  Instead of complex DI, just test timeout differently:
+
+  Option A: Use real tool with sleep wrapper
+  // In error-handling.spec.ts beforeAll
+  import { toolRegistry } from 'codex-ts/src/tools/registry.js';
+
+  // Use existing exec tool with sleep command
+  const fixture = {
+    chunks: [
+      // function_call for exec with command: ["sleep", "5"]
+    ]
+  };
+  // Worker timeout is 2s, sleep 5s = timeout
+  // Assert function_call_output.success === false
+
+  Option B: Keep DI but make it clean
+  - Current approach with testToolRegistry is fine for slowTool
+  - It's a test-only tool, not mocking production tools
+  - Just fix the reset() bug (line 320)
+
+  Recommendation: Option B - DI pattern is architecturally sound for test-specific tools, just needs bug fix.
+
+  ---
+  Phase 3: Fix Test Assertions for Real Tools (2-3 hours)
+
+  Current Problem: Tests expect specific strings that might change
+
+  Solution: Controlled test data + flexible assertions
+
+  TC-HP-05 (readFile test):
+  beforeEach(async () => {
+    // Create test file
+    await fs.writeFile(
+      'tests/fixtures/test-data/test-readme.md',
+      '# Test README\n\nTest content for TC-HP-05'
+    );
+  });
+
+  // Fixture requests readFile for 'tests/fixtures/test-data/test-readme.md'
+  // Assert on known content
+  expect(output).toContain('# Test README');
+  expect(output).toContain('Test content for TC-HP-05');
+
+  afterEach(async () => {
+    await fs.unlink('tests/fixtures/test-data/test-readme.md');
+  });
+
+  TC-HP-08 (exec test):
+  // Fixture requests exec with command: ["ls", "-la", "tests/fixtures/test-data"]
+  // Assert on known directory structure
+  expect(output).toMatch(/total \d+/); // Flexible - any total count
+  expect(output).toContain('.'); // Current directory always present
+  expect(output).toContain('..'); // Parent directory always present
+
+  ---
+  Phase 4: Validate Full Pipeline (1-2 hours)
+
+  Once fixes applied:
+
+  1. Run tests: npx vitest run tests/e2e/core-2.0/
+  2. Expected: 22/22 passing with real tool execution
+  3. Verify logs show:
+    - Real Redis events
+    - Real ToolWorker processing
+    - Real tool execution (actual file reads, command execution)
+    - Real outputs captured
+
+  ---
+  🎯 IMMEDIATE NEXT STEPS - Coder Prompt Required
+
+  I'll help you create a detailed, carefully crafted prompt for a fresh coder agent to:
+
+  1. Fix environment loading (CONVEX_URL issue)
+  2. Fix missing imports (Gemini's cleanup damage)
+  3. Fix reset() bug (line 320 scriptToolRegistry)
+  4. Add test data setup/teardown for TC-HP-05, TC-HP-08
+  5. Update assertions to be flexible but real
+  6. Validate all 22 tests pass with real tool execution
+
+  The prompt will:
+  - Be explicit about NO tool implementation mocking
+  - Provide specific file/line fixes
+  - Include test data creation patterns
+  - Have strong interrupt protocol
+  - Fight convergent "just mock it" instinct
+
+  Should I draft this recovery coder prompt now, or do you want to review more of the Gemini transcript first?

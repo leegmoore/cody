@@ -76,6 +76,13 @@ export default defineSchema({
         }),
         v.object({
           id: v.string(),
+          type: v.literal("cancelled"),
+          reason: v.optional(v.string()),
+          origin: v.string(),
+          correlation_id: v.optional(v.string()),
+        }),
+        v.object({
+          id: v.string(),
           type: v.literal("script_execution"),
           code: v.string(),
           origin: v.string(),

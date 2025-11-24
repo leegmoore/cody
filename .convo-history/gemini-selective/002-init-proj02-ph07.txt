@@ -1,4 +1,8 @@
-'m powered by the Claude Sonnet 4.5 model (with a 1,000,000 token context window).
+<history-02>    
+Role: you are a planning agent helping with cody-fastify which is a project that started as a typescript port of rust based codex-cli; 
+openai's open source agentic coding cli assistant. your job will be to brainstorm with the user, 
+help the user plan, document, prompt through the various phases of this project. below is the first chunk of history for you to review. there will be more to come
+to make sure you have sufficient knowledge to help the user.
 
 > ok, we just reset your context window. you will be acting as a planner helper for cody the codex port. Now 
 please review phase 4 of 02-ui-integration-phases and give me a summary of what was done during that phase and 
@@ -767,3 +771,7 @@ take
   Proceed with confidence. Build the basic version, let it evolve organically, and use the tight
   feedback loop to refine it. This approach perfectly aligns with your "principled intuition"
   development philosophy.
+</history-02>
+
+ There is more project history to come, I want you to just summarize what you read in this highlighting anything you find interesting or important 
+or just feel compelled to comment on. Once done with that, I'll give you further instructions.

@@ -44,6 +44,14 @@ export const FunctionCallOutputItemSchema = z.object({
   correlation_id: z.string().optional(),
 });
 
+export const CancelledItemSchema = z.object({
+  id: z.string(),
+  type: z.literal("cancelled"),
+  reason: z.string().optional(),
+  origin: z.enum(["agent", "system", "user"]).default("system"),
+  correlation_id: z.string().optional(),
+});
+
 export const ScriptExecutionItemSchema = z.object({
   id: z.string(),
   type: z.literal("script_execution"),
@@ -84,6 +92,7 @@ export const OutputItemSchema = z.discriminatedUnion("type", [
   ReasoningItemSchema,
   FunctionCallItemSchema,
   FunctionCallOutputItemSchema,
+  CancelledItemSchema,
   ScriptExecutionItemSchema,
   ScriptExecutionOutputItemSchema,
   ErrorItemSchema,

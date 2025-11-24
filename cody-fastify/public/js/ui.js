@@ -1,12 +1,84 @@
 import { state, ensureToolCall, applyToolCallUpdates } from './state.js';
 import { 
     escapeHtml, formatToolCallSignature, formatToolCallJson, 
-    normalizeTurnId 
+    normalizeRunId 
 } from './utils.js';
 
 export function scrollToBottom() {
     const chatHistory = document.getElementById('chatHistory');
     chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+export function clearChatHistory() {
+    const chatHistory = document.getElementById('chatHistory');
+    if (chatHistory) {
+        chatHistory.innerHTML = '';
+    }
+}
+
+export function setChatPlaceholder(message) {
+    const chatHistory = document.getElementById('chatHistory');
+    if (!chatHistory) return;
+    chatHistory.innerHTML = `
+        <div class="flex items-center justify-center h-full text-tan-600">
+            <div class="text-center">
+                <p class="text-lg">${escapeHtml(message)}</p>
+                <p class="text-sm mt-2">Type a message below to begin</p>
+            </div>
+        </div>
+    `;
+}
+
+export function setThreadNavItems(items) {
+    const threadNav = document.getElementById('threadNav');
+    if (!threadNav) return;
+    if (!items.length) {
+        threadNav.innerHTML = `
+            <div class="text-center text-xs text-brown-500 py-4">
+                Conversation breadcrumbs will appear here
+            </div>
+        `;
+        return;
+    }
+    threadNav.innerHTML = '';
+}
+
+export function setActiveThreadTitle(meta = {}) {
+    const titleEl = document.getElementById('conversationTitle');
+    if (!titleEl) return;
+    const displayTitle = meta.title?.trim();
+    const fallbackId = meta.threadId ? `Thread ${meta.threadId.slice(0, 8)}` : 'Untitled thread';
+    titleEl.textContent = displayTitle && displayTitle.length ? displayTitle : fallbackId;
+}
+
+export function setThreadDebugInfo(threadId) {
+    const label = document.getElementById('threadDebugLabel');
+    const button = document.getElementById('copyThreadIdButton');
+    if (!label || !button) return;
+    if (threadId) {
+        label.textContent = `Thread: ${threadId}`;
+        button.disabled = false;
+        button.dataset.threadId = threadId;
+    } else {
+        label.textContent = 'Thread: --';
+        button.disabled = true;
+        delete button.dataset.threadId;
+    }
+}
+
+function registerRenderedItem(itemId, elementId) {
+    if (!itemId || !elementId) return;
+    state.renderedItems.set(itemId, elementId);
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.dataset.itemId = itemId;
+    }
+}
+
+function getRenderedElement(itemId) {
+    const elementId = state.renderedItems.get(itemId);
+    if (!elementId) return null;
+    return document.getElementById(elementId);
 }
 
 export function resetToolCallState(options = {}) {
@@ -27,11 +99,11 @@ export function resetToolCallState(options = {}) {
     closeToolCallModal(true);
 }
 
-export function ensureToolTimeline(turnId) {
-    if (!turnId) {
+export function ensureToolTimeline(runId) {
+    if (!runId) {
         return null;
     }
-    let timeline = state.toolCallTimelines.get(turnId);
+    let timeline = state.toolCallTimelines.get(runId);
     if (timeline && document.body.contains(timeline.element)) {
         return timeline;
     }
@@ -41,7 +113,7 @@ export function ensureToolTimeline(turnId) {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'flex justify-start animate-fade-in';
-    wrapper.dataset.toolTimelineId = turnId;
+    wrapper.dataset.toolTimelineId = runId;
     wrapper.innerHTML = `
         <div class="tool-call-stack-wrapper">
             <div class="tool-call-cards"></div>
@@ -53,7 +125,7 @@ export function ensureToolTimeline(turnId) {
 
     const cardsContainer = wrapper.querySelector('.tool-call-cards');
     timeline = { element: wrapper, cardsContainer };
-    state.toolCallTimelines.set(turnId, timeline);
+    state.toolCallTimelines.set(runId, timeline);
     return timeline;
 }
 
@@ -87,21 +159,21 @@ export function getToolStatusMeta(status) {
     };
 }
 
-export function updateToolCallStack(turnId) {
-    const normalizedTurnId = normalizeTurnId(turnId);
-    if (!normalizedTurnId) {
+export function updateToolCallStack(runId) {
+    const normalizedRunId = normalizeRunId(runId);
+    if (!normalizedRunId) {
         return;
     }
 
     const callsForTurn = state.toolCalls
-        .filter((call) => call.turnId === normalizedTurnId)
+        .filter((call) => call.runId === normalizedRunId)
         .sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
 
     if (!callsForTurn.length) {
         return;
     }
 
-    const timeline = ensureToolTimeline(normalizedTurnId);
+    const timeline = ensureToolTimeline(normalizedRunId);
     if (!timeline || !timeline.cardsContainer) {
         return;
     }
@@ -234,7 +306,7 @@ export function renderToolCallModalContent(call) {
     outputEl.classList.add('hljs', 'language-json');
 
     const siblings = state.toolCalls
-        .filter(tc => tc.turnId === call.turnId)
+        .filter(tc => tc.runId === call.runId)
         .sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
     
     const currentIndex = siblings.findIndex(tc => tc.callId === call.callId);
@@ -295,7 +367,7 @@ export function closeToolCallModal(silent = false) {
 
 export function syncToolCallUI(call) {
     if (call) {
-        updateToolCallStack(call.turnId);
+        updateToolCallStack(call.runId);
     }
     if (state.toolCallModalCallId) {
         const active = state.toolCalls.find(tc => tc.callId === state.toolCallModalCallId);
@@ -493,11 +565,11 @@ export function removeThinkingPlaceholder() {
     }
 }
 
-export function delayedToolUpdate(callId, turnId, updates) {
+export function delayedToolUpdate(callId, runId, updates) {
     state.pendingCompletionId = callId;
     setTimeout(() => {
-        const targetTurnId = normalizeTurnId(turnId) || state.currentTurnId;
-        const call = ensureToolCall(callId, { type: 'tool', turnId: targetTurnId });
+        const targetRunId = normalizeRunId(runId) || state.currentRunId;
+        const call = ensureToolCall(callId, { type: 'tool', runId: targetRunId });
         applyToolCallUpdates(call, updates);
         syncToolCallUI(call);
         
@@ -512,15 +584,17 @@ export function delayedToolUpdate(callId, turnId, updates) {
     }, 800);
 }
 
-export function addUserMessage(text) {
+export function addUserMessage(text, options = {}) {
     const chatHistory = document.getElementById('chatHistory');
     const emptyState = chatHistory.querySelector('.flex.items-center.justify-center');
     if (emptyState && emptyState.textContent.includes('Start a conversation')) {
         emptyState.remove();
     }
 
+    const messageId = options.itemId || `user-${Date.now()}`;
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex justify-end animate-fade-in';
+    messageDiv.dataset.itemId = messageId;
     messageDiv.innerHTML = `
         <div class="max-w-3xl">
             <div class="bg-orange-600 text-white rounded-lg px-4 py-3 shadow">
@@ -533,21 +607,23 @@ export function addUserMessage(text) {
     scrollToBottom();
     
     addToThreadNav('user', text);
-    state.messageHistory.push({ role: 'user', content: text, element: messageDiv });
+    state.messageHistory.push({ role: 'user', content: text, element: messageDiv, id: messageId });
+    return messageId;
 }
 
-export function addAgentMessage(text) {
+export function addAgentMessage(text, options = {}) {
     const chatHistory = document.getElementById('chatHistory');
     const emptyState = chatHistory.querySelector('.flex.items-center.justify-center');
     if (emptyState && emptyState.textContent.includes('Start a conversation')) {
         emptyState.remove();
     }
-    
-    const messageId = 'agent-' + Date.now();
+
+    const messageId = options.itemId || `agent-${Date.now()}`;
     
     const messageDiv = document.createElement('div');
     messageDiv.id = messageId;
     messageDiv.className = 'flex justify-start animate-fade-in';
+    messageDiv.dataset.itemId = messageId;
     messageDiv.innerHTML = `
         <div class="max-w-3xl">
             <div class="bg-white border-2 border-tan-300 rounded-lg px-4 py-3 shadow">
@@ -570,12 +646,10 @@ export function addAgentMessage(text) {
 export function updateAgentMessage(messageId, text) {
     const messageDiv = document.getElementById(messageId);
     if (!messageDiv) {
-        console.error('Message div not found for ID:', messageId);
         return;
     }
     const contentDiv = messageDiv.querySelector('.message-content');
     if (!contentDiv) {
-        console.error('Content div not found in message:', messageId);
         return;
     }
     contentDiv.textContent = text;
@@ -748,6 +822,223 @@ export function toggleRightSidebar() {
     } else {
         sidebar.classList.add('-mr-64');
         toggle.classList.remove('hidden');
+    }
+}
+
+export function renderResponseItems(items = [], context = {}) {
+    items.forEach((item) => {
+        switch (item.type) {
+            case 'message':
+                renderMessageItem(item, context);
+                break;
+            case 'reasoning':
+                renderReasoningItem(item);
+                break;
+            case 'function_call':
+                renderFunctionCallItem(item, context);
+                break;
+            case 'function_call_output':
+                renderFunctionCallOutput(item, context);
+                break;
+            case 'error':
+                renderErrorCard(item, context);
+                break;
+            case 'cancelled':
+                renderCancelledCard(item, context);
+                break;
+            default:
+                break;
+        }
+    });
+
+    if (context?.runId && ['complete', 'error', 'aborted'].includes(context.status)) {
+        state.runAgentAnchors.delete(context.runId);
+    }
+}
+
+function updateMessageContent(elementId, text) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const content = el.querySelector('.message-content');
+    if (content) {
+        content.textContent = text;
+    }
+}
+
+function renderMessageItem(item, context) {
+    const origin = item.origin || 'agent';
+    if (origin === 'agent' && (!item.content || item.content.length === 0)) {
+        return;
+    }
+    const existing = getRenderedElement(item.id);
+    const runId = context?.runId;
+    const anchor = runId ? state.runAgentAnchors.get(runId) : null;
+    if (anchor && anchor.itemId !== item.id) {
+        state.runAgentAnchors.delete(runId);
+    }
+    if (existing) {
+        const content = existing.querySelector('.message-content');
+        if (content && content.textContent !== item.content) {
+            content.textContent = item.content;
+            scrollToBottom();
+        }
+        if (origin === 'agent' && runId) {
+            state.runAgentAnchors.set(runId, {
+                itemId: item.id,
+                elementId: existing.id,
+            });
+        }
+        return;
+    }
+
+    if (origin === 'user') {
+        const pendingIndex = state.pendingUserMessages.findIndex(
+            (entry) => entry.runId === context.runId,
+        );
+        if (pendingIndex >= 0) {
+            const pending = state.pendingUserMessages.splice(pendingIndex, 1)[0];
+            registerRenderedItem(item.id, pending.elementId);
+            updateMessageContent(pending.elementId, item.content);
+            return;
+        }
+        const elementId = addUserMessage(item.content, { itemId: item.id });
+        registerRenderedItem(item.id, elementId);
+        return;
+    }
+
+    if (anchor && runId) {
+        registerRenderedItem(item.id, anchor.elementId);
+        updateMessageContent(anchor.elementId, item.content);
+        state.runAgentAnchors.set(runId, {
+            itemId: item.id,
+            elementId: anchor.elementId,
+        });
+        return;
+    }
+
+    const elementId = addAgentMessage(item.content || '', { itemId: item.id });
+    registerRenderedItem(item.id, elementId);
+    if (runId) {
+        state.runAgentAnchors.set(runId, {
+            itemId: item.id,
+            elementId,
+        });
+    }
+}
+
+function renderReasoningItem(item) {
+    const existing = state.thinkingBlocks.get(item.id);
+    if (existing) {
+        const content = existing.querySelector('.thinking-content');
+        if (content) {
+            content.textContent = item.content;
+        }
+        return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-start reasoning-message animate-fade-in';
+    wrapper.dataset.thinkingId = item.id;
+    wrapper.innerHTML = `
+        <div class="max-w-3xl w-full">
+            <div class="bg-tan-200 border-l-4 border-tan-400 rounded-r-lg px-4 py-3 shadow-sm my-2">
+                <div class="flex items-center mb-1">
+                    <svg class="w-4 h-4 mr-2 text-tan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    <span class="text-xs font-bold uppercase tracking-wide text-tan-700">Reasoning</span>
+                </div>
+                <div class="thinking-content text-sm text-brown-800 font-mono whitespace-pre-wrap">${escapeHtml(item.content)}</div>
+            </div>
+        </div>
+    `;
+    const chatHistory = document.getElementById('chatHistory');
+    chatHistory.appendChild(wrapper);
+    state.thinkingBlocks.set(item.id, wrapper);
+    scrollToBottom();
+}
+
+function renderFunctionCallItem(item, context) {
+    const args = safeJson(item.arguments);
+    const existing = state.toolCalls.find((tc) => tc.callId === item.call_id);
+    const call = ensureToolCall(item.call_id, {
+        toolName: item.name,
+        arguments: args,
+        status: existing?.status ?? 'in_progress',
+        runId: context.runId,
+        type: item.name === 'exec' ? 'exec' : 'tool'
+    });
+    const updates = {
+        toolName: item.name,
+        arguments: args,
+        runId: context.runId,
+    };
+    if (!existing) {
+        updates.status = 'in_progress';
+        updates.startedAt = Date.now();
+    }
+    applyToolCallUpdates(call, updates);
+    syncToolCallUI(call);
+}
+
+function renderFunctionCallOutput(item, context) {
+    const call = ensureToolCall(item.call_id, { runId: context.runId });
+    if (call.status === 'completed' || call.status === 'error') {
+        return;
+    }
+    delayedToolUpdate(item.call_id, context.runId, {
+        output: safeJson(item.output),
+        status: item.success ? 'completed' : 'error',
+        completedAt: Date.now(),
+    });
+}
+
+function renderErrorCard(item, context) {
+    const existing = getRenderedElement(item.id);
+    if (existing) return;
+    const chatHistory = document.getElementById('chatHistory');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-center animate-fade-in';
+    const elementId = `error-${item.id}`;
+    wrapper.id = elementId;
+    wrapper.innerHTML = `
+        <div class="max-w-2xl">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm">
+                <strong>Error:</strong> ${escapeHtml(item.message)}
+            </div>
+        </div>
+    `;
+    chatHistory.appendChild(wrapper);
+    registerRenderedItem(item.id, elementId);
+    scrollToBottom();
+}
+
+function renderCancelledCard(item) {
+    const existing = getRenderedElement(item.id);
+    if (existing) return;
+    const chatHistory = document.getElementById('chatHistory');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-center animate-fade-in';
+    const elementId = `cancelled-${item.id}`;
+    wrapper.id = elementId;
+    wrapper.innerHTML = `
+        <div class="max-w-2xl">
+            <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-lg text-sm">
+                <strong>Cancelled:</strong> ${escapeHtml(item.reason || 'Run was cancelled.')}
+            </div>
+        </div>
+    `;
+    chatHistory.appendChild(wrapper);
+    registerRenderedItem(item.id, elementId);
+    scrollToBottom();
+}
+
+function safeJson(value) {
+    if (typeof value !== 'string') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return value;
     }
 }
 

@@ -1,4 +1,57 @@
+# 2025-11-23 – Smoke Tests: Tool Loop Regression Fixes
+
+- Ran targeted smoke cases after fixing OpenAI tool continuation and Anthropic tooling format.
+- Commands: `npm run test:smoke -t "TC-SMOKE-01"`, `npm run test:smoke -t "TC-SMOKE-02"`, `npm run test:smoke -t "TC-SMOKE-05"`.
+- Result: the three required scenarios now pass end-to-end against real providers. OpenAI usage metrics populate correctly and tool calls produce final assistant messages.
+
+| Test | Status | Notes |
+|------|--------|-------|
+| TC-SMOKE-01 | ✅ PASS | Usage totals now reflect non-zero prompt/completion tokens from the `response.completed` chunk. |
+| TC-SMOKE-02 | ✅ PASS | Anthropic adapter sends `max_tokens` plus the proper Messages API tool schema; request accepted and streamed. |
+| TC-SMOKE-05 | ✅ PASS | Responses API receives formatted tool outputs, loops back for the final answer, and reducer persists `function_call`, `function_call_output`, and `message`. |
+
+---
+
 # Test Results Summary
+
+## 2025-11-23 – Smoke Tests: Tool Integration Attempt
+
+- Ran `npm run test:smoke` after wiring tool schemas through the adapters/submit route.
+- Fastify returned `THREAD_NOT_FOUND` for every `/api/v2/submit` request because the local Convex state did not contain the thread IDs referenced by the harness (see logs at `tests/harness/core-harness.ts:212`).
+- Result: 0/6 passing — tests never reached provider adapters, so tool call behavior with real APIs remains unverified in this environment.
+- Action items: seed/create smoke threads before rerunning, or stub the harness to auto-provision threads during setup.
+
+| Test | Status | Notes |
+|------|--------|-------|
+| TC-SMOKE-01 | ❌ FAIL | 404 THREAD_NOT_FOUND before adapter invoked |
+| TC-SMOKE-02 | ❌ FAIL | Same as above |
+| TC-SMOKE-03 | ❌ FAIL | Same as above |
+| TC-SMOKE-04 | ❌ FAIL | Same as above |
+| TC-SMOKE-05 | ❌ FAIL | Same as above |
+| TC-SMOKE-06 | ❌ FAIL | Same as above |
+
+**Total Cost This Run:** $0 (no provider requests were issued).
+
+## 2025-11-23 – Smoke Tests: Real API Integration
+
+- Added `Core2TestHarness` support for `useRealProviders`, wired vitest smoke suite (`tests/e2e/smoke/real-api.spec.ts`), and documented required environment in `.env.test.example`.
+- Introduced `npm run test:smoke` for on-demand execution (costs ~$0.02-$0.03/run). Do **not** add this to CI; run weekly or pre-release.
+- First execution surfaced real-provider gaps: Anthropics now requires `max_tokens`, OpenAI doesn’t emit reasoning/tool events as mocked, and usage counters aren’t plumbed through to responses yet.
+
+**Status:** 0/6 passing (current failures indicate real API drift)
+
+| Test | Status | Notes |
+|------|--------|-------|
+| TC-SMOKE-01: OpenAI basic | ❌ FAIL | Response persisted but `usage.total_tokens` remained 0 — real API isn’t populating usage yet. |
+| TC-SMOKE-02: Anthropic basic | ❌ FAIL | Anthropic Messages API returned `max_tokens: Field required`; adapter still sends `max_output_tokens`. |
+| TC-SMOKE-03: OpenAI thinking | ❌ FAIL | Real stream lacked `reasoning` item even with `reasoning` request — indicates adapter/schema mismatch. |
+| TC-SMOKE-04: Anthropic thinking | ❌ FAIL | Same `max_tokens` validation error blocked streaming entirely. |
+| TC-SMOKE-05: OpenAI tool call | ❌ FAIL | Timed out waiting for `function_call`; Responses API never invoked `readFile` without explicit tool definitions. |
+| TC-SMOKE-06: Cross-provider parity | ❌ FAIL | Blocked by Anthropic request error; no deltas emitted to compare schemas. |
+
+**Total Cost This Run:** ≈$0.01 (OpenAI calls completed; Anthropic calls failed before streaming).
+
+---
 
 ## 2025-11-23 – Phase 5.2 Edge Cases & Stress Tests
 
@@ -137,6 +190,29 @@
 
 - TC-6.4: Model Override (per-turn overrides not implemented)
 - TC-8.4: Client Disconnect and Reconnect (Playwright limitation)
+
+## Recommended Improvements - Tool Support System
+
+**Priority 1 (High Impact):**
+1. Fine-Grained Tool Scoping  
+   - Current limitation: Every run now receives the entire registry regardless of agent identity or prompt, which risks exposing high-risk tools (e.g., `applyPatch`) in contexts that never intended to allow edits.  
+   - Recommended fix: Introduce agent/thread-level tool policies so the submit handler can request only approved specs (e.g., via metadata on the agent record or request payload).  
+   - Effort: ~1.5 days (policy surface, plumbing through submit route, tests).  
+   - Rationale: Prevents accidental elevation of tool capabilities and reduces schema bloat sent to providers.
+
+**Priority 2 (Medium Impact):**
+2. Tool Choice Strategy Controls  
+   - Current limitation: OpenAI adapter always sends `tool_choice: "auto"` when any tool exists, offering no way to force/forbid tool use or to pick a default function.  
+   - Recommended fix: Extend StreamParams with a `toolChoice` union (`auto | none | required | { type: "function", name: string }`) and expose it via submit payload or agent config.  
+   - Effort: ~1 day (adapter changes + harness plumbing + validation).  
+   - Rationale: Some workflows (e.g., deterministic file reads) need to force a tool call, while others must guarantee pure text responses; having knobs prevents extra retries.
+
+**Priority 3 (Nice-to-Have):**
+3. Tool Schema Validation & Caching  
+   - Current limitation: Tool specs are reformatted on every request with no validation beyond TypeScript shapes, so malformed JSON schemas will surface only at runtime from the provider.  
+   - Recommended fix: Validate registry entries with Ajv at startup and cache the preformatted Responses/Chat arrays so adapters can reuse immutable snapshots.  
+   - Effort: ~0.5 day (Ajv wiring + memoization + tests).  
+   - Rationale: Catches schema bugs earlier, trims per-request overhead, and simplifies debugging when new tools are registered.
 - TC-8.5: Multiple Subscribers (not supported)
 - TC-L4: Provider Override Workflow (per-turn overrides not implemented)
 - TC-L6: Stream Reconnection (Playwright limitation)

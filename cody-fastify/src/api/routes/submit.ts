@@ -7,6 +7,7 @@ import {
   context as otelContext,
   trace,
 } from "@opentelemetry/api";
+import { toolRegistry } from "codex-ts/src/tools/registry.js";
 import { RedisStream } from "../../core/redis.js";
 import {
   InvalidModelError,
@@ -14,6 +15,10 @@ import {
   type StreamAdapter,
 } from "../../core/model-factory.js";
 import { traceContextFromSpanContext } from "../../core/tracing.js";
+import {
+  createThread,
+  ensureThreadExists,
+} from "../services/thread-service.js";
 
 const tracer = trace.getTracer("codex.api.submit");
 
@@ -68,7 +73,21 @@ export async function registerSubmitRoutes(
 
       const runId = body.runId ?? randomUUID();
       const turnId = body.turnId ?? randomUUID();
-      const threadId = body.threadId ?? randomUUID();
+      let threadId = body.threadId;
+      if (!threadId) {
+        const thread = await createThread({
+          modelProviderId: providerId,
+          modelProviderApi: "responses",
+          model,
+        });
+        threadId = thread.threadId;
+      } else {
+        await ensureThreadExists(threadId, {
+          modelProviderId: providerId,
+          modelProviderApi: "responses",
+          model,
+        });
+      }
 
       const activeSpan = trace.getSpan(otelContext.active());
       const requestContext = otelContext.active();
@@ -132,6 +151,8 @@ export async function registerSubmitRoutes(
         return;
       }
 
+      const toolSpecs = toolRegistry.getToolSpecs();
+
       void (async () => {
         try {
           await tracer.startActiveSpan(
@@ -155,6 +176,7 @@ export async function registerSubmitRoutes(
                   threadId,
                   agentId: body.agentId,
                   traceContext,
+                  tools: toolSpecs,
                 });
               } catch (error) {
                 span.recordException(error as Error);

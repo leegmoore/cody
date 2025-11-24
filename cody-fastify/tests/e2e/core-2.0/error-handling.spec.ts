@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ToolRegistry } from "codex-ts/src/tools/registry.js"; // Import ToolRegistry class
 
 import {
   afterAll,
@@ -16,7 +17,6 @@ import {
 import type { Response } from "../../../src/core/schema.js";
 import { Core2TestHarness } from "../../harness/core-harness.js";
 import type { MockFixtureFile } from "../../mocks/mock-stream-adapter.js";
-import { installMockTools, type RestoreFn } from "./mock-tools.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,19 +40,37 @@ const FIXTURES = {
   },
 } as const;
 
-const harness = new Core2TestHarness();
-let restoreTools: RestoreFn | undefined;
+// Create a test-specific tool registry
+const testToolRegistry = new ToolRegistry();
+
+// Register slowTool with the test-specific registry
+testToolRegistry.register({
+  metadata: {
+    name: "slowTool",
+    description: "A tool that sleeps for 5 seconds",
+    requiresApproval: false,
+    schema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  execute: async () => {
+    await sleep(5000);
+    return { success: true, output: "done" };
+  },
+});
+
+const harness = new Core2TestHarness(testToolRegistry); // Pass the test-specific registry to the harness
 
 describe("Core 2.0 Error Handling", () => {
   beforeAll(async () => {
     await registerFixtures();
-    restoreTools = installMockTools();
     await harness.setup();
   });
 
   afterAll(async () => {
+    // We don't need to clear the legacyToolRegistry here because we're using a test-specific one.
     await harness.cleanup();
-    restoreTools?.();
   }, 20_000);
 
   afterEach(async () => {
