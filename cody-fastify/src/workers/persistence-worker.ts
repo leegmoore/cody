@@ -87,7 +87,6 @@ export class PersistenceWorker {
     if (!convexUrl) {
       throw new Error("CONVEX_URL is required to run persistence worker");
     }
-
     this.redis = await RedisStream.connect({ url: this.config.redisUrl });
     this.convexWriter = new ConvexWriter(new ConvexHttpClient(convexUrl));
     this.running = true;
@@ -103,6 +102,7 @@ export class PersistenceWorker {
   async stop(): Promise<void> {
     if (!this.running) return;
     this.running = false;
+    console.log("[DEBUG - PersistenceWorker] Waiting for loops to join...");
     await this.joinPromise;
     await this.redis?.close();
     this.redis = undefined;

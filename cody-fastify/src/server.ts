@@ -75,7 +75,9 @@ export async function createServer(options: ServerOptions = {}) {
 
   app.addHook("onClose", async () => {
     if (persistenceWorker) {
+      console.log("[DEBUG - Server onClose] Before persistenceWorker.stop()");
       await persistenceWorker.stop().catch(() => undefined);
+      console.log("[DEBUG - Server onClose] After persistenceWorker.stop()");
     }
   });
   app.get("/health", async () => ({

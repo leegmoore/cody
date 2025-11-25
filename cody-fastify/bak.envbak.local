@@ -1,0 +1,4 @@
+# Deployment used by `npx convex dev`
+CONVEX_DEPLOYMENT=local:local-lee_moore-cody_fastify # team: lee-moore, project: cody-fastify
+
+CONVEX_URL=http://127.0.0.1:3210

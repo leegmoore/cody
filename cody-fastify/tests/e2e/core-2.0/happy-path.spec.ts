@@ -62,7 +62,7 @@ describe("Core 2.0 Happy Path", () => {
 
   afterAll(async () => {
     await harness.cleanup();
-  }, 10_000);
+  });
 
   test("TC-HP-01: Simple message turn (OpenAI)", async () => {
     const turnId = randomUUID();
@@ -676,7 +676,7 @@ async function registerFixtures(): Promise<void> {
 
 async function waitForPersisted(
   runId: string,
-  timeoutMs = 10000,
+  timeoutMs = 5000,
   expectedStatus?: Response["status"],
 ) {
   const deadline = Date.now() + timeoutMs;

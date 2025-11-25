@@ -162,6 +162,7 @@ export class ToolWorker {
   async stop(): Promise<void> {
     if (!this.running) return;
     this.running = false;
+    console.log("[DEBUG - ToolWorker] Waiting for loops to join...");
     await this.joinPromise;
     await this.redis?.close();
     this.redis = undefined;

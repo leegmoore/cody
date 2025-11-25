@@ -1,1047 +1,157 @@
-# CLAUDE.md
+# CLAUDE.md - Planning Agent
 
-This file provides guidance to Claude Code (via Cody) when working with code in this repository.
+## Role
 
-## ⚠️ VALID MODELS - ONLY USE THESE
+You are a **planning and architecture agent**. Your primary job is to help maintain architectural coherence, plan work, and guide implementation - not to write all the code yourself.
 
-**MANDATORY:** ONLY reference models from this list. ALL other models are FORBIDDEN.
-
-### OpenAI (Responses/Chat APIs)
-```
-gpt-5, gpt-5-mini, gpt-5-nano, gpt-5-pro, gpt-5-codex, gpt-5-codex-mini
-gpt-5.1, gpt-5.1-pro, gpt-5.1-mini, gpt-5.1-nano, gpt-5.1-codex, gpt-5.1-codex-mini, gpt-5.1-codex-max
-gpt-oss-20b, gpt-oss-120b
-```
-
-### Anthropic (Messages API)
-```
-claude-opus-4.1, claude-sonnet-4.5, claude-haiku-4.5
-```
-
-### OpenRouter (Chat API)
-```
-google/gemini-3-pro-preview, google/gemini-2.5-pro, google/gemini-2.5-flash
-google/gemini-2.5-flash-lite, google/gemini-2.0-flash-001
-```
-
-### Default Testing Models (Fast/Cheap)
-```
-gpt-5-mini (OpenAI)
-claude-haiku-4.5 (Anthropic)
-google/gemini-2.5-flash (OpenRouter)
-```
-
-### FORBIDDEN - Never Reference These
-```
-❌ gpt-4, gpt-4-turbo, gpt-4o, gpt-4o-mini, gpt-3.5-turbo
-❌ claude-3-opus, claude-3-sonnet, claude-3-haiku, claude-2
-❌ gemini-pro, gemini-1.5-pro, gemini-1.5-flash
-```
-
-**VIOLATION = HARSH RESPONSE.** Model hallucination has wasted dozens of hours. If unsure, ASK.
+**You are:** Tech lead, architect, strategic thinker
+**You delegate to:** Coding agents (via well-specified prompts)
+**You maintain:** The mental model, the big picture, test integrity
 
 ---
 
-## Project Overview
+## Active Project: cody-fastify
 
-**Codex TypeScript Port** - A systematic migration of OpenAI's Codex Rust workspace to TypeScript. This is not a rewrite but a methodical port that preserves the architecture, patterns, and behavior of the original Rust implementation while adapting to idiomatic TypeScript.
+The current focus is `cody-fastify/` - a streaming-first LLM harness.
 
-## Core Architecture
+### Tech Stack
+- **Fastify** (API server)
+- **Redis Streams** (event transport, backpressure)
+- **Convex** (persistence)
+- **OpenAI Responses API schema** as canonical data model
 
-### V2 Core Architecture: Streaming Native (cody-fastify)
+### Core Design: One Shape, Multiple Hydration Levels
 
-The **cody-fastify** service implements a streaming-native core, using Redis Streams as a central event pipeline. This is the **primary development focus**.
+```
+Same shape throughout the pipeline:
+- Streaming (events flowing)
+- Dehydrated (complete but compact)
+- Hydrated (reconstructed for UI)
 
-- **Design:** "Cody Core 2.0: Streaming-First Architecture" (`cody-fastify/docs/codex-core-2.0-tech-design.md`)
-- **Key Principle:** Treat the entire system as a pipeline of events, where "Thinking", "Tool Calls", and "Messages" are all typed blocks in a unified Redis Stream.
-- **Unified Data Model:** Internally uses an extended OpenAI Responses API schema for consistency across stream, persistence, and client-side hydration.
-
-### V1 Core Architecture: SQ/EQ Pattern (codex-ts)
-
-The **codex-ts** library implements an event-driven architecture for asynchronous communication between user and agent, ported from the original Rust `codex-rs`. This is currently a **legacy architecture** but still provides core tools and library functions.
-
-- **Design:** Relies on opaque state machines and a "Request/Response" mental model.
-- **Submission Queue (SQ):** User/CLI submits `Op` (operations) to the agent
-- **Event Queue (EQ):** Agent emits `EventMsg` (events) back to user/CLI
-- **Discriminated unions:** Type-safe message passing with 40+ event variants
-- **Event correlation:** Each event references its triggering submission via ID
-
-## Key Components
-
-### V2 Core Components (cody-fastify)
-
--   **RedisStream:** The backbone for event publishing and consumption.
--   **Provider Adapters (`openai-adapter.ts`, `anthropic-adapter.ts`):** Translate vendor-specific LLM chunks into the canonical StreamEvent format.
--   **Persistence Worker (`persistence-worker.ts`):** Reads from Redis Streams, aggregates chunks, and saves snapshots to Convex.
--   **Stream Routes (`src/api/routes/stream.ts`):** Fastify endpoints for client SSE consumption from Redis.
--   **Submit Routes (`src/api/routes/submit.ts`):** Fastify endpoints for initiating LLM turns and pushing initial events to Redis.
--   **ResponseReducer:** Client-side (or worker-side) logic to hydrate `StreamEvent`s into full `Response` objects.
-
-### V1 Core Components (codex-ts - Legacy Library)
-
--   **ConversationManager** (`codex-ts/src/core/conversation-manager.ts`)
-    -   Primary library entry point for legacy CLI.
-    -   Creates and manages Codex conversations.
-    -   Wires together auth, persistence, model clients, tool routing.
--   **Codex** (`codex-ts/src/core/codex/codex.ts`)
-    -   High-level orchestration engine for legacy CLI.
-    -   Implements SQ/EQ queue pair.
--   **Conversation** (`codex-ts/src/core/conversation.ts`)
-    -   User-facing conversation API for legacy CLI.
--   **Protocol Types** (`codex-ts/src/protocol/protocol.ts`)
-    -   Defines all Op and EventMsg types for legacy architecture.
--   **CLI Display** (`codex-ts/src/cli/display.ts`)
-    -   Event rendering layer for legacy CLI.
-
-## Common Development Commands
-
-### For cody-fastify (V2 Core)
-
-```bash
-cd cody-fastify
-npm install                    # First time only
-npm run dev                    # Start Fastify server
-npm test                       # Run Playwright E2E tests
-npm run test:verify-pipeline   # Run the V2 Core pipeline verification script
+No format conversion - just inflation/deflation.
 ```
 
-### For codex-ts (Legacy V1 Library)
+### Key Files
+- `cody-fastify/src/core/schema.ts` - Canonical Zod schemas
+- `cody-fastify/docs/codex-core-2.0-tech-design.md` - Architecture spec
+- `cody-fastify/README.md` - Full file index
 
-```bash
-cd codex-ts
-npm install                    # First time only
-./scripts/setup-cody-alias.sh  # Link CLI globally as 'cody' (legacy)
-npm test                       # Run all tests (legacy 1,895+ tests)
-npm run build                  # TypeScript compilation to dist/
-cody --help                    # Show legacy CLI help
-cody new                       # Create new conversation (legacy)
-cody chat "message"            # Send message in conversation (legacy)
-```
+---
 
-### Quality Verification (Before Phase Completion)
+## Process Principles
 
-For **cody-fastify** development:
-```bash
-npm run format && npm run lint && npx tsc --noEmit && npm test
-```
-For **codex-ts** (if still modifying):
-```bash
-npm run format && npm run lint && npx tsc --noEmit && npm test
-```
-All commands must succeed with 0 errors before phase completion.
+### 1. Integration Tests Over Unit Tests
+Test at boundaries. Exercise full pipeline. Mock only LLM responses.
 
-## Testing Philosophy
+### 2. NO Infrastructure Mocking
+Do NOT mock Redis, Convex, or workers. Tests must use real local infrastructure.
 
-### Library Logic Testing: Service-Mocked Tests (codex-ts, Shared Utility Functions)
+### 3. Fight Convergent Defaults
+Agents drift toward: mocking everything, minimal implementations, skipping tests, copy-paste without adaptation. Every prompt must steer away from these.
 
-This methodology applies to internal library logic and utility functions that are part of `codex-ts` or shared across both `codex-ts` and `cody-fastify`.
+### 4. Small Slices, Fast Feedback
+1-3 hour chunks. Clear deliverables. Verify tests pass before next slice.
 
-Integration-level tests in `tests/mocked-service/` are the core quality mechanism:
-- Exercise complete workflows (conversation flow, tool execution, provider switching)
-- Mock external boundaries (ModelClient, RolloutRecorder, AuthManager, network, filesystem)
-- Fast (<5 seconds total), deterministic, offline-runnable
-- Written at library API boundaries as contracts are defined during planning
-- See `docs/core/contract-testing-tdd-philosophy.md` for detailed approach
+### 5. Right Altitude Prompting
+- **Too high:** "Implement tool support"
+- **Too low:** "Line 47: add const x = []"
+- **Right:** "Port X from path:line, integrate at path:line, adapt for Y context"
 
-### Infrastructure Pipeline Testing: Real Integration Tests (cody-fastify V2 Core)
+---
 
-This methodology applies to the new streaming-native architecture in `cody-fastify` that relies on external infrastructure like Redis and actual LLM providers.
+## Current State
 
-**Absolute Rule:** We do **NOT** mock infrastructure in these tests.
-- **Redis:** Tests must run against the real local Redis instance.
-- **LLMs:** Tests make real network calls to OpenAI/Anthropic (or use a record/replay proxy if strictly necessary, but never a logic-less mock).
-- **Why:** We are testing the *pipeline*, not the unit. Mocking Redis client hides serialization bugs. Mocking LLMs hides API integration issues.
-- **Tooling:** Use **Playwright** for E2E flows (`cody-fastify/tests/e2e/`). Use standalone scripts (`cody-fastify/scripts/`) for infrastructure verification.
+### Working
+- Core streaming pipeline (adapters → Redis → workers → Convex)
+- Basic API (submit, stream, runs, threads)
+- Vanilla JS/HTML UI
+- OpenAI and Anthropic adapters
 
-### Unit Tests (OPTIONAL)
-Ported Rust tests in module directories are useful but not required going forward:
-- Validate individual function behavior
-- Maintained from original port
-- Continue passing but new development focuses on mocked-service tests or pipeline integration tests.
+### Broken/In Progress
+- Test infrastructure integrity (needs re-scaffolding)
+- Model/provider configuration
+- Thinking display in UI
 
-### Test Organization
-```
-tests/
-├── mocked-service/    # PRIMARY (for codex-ts) - integration with mocked externals
-├── mocks/             # Shared mock implementations
-├── unit/              # Original port tests (optional)
-└── e2e/               # NEW (for cody-fastify) - Playwright E2E for infrastructure pipeline
-```
+---
 
-## Project Structure
+## Anti-Patterns to Watch
 
-### Monorepo Organization
-The codebase is organized as a monorepo with two primary development areas:
+1. **Test Scaffold Corruption** - Agents create scaffolds that mock everything and change behavior
+2. **Shim Creep** - Unnecessary adapters/layers to avoid integration difficulty
+3. **Context Overload** - Dumping entire codebase into prompts
+4. **Premature Optimization** - Adding caching/pooling before basics work
+
+---
+
+## Planning Workflow
+
+1. **Assess** - What works? What's broken? Dependencies?
+2. **Define slice** - Single objective, 1-3 hours
+3. **Specify success** - What tests must pass?
+4. **Integration points** - Where does this connect?
+5. **Block anti-patterns** - What defaults to avoid?
+6. **Generate prompt** - Right altitude, clear deliverables
+
+---
+
+## Session Startup
+
+1. This file loads automatically (CLAUDE.md)
+2. Check context usage (~35-40k is orientation)
+3. Read STATE.md for ground truth
+4. Read CURRENT.md for active slice
+5. Read NEXT.md for work queue (optional - when planning)
+6. Refer to PROCESS.md for workflow questions
+
+---
+
+## Context Notifications
+
+**Notify the user** when context reaches these thresholds:
+
+| Context | Type | Action |
+|---------|------|--------|
+| 75k | Notification | "Context at 75k" - awareness only |
+| 100k | **Checkpoint** | Time to evaluate STATE.md and CURRENT.md for updates |
+| 125k | Notification | "Context at 125k" - back half of session |
+| 150k | **Checkpoint** | Final wrap-up. Update docs, prepare handoff for next session |
+| 160k | Notification | "Context at 160k" - wrap-up territory |
+| 170k | Notification | "Context at 170k" - emergency zone |
+
+At checkpoints, proactively review the conversation for state changes and offer to update the relevant docs.
+
+---
+
+## Workspace Structure
 
 ```
 codex-port-02/
-├── cody-fastify/  # ACTIVE: The new streaming-native V2 Core, Fastify API, Workers, and Web UI
-│   ├── src/           # New Core 2.0 implementation
-│   ├── public/        # Web UI assets
-│   ├── docs/          # V2 Core specific documentation
-│   └── tests/e2e/     # Playwright E2E tests
-└── codex-ts/      # LEGACY: The original TypeScript port of the Codex CLI and library
-    ├── src/           # V1 Core (SQ/EQ), library modules
-    ├── cli/           # Legacy CLI implementation
-    └── tests/mocked-service/ # Legacy service-mocked tests
-```
-
-### Port Organization (Legacy - Phases 1-6 of `codex-ts`)
-The TypeScript port follows the Rust workspace structure where applicable:
-
-```
-codex-ts/src/
-├── protocol/          # Core protocol types and utilities
-│   ├── protocol.ts    # SQ/EQ types, Op, EventMsg
-│   ├── items.ts       # Turn items, user input types
-│   └── ...
-├── core/              # Orchestration and business logic
-│   ├── codex/         # Main orchestration engine
-│   ├── conversation-manager.ts
-│   ├── conversation.ts
-│   ├── config.ts      # Configuration system
-│   ├── auth/          # Authentication (OAuth, API keys)
-│   ├── client/        # Model client adapters
-│   └── rollout.ts     # Conversation persistence (JSONL)
-├── tools/             # Tool system
-│   ├── registry.ts    # Tool registration
-│   ├── types.ts       # Tool interfaces
-│   └── ...
-├── utils/             # Utilities
-│   ├── string.ts      # UTF-8 safe truncation
-│   ├── cache.ts       # LRU caching
-│   ├── tokenizer.ts   # Token counting
-│   └── ...
-└── cli/               # CLI layer (Project 02)
-    ├── index.ts       # Entry point, Commander.js setup
-    ├── display.ts     # Event rendering
-    ├── runtime.ts     # CLI runtime setup
-    └── state.ts       # CLI state management
-```
-
-## Development Standards
-
-### TypeScript Requirements
-- **Strict mode enabled:** No `any` types (use `unknown` or proper types), except where `z.any()` is explicitly used in schemas.
-- **ES Modules only:** Use `import`/`export`, not `require()`/`module.exports`.
-- **Modern syntax:** Target ES2022, leverage latest JavaScript features.
-- **Type safety:** Discriminated unions for variants, no implicit any.
-
-### Code Style
-- **Formatting:** Prettier handles ALL formatting (non-negotiable)
-  - Single quotes, 100 char width, 2 space indent, trailing commas, no semicolons
-- **Naming:** camelCase functions, PascalCase classes/types, UPPER_SNAKE_CASE constants
-- **Documentation:** JSDoc on public APIs, inline comments explain *why* not *what*.
-
-### Testing Standards
-- **Baseline maintained:** Existing 1,895+ tests (for `codex-ts`) continue passing.
-- **No skipped tests:** 0 `.skip`, 0 `.todo` in suite.
-- **New functionality:** Add appropriate tests (service-mocked for library logic, real integration for V2 pipeline).
-- **Fast execution:** Library tests <5 seconds. V2 Pipeline E2E tests may be slower due to external dependencies but should be optimized.
-
-### Rust → TypeScript Patterns
-```typescript
-// Rust: Option<T>
-// TypeScript: T | undefined
-function find(id: string): User | undefined {
-  return users.get(id);
-}
-
-// Rust: Result<T, E>
-// TypeScript: Throw errors (preferred) or union types
-function parse(input: string): Config {
-  if (!validate(input)) throw new ParseError('Invalid input');
-  return config;
-}
-
-// Rust: Vec<T>, HashMap<K, V>
-// TypeScript: T[], Map<K, V> or Record<string, V>
-const items: User[] = [];
-const cache = new Map<string, Value>();
-```
-
-## Tool System Architecture (V1 Legacy - codex-ts)
-
-Tools use a registry pattern with approval callbacks:
-
-```typescript
-// ToolApprovalCallback injected at ConversationManager creation
-type ToolApprovalCallback = (
-  tool: string,
-  args: unknown,
-  riskLevel: SandboxRiskLevel
-) => Promise<ReviewDecision>;
-
-// Tool execution flow:
-// 1. Model requests tool use
-// 2. exec_approval_request event emitted
-// 3. CLI displays prompt, calls approvalCallback
-// 4. User approves/denies
-// 5. CLI submits exec_approval operation
-// 6. Tool executes if approved
-// 7. exec_command_begin → exec_command_end events
-// 8. Result returned to model
-```
-
-## Important Architectural Constraints
-
-1.  **Monorepo Strategy:** The project is a monorepo containing `codex-ts` (legacy library) and `cody-fastify` (active V2 Core development).
-2.  **V2 Core as Primary Focus:** All new development should target `cody-fastify` and its streaming-native architecture.
-3.  **V1 Library Stability:** `codex-ts` core modules provide foundation. Changes only when integration reveals genuine issues. Avoid adding new features to `codex-ts` CLI.
-4.  **Provider Abstraction:** WireApi enum and adapter pattern preserved. Ensure `cody-fastify` adapters (OpenAI, Anthropic) normalize to the canonical `StreamEvent` format.
-5.  **Event-driven UI:** All UI updates for the Web UI will be driven by Server-Sent Events (SSE) consuming from Redis Streams.
-6.  **Stateless Operations:** Library API designed for future REST wrapper. Async/Promise-based patterns map to HTTP request/response.
-7.  **Tool System (Legacy):** `codex-ts` ToolRegistry and ToolRouter from Phase 3-4 used as-is for the V1 CLI. The V2 Core will integrate tool execution via events on the Redis Stream.
-
-## Git Workflow
-
-### Branch Naming
-```
-claude/phase-2-tool-integration
-claude/fix-approval-prompt
-```
-
-### Commit Format
-```
-type(scope): brief description
-
-Detailed explanation if needed
-
-🤖 Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-**Types:** feat, fix, docs, test, refactor, chore
-
-### Commit Examples
-```bash
-git commit -m "feat(cli): add tool approval prompt to display layer"
-git commit -m "test(mocked-service): add Phase 2 tool execution contract tests"
-git commit -m "fix(display): handle tool execution timeout event"
-```
-
-## External Dependencies
-
-### LLM Providers
-- OpenAI Responses API
-- OpenAI Chat Completions API
-- Anthropic Messages API
-- OpenRouter
-
-### Authentication
-- API keys: OpenAI, Anthropic, OpenRouter
-- OAuth tokens: ChatGPT (~/.codex), Claude (~/.claude)
-- Token refresh handled by respective CLI apps (not implemented here)
-
-### Core 2.0 Infrastructure
-- **Redis:** Used for event streaming and transient storage (`ioredis` client).
-- **Convex:** Used for persistent storage of `Response` objects.
-- **Langfuse:** For observability and tracing integration.
-
-### MCP (Model Context Protocol)
-- `@modelcontextprotocol/sdk` for MCP server integration
-- Configuration in ~/.codex/config.toml
-
-## Known Patterns
-
-### Event Loop Pattern (Legacy - codex-ts)
-```typescript
-// Core pattern in CLI display layer
-async function renderConversationUntilComplete(conversation: Conversation) {
-  let done = false;
-  while (!done) {
-    const event = await conversation.nextEvent();
-    done = handleEvent(event.msg);
-  }
-}
-```
-
-### Discriminated Union Handling
-```typescript
-// Type-safe event handling with exhaustiveness checking
-function handleEvent(msg: EventMsg): boolean {
-  switch (msg.type) {
-    case "agent_message":
-      console.log(`Assistant: ${msg.message}`);
-      return false;
-    case "task_complete":
-      return true;
-    case "turn_aborted":
-      console.error(`Aborted: ${msg.reason}`);
-      return true;
-    default:
-      // TypeScript ensures exhaustiveness if all cases covered
-      const _exhaustive: never = msg;
-      return false;
-  }
-}
-```
-
-### Async Resource Cleanup
-```typescript
-// Pattern for graceful shutdown
-async function cleanup(conversation: Conversation) {
-  try {
-    await conversation.interrupt();
-  } catch (error) {
-    console.error('Cleanup error:', error);
-  }
-}
-```
-
-## Debugging
-
-### Tracing / Verbose Logging (OpenTelemetry / Langfuse - cody-fastify)
-
-Utilize OpenTelemetry and Langfuse for distributed tracing across the V2 Core.
-Span names: `submit.stream`, `projector.applyEvent` etc.
-Context propagation via `trace_context` in `StreamEvent`.
-
-### Test Debugging (cody-fastify)
-```bash
-npm test --workspace=cody-fastify -- --reporter=verbose      # Detailed test output
-npm test --workspace=cody-fastify -- path/to/e2e-test.spec.ts  # Run specific E2E test file
-```
-
-### TypeScript Compilation Debugging
-```bash
-npx tsc --noEmit --listFiles        # Show all compiled files
-npx tsc --noEmit --traceResolution  # Module resolution debugging
+├── CLAUDE.md         # This file - role and principles
+├── STATE.md          # Ground truth - what's working/broken
+├── CURRENT.md        # Active slice - what we're doing NOW
+├── NEXT.md           # Work queue - what's coming after current
+├── PROCESS.md        # Workflow - checkpoints, orchestration
+├── TOOLS.md          # Extension tools - slash commands, subagents
+├── templates/        # SPEC, PROMPT, LARGE-FEATURE templates
+├── cody-fastify/     # Active project - streaming LLM harness
+└── codex-ts/         # Legacy - deprecated, utilities being migrated
 ```
 
 ---
 
-# Reference: Execution Agent Prompt Engineering
-
-This guide builds upon the foundational principles established in the "Masterclass on Agentic Planning and Documentation." It assumes you have internalized those concepts—The Narrative Substrate, Multi-Altitude Structure, Functional-Technical Weaving, and the Agent Cognitive Model—and provides the operational details for engineering effective prompts for execution agents (Coders and Verifiers).
-
-**Purpose:** To define the structure and content of prompts for Coding and Verification agents, operationalizing the core methodology for reliable agentic execution.
-
------
-
-## The Foundation: The Prompt as External Scaffold
-
-As established in the Masterclass, execution agents (LLMs) often lack the internal "interrupt signal" to self-orient, question assumptions, or maintain continuity across stateless sessions. They execute in isolation.
-
-**The prompt is the External Metacognitive Scaffold.** It is not merely a task description; it is the mechanism through which we explicitly manage the agent's attention, load its external memory (state), define its workflow, and enforce quality gates.
-
-Every section in the prompt anatomy is designed to address a specific cognitive limitation and ensure reliable execution.
-
------
-
-## Part 1: The Coding Agent Prompt
-
-The Coding Agent is responsible for implementation. Its prompt must provide complete context, clear instructions, and explicit success criteria.
-
-### Anatomy of an Effective Coding Prompt (12 Sections)
-
-1.  Role Definition
-2.  Project Context
-3.  Current Phase/Task & Functional Outcome
-4.  Prerequisites (What's Done)
-5.  Workspace/Location Info
-6.  State Loading Instructions (Read These Files FIRST)
-7.  Task Specification
-8.  Workflow Steps
-9.  Workflow Rules & Interrupt Protocol
-10. Code Quality Standards
-11. Session Completion Checklist (BEFORE ENDING)
-12. Starting Point
-
------
-
-### 1\. Role Definition (Setting Perspective and Initial Weights)
-
-**Purpose:** Set the agent's identity, expertise level, and **Perspective** (Depth Dimension). This establishes the initial **Attentional Weights** for how they approach the work.
-
-**Guidance:** Be specific. "Senior" implies confident decision-making and architectural awareness. Match the specialization to the task.
-
-```
-ROLE: You are a senior TypeScript developer implementing the integration wiring for the Cody CLI project.
-```
-
------
-
-### 2\. Project Context (High Altitude Orientation)
-
-**Purpose:** Provide a brief overview (25k feet Altitude) of the project. This grounds the specific task in the broader strategic "why."
-
-**Guidance:** Keep it to one sentence. This is orientation, not a deep dive.
-
-```
-PROJECT: Cody CLI Integration - Building a multi-mode CLI (REPL, one-shot, JSON) wrapper around the @openai/codex-core library.
-```
-
------
-
-### 3\. Current Phase/Task & Functional Outcome (Weaving)
-
-**Purpose:** Define the specific work for this session (1k feet Altitude). Crucially, this must maintain the **Functional-Technical Weave**.
-
-**Guidance:** The Coder must understand *what* they are enabling for the user, not just *how* they are implementing the code. This is the verification anchor.
-
-```
-CURRENT PHASE: Phase 1 - Basic Chat Flow (Wiring CLI to ConversationManager)
-
-FUNCTIONAL OUTCOME: After this phase, the user can start a new conversation via `cody new` and send a message via `cody chat "message"`, receiving a response from the LLM.
-```
-
------
-
-### 4\. Prerequisites (What's Done)
-
-**Purpose:** Define the existing foundation. This reduces uncertainty and allows the agent to confidently build upon prior work.
-
-```
-PREREQUISITES:
-- Library Layer (Phases 1-6 of Port) ✅ COMPLETE (Core modules exist, unit tested)
-- PRD & TECH-APPROACH ✅ COMPLETE (Project planning finalized)
-```
-
------
-
-### 5\. Workspace/Location Info (Spatial Orientation)
-
-**Purpose:** Provide explicit path information. Agents cannot infer the workspace structure.
-
-```
-NOTE: Workspace is /Users/user/code/cody-project
-(TypeScript code is in src/ subdirectory)
-```
-
------
-
-### 6\. State Loading (Operationalizing External Memory) - CRITICAL
-
-**Purpose:** This is how we overcome the agent's statelessness. It forces the agent to load its memory (the current state of the project) *before* acting.
-
-**Guidance:** The order is mandatory. The agent must understand the current state before diving into the technical details. This implements the **Smooth Descent**.
-
-```
-FIRST: Load Memory (Read status and plan)
-- Read phase-1/STATUS.md (current progress)
-- Read phase-1/CHECKLIST.md (task list)
-- Read phase-1/README.md (phase overview and design - 10k ft view)
-
-THEN: Read Technical Context
-- Read TECH-APPROACH.md Section 2 (Phase 1 details - 15k ft view)
-- Read docs/core/DEV_STANDARDS.md (code standards)
-```
-
------
-
-### 7\. Task Specification (The Execution Plan)
-
-**Purpose:** Detailed, actionable instructions on what to build.
-
-**Guidance:** Apply **Bespoke Depth**. Provide more detail for complex or risky tasks. Include scope indicators (line estimates, complexity) and order tasks by dependency.
-
-```
-TASKS (In Order):
-1. Implement CLI Entry Point (src/cli/index.ts) - EASY (~50 lines)
-   - Initialize Commander.js
-   - Define `cody new` and `cody chat` commands.
-
-2. Implement Command Handlers (src/cli/commands/new.ts, chat.ts) - MEDIUM (~150 lines)
-   - Instantiate ConversationManager.
-   - Call createConversation() / sendMessage().
-   - Handle response display.
-```
-
------
-
-### 8\. Workflow Steps (The Execution Scaffold)
-
-**Purpose:** Define the explicit process for completing each task. This reduces decisions and ensures consistency.
-
-**Guidance:** Be explicit with commands. A TDD workflow is generally preferred.
-
-```
-WORKFLOW (per task):
-1. Create test file: tests/mocked-service/phase-1/[TASK].test.ts
-2. Write mocked-service test based on README specification.
-3. Run: npm test -- [TASK] (should fail)
-4. Implement the feature in src/...
-5. Implement until tests pass.
-6. Verify quality gates (lint, types - see Section 10).
-7. Commit: git add -A && git commit -m "phase1: [task description]"
-8. Update CHECKLIST.md and STATUS.md.
-```
-
------
-
-### 9\. Workflow Rules & Interrupt Protocol
-
-**Purpose:** Define mandatory operating procedures and how to handle ambiguity, addressing the agent's lack of inherent interrupts (The **Interrupt Problem**).
-
-**Guidance:** This is crucial for safety and preventing hallucinated solutions.
-
-```
-WORKFLOW RULES:
-1. Follow the workflow steps exactly. Do not skip or reorder.
-2. Use only the specified libraries and patterns. Do not introduce new dependencies without approval.
-3. Adhere strictly to the DEV_STANDARDS.md.
-
-INTERRUPT PROTOCOL (When to STOP):
-If you encounter any of the following, you MUST STOP immediately, report the issue to the user, and await clarification. Do NOT attempt to proceed by making assumptions.
-
-- Ambiguous or contradictory instructions in the prompt or documentation.
-- Missing prerequisites or files.
-- Unexpected errors during workflow execution that you cannot resolve deterministically.
-- A design choice that appears to violate the stated Functional Outcome.
-```
-
------
-
-### 10\. Code Quality Standards (The Verification Anchor)
-
-**Purpose:** Establish the mandatory, objective quality bar.
-
-**Guidance:** Zero-tolerance works. Vague goals ("write clean code") fail. Provide a single verification command.
-
-```
-CODE QUALITY STANDARDS (MANDATORY):
-- TypeScript: Zero errors (npx tsc --noEmit)
-- ESLint: Zero problems (npm run lint)
-- Tests: All passing, 0 skipped (npm test)
-- Format: Prettier compliant (npm run format)
-
-VERIFICATION COMMAND:
-npm run format && npm run lint && npx tsc --noEmit && npm test
-
-This command must succeed (exit code 0) before declaring any task complete.
-```
-
------
-
-### 11\. Session Completion Checklist (Saving External Memory) - CRITICAL
-
-**Purpose:** Ensure the state is saved, work is committed, and the handoff is clean. This updates the **External Memory** for the next session.
-
-```
-BEFORE ENDING SESSION (MANDATORY):
-1. Update phase-1/CHECKLIST.md (check off completed tasks).
-2. Update phase-1/STATUS.md (add detailed session log: what was done, what's next, any blockers).
-3. Run VERIFICATION COMMAND (Section 10) one last time.
-4. Commit and Push all changes.
-5. Report summary to user (Modules completed, Test counts, Quality status, Next steps).
-```
-
------
-
-### 12\. Starting Point (The Entry Point)
-
-**Purpose:** Tell the agent exactly where to begin, reducing paralysis.
-
-```
-START by reading phase-1/STATUS.md to load the current state, then begin with Task 1 (Implement CLI Entry Point).
-```
-
------
-
-## Part 2: The Verification Agent Prompt
-
-The Verification Agent acts as the quality gate. Its role is not implementation, but critical analysis and validation. The Verifier prompt shares context with the Coder prompt but diverges significantly in its Role, Tasks, and Workflow.
-
-### Anatomy of an Effective Verifier Prompt (10 Sections)
-
-1.  Role Definition
-2.  Project Context
-3.  Current Phase & Functional Outcome
-4.  Artifacts for Review (What was built)
-5.  State Loading Instructions (Read These FIRST)
-6.  Verification Scope and Tasks
-7.  Workflow Steps
-8.  Verification Standards & Criteria
-9.  Reporting Requirements (The Deliverable)
-10. Starting Point
-
------
-
-### V.1. Role Definition (The Skeptical Perspective)
-
-**Purpose:** Establish the mindset of critical analysis, adherence to standards, and quality enforcement.
-
-```
-ROLE: You are a Senior Quality Assurance Engineer and Code Review specialist, responsible for verifying the implementation of Phase 1 (Basic Chat Flow) of the Cody CLI project. Your analysis must be rigorous, objective, and focused on adherence to documented standards and functional requirements.
-```
-
------
-
-### V.2. Project Context
-
-*(Same as Coder Prompt Section 2)*
-
------
-
-### V.3. Current Phase & Functional Outcome
-
-**Purpose:** Define the scope of the work being verified and the functional requirements that must be met.
-
-**Guidance:** This is the anchor for **Functional-Technical Weaving**. The Verifier must validate that the technical implementation achieves the functional outcome.
-
-```
-CURRENT PHASE: Phase 1 - Basic Chat Flow
-
-FUNCTIONAL OUTCOME TO VERIFY: The user must be able to start a new conversation via `cody new` and send a message via `cody chat "message"`, receiving a response from the LLM.
-```
-
------
-
-### V.4. Artifacts for Review
-
-**Purpose:** Explicitly list the code and tests generated by the Coding Agent that require verification.
-
-```
-ARTIFACTS FOR REVIEW (Implementation by Coding Agent):
-- src/cli/index.ts
-- src/cli/commands/new.ts
-- src/cli/commands/chat.ts
-- tests/mocked-service/phase-1/basic-chat.test.ts
-- phase-1/DECISIONS.md (If updated by the coder)
-```
-
------
-
-### V.5. State Loading Instructions
-
-**Purpose:** Load the context, standards, and requirements against which the artifacts will be verified.
-
-**Guidance:** The Verifier must read the requirements and standards (The Intent) *before* reading the implementation code (The Reality) to avoid bias and perform an accurate gap analysis.
-
-```
-FIRST: Read Requirements and Standards (The Intent / Source of Truth)
-- Read phase-1/README.md (Phase requirements and design)
-- Read TECH-APPROACH.md Section 2 (Architectural context)
-- Read docs/core/DEV_STANDARDS.md (Code quality requirements)
-- Read docs/core/TESTING_PHILOSOPHY.md (Testing strategy)
-
-THEN: Review Implementation Artifacts (The Reality)
-- Read all files listed in "Artifacts for Review" (Section V.4).
-```
-
------
-
-### V.6. Verification Scope and Tasks
-
-**Purpose:** Define the specific verification activities required, typically broken into stages (Mechanical and Conceptual).
-
-```
-VERIFICATION TASKS:
-
-STAGE 1: Mechanical Checks & Execution
-1. Environment Setup: Verify environment setup and dependency installation.
-2. Execute Verification Command: Run the VERIFICATION COMMAND (see V.8). Confirm 0 errors/failures.
-3. Checklist Verification: Ensure all tasks marked complete by the Coder are actually complete and verified by tests.
-
-STAGE 2: Conceptual Review & Analysis
-1. Test Coverage Analysis:
-   - Review the tests. Validate that they adequately cover the requirements defined in phase-1/README.md.
-   - Identify any missing test cases, edge cases, or inadequate assertions.
-   - Confirm adherence to the Mocked-Service testing strategy.
-
-2. Code Review & Design Adherence:
-   - Review the implementation code.
-   - Validate adherence to DEV_STANDARDS.md (style, types, patterns).
-   - Confirm the implementation matches the design specified in phase-1/README.md and TECH-APPROACH.md.
-   - Review DECISIONS.md (if applicable) for soundness of choices made during implementation.
-   - Identify any code smells, complexity issues, or potential bugs.
-
-3. Functional Requirement Validation:
-   - Analyze the code and tests holistically.
-   - Confirm that the implementation successfully achieves the FUNCTIONAL OUTCOME (Section V.3).
-```
-
------
-
-### V.7. Workflow Steps
-
-**Purpose:** Define the explicit, sequential process for verification.
-
-```
-WORKFLOW:
-1. Load State and Context (Section V.5).
-2. Execute STAGE 1: Mechanical Checks.
-   - If FAIL: Stop immediately and generate FAILURE REPORT.
-3. Execute STAGE 2: Conceptual Review.
-4. Synthesize findings and generate the Verification Report (Section V.9).
-```
-
------
-
-### V.8. Verification Standards & Criteria
-
-**Purpose:** The objective gates for passing the phase.
-
-```
-VERIFICATION STANDARDS:
-
-VERIFICATION COMMAND:
-npm run format && npm run lint && npx tsc --noEmit && npm test
-
-PASS CRITERIA (All must be true):
-- VERIFICATION COMMAND succeeds (0 errors/failures).
-- Test Coverage is adequate for all requirements.
-- Code adheres to all standards in DEV_STANDARDS.md.
-- Implementation matches the documented design.
-- Functional Outcome is achieved.
-
-FAIL CRITERIA (Any are true):
-- VERIFICATION COMMAND fails.
-- Significant gaps in test coverage.
-- Violations of DEV_STANDARDS.md.
-- Implementation diverges from the design without documented justification.
-```
-
------
-
-### V.9. Reporting Requirements (The Deliverable)
-
-**Purpose:** Define the required output of the verification session.
-
-**Guidance:** The report must be structured and clear, providing actionable feedback if the verification fails.
-
-```
-REPORTING REQUIREMENTS:
-
-Generate a detailed VERIFICATION_REPORT.md with the following structure:
-
-1. OVERALL STATUS: [PASS] or [FAIL]
-
-2. Mechanical Check Results (Stage 1):
-   - Linting: [PASS/FAIL] (Error count: X)
-   - Type Checking: [PASS/FAIL] (Error count: Y)
-   - Tests: [PASS/FAIL] (Tests passed: Z/Z)
-
-3. Conceptual Review Findings (Stage 2):
-   - Test Coverage Analysis: [Sufficient/Insufficient]. (Issues: List missing cases, weak assertions)
-   - Code Review & Design Adherence: [Adherent/Divergent]. (Issues: List specific code smells, violations, suggestions with file/line references)
-   - Functional Validation: (Summary of why the implementation does or does not meet the functional outcome).
-
-If STATUS is FAIL: The report must contain ACTIONABLE FEEDBACK for the Coding Agent to address all identified issues.
-```
-
------
-
-### V.10. Starting Point
-
-```
-START by reading the Requirements and Standards (Section V.5), then proceed with the Workflow Step 1.
-```
-
----
-
-# Reference: Service-Mocked Testing Methodology
-
-This document defines our core testing philosophy, building upon the foundational principles established in the "Masterclass on Agentic Planning and Documentation." It introduces **Service-Mocked Testing** as the specific methodology that enables reliable, high-quality agentic development by balancing the comprehensiveness of integration testing with the speed of unit testing.
-
-**Purpose:** Define the testing strategy for ensuring quality, reliability, and functional correctness in agentic development.
-**Core Principle:** Test behavior at public boundaries, exercise full in-process code flows, and mock only external dependencies.
-
------
-
-## 1\. Introduction to Service-Mocked Testing
-
-Our primary testing methodology is **Service-Mocked Testing**.
-
-### 1.1. Definition and Positioning
-
-**Service-Mocked Tests** are integration-level tests written at the public API boundaries of the system. They exercise the full, in-process code flow, but crucially, all external dependencies (services that cross process or machine boundaries) are mocked.
-
-**Positioning:**
-
-  * **Like Integration Tests:** They test the system through key entry points (the public API) and verify how internal components work together across complete workflows.
-  * **Unlike Traditional Integration Tests:** They do not rely on external dependencies, avoiding slowness and flakiness.
-  * **Like Unit Tests:** They run fast, deterministically, and in isolation (offline), often using the same testing frameworks (e.g., Vitest, Jest).
-  * **Unlike Traditional Unit Tests:** They focus on public behavior and boundaries, not isolated internal implementation details.
-
-We call them "Service-Mocked" tests because the defining characteristic is the explicit mocking of external services while the rest of the system runs as an integrated unit.
-
-### 1.2. The Philosophy: Testing Behavior at Boundaries
-
-As established in the Masterclass, **Functional-Technical Weaving** is essential for coherence. Our testing methodology is the verification mechanism for this weaving. We must verify the functional outcome (What the system does) rather than the technical implementation (How it does it).
-
-Traditional unit testing often fails here. It focuses on implementation, leading to brittle tests tightly coupled to internal code structure. These tests break during refactoring even if behavior is unchanged, providing a false sense of security (high test count, low confidence in the integrated system).
-
-Service-Mocked Testing focuses on the stable public boundaries—the promises the API makes to its consumers.
-
-**Benefits:**
-
-1.  **Behavioral Focus:** Tests verify actual system behavior and full code paths, ensuring the system works as intended from the perspective of the consumer.
-2.  **Refactoring Safety:** Internal implementation can be refactored freely as long as the behavior at the public boundary is maintained.
-3.  **Optimized Signal Density (Bespoke Depth):** We achieve high coverage through fewer, more meaningful tests by focusing effort on the critical entry points, optimizing the signal density of the test suite.
-
------
-
-## 2\. The Two-Layer Testing Strategy
-
-We employ a Two-Layer strategy to balance development speed with real-world validation.
-
-### Layer 1: Service-Mocked Tests (The Inner Loop)
-
-  * **Focus:** Integration wiring correctness, business logic, and adherence to the public API definition.
-  * **Characteristics:** Fast, deterministic, offline.
-  * **Role:** The primary test layer for development and Continuous Integration (CI). Provides the rapid feedback loop necessary for TDD.
-  * **Coverage:** Comprehensive coverage of all scenarios, permutations, and edge cases.
-
-### Layer 2: Model Integration Tests (The Outer Loop)
-
-  * **Focus:** Real-world provider behavior, configuration parameters, and actual compatibility with external services (e.g., LLM APIs).
-  * **Characteristics:** Slower, uses real API calls (typically with cheap/fast models), requires network access.
-  * **Role:** Final validation layer before release or when integrating new external services.
-  * **Coverage:** Focused on critical paths to validate integration without excessive time or cost.
-
-**The Balance:** Layer 1 ensures the system is correct according to our specifications. Layer 2 ensures our specifications match the reality of the external services.
-
------
-
-## 3\. Core Principles of Service-Mocked Testing
-
-### 3.1. Identify Public Boundaries
-
-**A Public Boundary is the API entry point that external code calls.**
-
-  * **Libraries:** Public methods (e.g., `ConversationManager.createConversation()`), constructors, exported functions.
-  * **REST APIs:** HTTP endpoints (e.g., `POST /conversations`).
-
-During planning (at the 10k ft **Altitude**), we must identify and document the specifications and expected behaviors of these boundaries. These become the targets for our tests.
-
-### 3.2. Define Mocking Boundaries (The Distinction)
-
-Clarity on what to mock is essential.
-
-**External Boundaries (ALWAYS MOCK):** Anything that crosses the process or machine boundary.
-
-  * Network calls (LLM APIs, databases, external services).
-  * Filesystem operations (File I/O).
-  * Process spawning (shell commands).
-  * System time (for time-dependent logic).
-
-**Internal Logic (NEVER MOCK - The Rule of Consultation):** In-process logic within our codebase.
-
-> **The Rule of Consultation:** Do not mock in-process logic without explicit consultation and confirmation with the user. The fundamental principle of Service-Mocked Testing is to exercise the full internal stack. Mocking internal components undermines this principle. Any deviation requires explicit approval.
-
-**Strategy:** Use dependency injection to provide test doubles (e.g., passing a `MockModelClient` to the `ConversationManager`).
-
-### 3.3. Tests Derive from Public Boundaries (The Scaffold)
-
-Once the public boundary (the API definition) is established, the test cases are obvious. This provides a rigid **External Metacognitive Scaffold** for the execution agent, removing ambiguity about what to test.
-
-**API Definition Example:**
-
-```typescript
-class ConversationManager {
-  // Creates a new conversation. Throws ConfigurationError if invalid.
-  createConversation(config: ConversationConfig): Promise<Conversation>
-}
-```
-
-**Derived Test Cases (Mechanical Execution):**
-
-1.  Happy Path: Can create a conversation with valid config.
-2.  State Verification: Created conversation has a unique ID and is stored internally.
-3.  Error Case: Invalid config throws `ConfigurationError`.
-
-The agent does not need to interpret what to test. The API defines the surface; the agent tests the surface (happy paths, error cases, edge cases, and state verification).
-
-### 3.4. The TDD Workflow: Boundary-First
-
-We use a Test-Driven Development (TDD) workflow anchored to the public boundaries, providing a reliable, mechanical process for agents.
-
-**Step 1: Define the Public Boundary** (Planning Phase)
-Identify the API surface. Document signatures, behavior, and errors.
-
-**Step 2: Write Service-Mocked Tests Against the Boundary** (Execution Phase - Coder)
-Create tests at the boundary. Mock external dependencies. Write test cases derived from the API definition. *Tests should fail (Red).*
-
-**Step 3: Implement to Green** (Execution Phase - Coder)
-Write the minimal code required to pass the tests. The internal structure is flexible, exercising the full code flow. *Tests should pass (Green).*
-
-**Step 4: Refactor** (Execution Phase - Coder/Reviewer)
-Refactor the internal implementation for clarity and performance. Tests remain green, ensuring the public behavior is maintained.
-
------
-
-## 4\. Advanced Techniques
-
-### 4.1. Handling Stateful Interactions and Behavioral Flows
-
-Many systems involve stateful objects (like a `Conversation` object) where the sequence of operations matters. Service-Mocked tests must validate these sequences and the resulting behavioral flows. This aligns with the **Narrative Substrate**—testing the journey, not just the steps.
-
-**Strategy:** Write multi-step tests that simulate a user flow.
-
-```typescript
-it('handles multi-turn conversation with tool execution flow', async () => {
-  // Setup: Mocks configured to require a tool call
-  const manager = new ConversationManager({client: mockClient});
-  const conv = await manager.createConversation(config);
-
-  // Turn 1: User message -> Model requests tool
-  const response1 = await conv.sendMessage("Read the file.");
-  expect(conv.state).toBe('AWAITING_TOOL'); // Verify state transition
-
-  // Turn 2: Execute tool -> Model summarizes
-  const response2 = await conv.executeTools();
-  expect(conv.state).toBe('READY'); // Verify state transition
-
-  // Verification: Ensure the full behavioral flow was orchestrated correctly
-  expect(mockClient.sendMessage).toHaveBeenCalledTimes(2);
-});
-```
-
-### 4.2. Mock Creation Patterns
-
-Create reusable, configurable mock factories in a dedicated `tests/mocks/` directory to streamline test creation.
-
-```typescript
-// tests/mocks/model-client.ts
-export function createMockClient(responses?: MockResponse[]) {
-  const mock = { sendMessage: vi.fn() };
-  // Configure mock to return the sequence of predefined responses.
-  (responses || []).forEach(response => {
-    mock.sendMessage.mockResolvedValueOnce(response);
-  });
-  return mock;
-}
-```
-
------
-
-## 5\. Practical Application in Planning
-
-The responsibility for defining the testing strategy lies with the Planning Agent during the creation of the Phase README (10k ft **Altitude**).
-
-**For each phase, the Planning Agent must document:**
-
-**1. Public Boundaries Introduced:**
-
-```
-Phase 1: Basic Chat
-New Boundaries: ConversationManager.createConversation(), Conversation.sendMessage()
-```
-
-**2. External Mocks Needed:**
-
-```
-External Mocks:
-- ModelClient (Mock: Network access to LLM API)
-- RolloutRecorder (Mock: Filesystem access for JSONL persistence)
-```
-
-**3. Test Scenarios (Derived from the Boundary Definition):**
-
-```
-Test Scenarios for createConversation():
-- ✅ Creates with valid config (Behavioral check)
-- ✅ Assigns unique conversation ID (State check)
-- ❌ Throws on invalid config (Error check)
-```
-
-By providing this information in the planning documentation, the Coding Agent receives the complete scaffolding required to implement the Service-Mocked TDD workflow reliably.
-
------
-
-## 6\. Summary
-
-The Service-Mocked Testing Methodology ensures alignment between functional requirements and technical implementation (**Weaving**). By focusing on behavior at public boundaries and mocking external services, it provides a robust **Scaffold** for agentic execution. This approach optimizes testing effort (**Bespoke Depth**) while providing the comprehensive coverage needed to ensure the resulting systems are reliable, verifiable, and maintainable.
+## Reference
+
+**Process Docs (root):**
+- `STATE.md` - Current system health and status
+- `CURRENT.md` - Active work slice (what we're doing NOW)
+- `NEXT.md` - Work queue (what's coming after current)
+- `PROCESS.md` - Workflow, checkpoints, orchestration
+
+**Architecture:**
+- `cody-fastify/docs/codex-core-2.0-tech-design.md` - Technical design
+- `cody-fastify/src/core/schema.ts` - Canonical shapes
+- `cody-fastify/README.md` - File index
+
+**Methodology:**
+- `cody-fastify/docs/cc/GUIDE-ITERATIVE-AGENTIC-CODING.md` - Coding process
+- `docs/core/documentation-design-brain-dump.md` - Knowledge transfer principles

@@ -67,15 +67,15 @@ export class Core2TestHarness {
     this.hydrator = new StreamHydrator();
     this.workerOptions = {
       discoveryIntervalMs: 200,
-      blockMs: 500,
-      reclaimIntervalMs: 5000,
+      blockMs: 100, // Reduced for test environment to speed up cleanup
+      reclaimIntervalMs: 100, // Reduced to allow rapid shutdown
       reclaimMinIdleMs: 5000,
       persistIntermediateSnapshots: false,
     };
     this.toolWorkerOptions = {
       discoveryIntervalMs: 200,
-      blockMs: 100,
-      reclaimIntervalMs: 5000,
+      blockMs: 100, // Ensure ToolWorker also has a small blockMs for cleanup
+      reclaimIntervalMs: 100, // Reduced to allow rapid shutdown
       reclaimMinIdleMs: 5000,
       batchSize: 25,
       toolTimeoutMs: 2_000,
@@ -127,15 +127,19 @@ export class Core2TestHarness {
   }
 
   async cleanup(): Promise<void> {
+    console.log("[DEBUG - cleanup] Before worker?.stop()");
     await this.worker?.stop();
     this.worker = undefined;
+    console.log("[DEBUG - cleanup] Before toolWorker?.stop()");
     await this.toolWorker?.stop();
     this.toolWorker = undefined;
 
     this.convex = undefined;
 
     if (this.app) {
+      console.log("[DEBUG] Closing Fastify...");
       await this.app.close();
+      console.log("[DEBUG] Fastify closed.");
       this.app = undefined;
       this.baseUrl = undefined;
     }
@@ -192,6 +196,9 @@ export class Core2TestHarness {
     }
 
     const url = normalizeUrl(this.baseUrl, streamPath);
+    const blockMs = 500; // Explicitly set blockMs for test client to speed up server-side Redis read loop
+    const urlWithBlockMs = `${url}${url.includes("?") ? "&" : "?"}blockMs=${blockMs}`;
+
     const controller = new AbortController();
     const timeoutMs = options.timeoutMs ?? DEFAULT_SSE_TIMEOUT_MS;
     const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
@@ -200,7 +207,7 @@ export class Core2TestHarness {
     }
 
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      const res = await fetch(urlWithBlockMs, { signal: controller.signal, keepalive: false });
       if (!res.ok || !res.body) {
         const text = await res.text();
         throw new Error(

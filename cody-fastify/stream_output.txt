@@ -1,0 +1,136 @@
+id: 1764009585500-0
+event: response_start
+data: {"event_id":"aa7b30ff-1d87-4bad-a286-f0265ebf945a","timestamp":1764009585499,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-123411cb507e8476-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"response_start","payload":{"type":"response_start","response_id":"18672140-4910-4dff-bf29-69efb55d9c5f","turn_id":"99f4f2f3-44eb-4866-8d9a-6a571813ca37","thread_id":"4ac82117-7ae9-40e6-8b7b-d97395636407","model_id":"gpt-5-mini","provider_id":"openai","created_at":1764009585499}}
+
+id: 1764009590583-0
+event: item_start
+data: {"event_id":"021d5a31-a523-4243-972f-2a44081b0310","timestamp":1764009590581,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-fe1aa2a6b8367861-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_start","payload":{"type":"item_start","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","item_type":"message"}}
+
+id: 1764009590584-0
+event: item_delta
+data: {"event_id":"75aba3ec-0284-4d7f-b8ef-5fc6cb86d209","timestamp":1764009590583,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-fe1aa2a6b8367861-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":"Hey"}}
+
+id: 1764009590586-0
+event: item_delta
+data: {"event_id":"3c3fb44c-f2af-4f72-86fe-a8d53b753293","timestamp":1764009590586,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-df703b0f59f12e87-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" —"}}
+
+id: 1764009590587-0
+event: item_delta
+data: {"event_id":"54924128-bdfa-4d3e-a1f9-53344750155e","timestamp":1764009590586,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-663adb004f3aba64-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" I'm"}}
+
+id: 1764009590587-1
+event: item_delta
+data: {"event_id":"c75d913e-842f-4673-9b72-da1838d153eb","timestamp":1764009590587,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-26af373fcfafb8d7-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" doing"}}
+
+id: 1764009590587-2
+event: item_delta
+data: {"event_id":"e4c612e3-f721-49a6-bfca-651582fa53b4","timestamp":1764009590587,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-7926869e3cf3c27a-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" well"}}
+
+id: 1764009590588-0
+event: item_delta
+data: {"event_id":"e239da21-7df2-45d7-8b9e-524399d141db","timestamp":1764009590588,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-f050a875e77909dd-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":","}}
+
+id: 1764009590588-1
+event: item_delta
+data: {"event_id":"f93e8fec-e166-4cc2-921d-66a439c9536d","timestamp":1764009590588,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-b928d5d455e7771d-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" thanks"}}
+
+id: 1764009590589-0
+event: item_delta
+data: {"event_id":"06da4178-e32b-4a74-ae71-bf4f5174f6ed","timestamp":1764009590589,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-1f788fe8d19a84ca-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":"!"}}
+
+id: 1764009590589-1
+event: item_delta
+data: {"event_id":"eba5bcc3-6197-4f63-9062-eb32509b9b8a","timestamp":1764009590589,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-ce29218c3e2af9b5-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" How"}}
+
+id: 1764009590590-0
+event: item_delta
+data: {"event_id":"f0cb46b7-b6e5-4ead-8296-7b6eea1cc388","timestamp":1764009590589,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-5bcd402ae46f3fa2-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" are"}}
+
+id: 1764009590590-1
+event: item_delta
+data: {"event_id":"729a6255-ab83-4434-8329-b098f5805524","timestamp":1764009590590,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-2d1d8b22ea269ff5-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" you"}}
+
+id: 1764009590591-0
+event: item_delta
+data: {"event_id":"286eff6c-eb87-4def-80d6-860a50dfec47","timestamp":1764009590590,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-6b7cea94fb20b204-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":"?"}}
+
+id: 1764009590591-1
+event: item_delta
+data: {"event_id":"1b7698ac-706c-4f33-850b-0ceed4a771ac","timestamp":1764009590591,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-2fb379655f028476-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" Anything"}}
+
+id: 1764009590592-0
+event: item_delta
+data: {"event_id":"f7602bf4-4261-49ea-9a01-0a705825a0d1","timestamp":1764009590591,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-558969127f5562d6-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" I"}}
+
+id: 1764009590592-1
+event: item_delta
+data: {"event_id":"45a8bf5a-ae14-44c5-9957-af0b7c9fc44d","timestamp":1764009590592,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-23e5b57900e9c39e-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" can"}}
+
+id: 1764009590592-2
+event: item_delta
+data: {"event_id":"de8a1635-2273-48d8-a124-5131b7db28b0","timestamp":1764009590592,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-e410002aabe86d51-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" help"}}
+
+id: 1764009590593-0
+event: item_delta
+data: {"event_id":"43104018-349e-46e3-9cf2-2c6875732988","timestamp":1764009590592,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-f5e004a0433cb781-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" you"}}
+
+id: 1764009590593-1
+event: item_delta
+data: {"event_id":"3ccc0575-95b5-4550-a40c-ccfaa3bf2e4c","timestamp":1764009590593,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-a883b6d41d418a96-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" with"}}
+
+id: 1764009590593-2
+event: item_delta
+data: {"event_id":"4dabcb6e-3129-4080-9a30-a99ba7f2027c","timestamp":1764009590593,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-1f93d779c2c4fa03-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":" today"}}
+
+id: 1764009590594-0
+event: item_delta
+data: {"event_id":"aa51e097-7c4c-4078-a008-5f10f2f5cc60","timestamp":1764009590594,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-46cc49f063fcd55f-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_delta","payload":{"type":"item_delta","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","delta_content":"?"}}
+
+id: 1764009590618-0
+event: item_done
+data: {"event_id":"acc31e81-ffcb-4dab-8a27-00c72a984e7f","timestamp":1764009590617,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-44d3777eb6ce6af5-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"item_done","payload":{"type":"item_done","item_id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","final_item":{"id":"msg_085adbead695c587006924a676b8008191bc07f9ba83129d49","type":"message","content":"Hey — I'm doing well, thanks! How are you? Anything I can help you with today?","origin":"agent"}}}
+
+id: 1764009590876-0
+event: usage_update
+data: {"event_id":"f6c1a782-1875-4fbd-affe-89cdbdc95489","timestamp":1764009590874,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-6d7b9c65994222ea-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"usage_update","payload":{"type":"usage_update","response_id":"18672140-4910-4dff-bf29-69efb55d9c5f","usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":1779}}}
+
+id: 1764009590878-0
+event: response_done
+data: {"event_id":"70a4b1fb-b30e-4e03-8c04-7bf06081fc66","timestamp":1764009590877,"trace_context":{"traceparent":"00-34b64081f065269b5e47f7be42aa78d3-123411cb507e8476-01"},"run_id":"18672140-4910-4dff-bf29-69efb55d9c5f","type":"response_done","payload":{"type":"response_done","response_id":"18672140-4910-4dff-bf29-69efb55d9c5f","status":"complete","usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":1779},"finish_reason":null}}
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
+: keep-alive
+
