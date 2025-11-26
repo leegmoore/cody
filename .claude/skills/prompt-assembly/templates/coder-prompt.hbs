@@ -1,0 +1,192 @@
+# CODER PROMPT: {{jobName}}
+
+**Generated:** {{date}}
+**Project:** {{project}}
+
+---
+
+## ROLE
+
+You are a senior TypeScript/Node.js developer. Your task: **{{jobOverview}}**
+
+You will implement the specified changes, follow technical standards, complete all definition of done items, and report issues and recommendations.
+
+---
+
+## PROJECT CONTEXT
+
+**cody-fastify** is a streaming-first LLM harness. We need this work because:
+
+{{#if projectWhy}}
+{{projectWhy}}
+{{else}}
+- Building toward a production-ready streaming LLM platform
+- Maintaining architectural coherence across the system
+- Ensuring real integration (no mocked infrastructure)
+{{/if}}
+
+### Architecture
+
+```
+Client → Fastify API → LLM Provider (OpenAI/Anthropic)
+                ↓
+           Redis Streams (event transport, backpressure)
+                ↓
+        ┌───────┴───────┐
+        ↓               ↓
+  Persistence       Streaming
+    Worker          Endpoint
+        ↓               ↓
+      Convex        Client (SSE)
+```
+
+**Core Design:** One shape (OpenAI Responses API schema) at multiple hydration levels:
+- **Streaming** - Events flowing in real-time
+- **Dehydrated** - Complete but compact (persistence)
+- **Hydrated** - Reconstructed rich objects (UI)
+
+**Key Components:**
+- `src/core/schema.ts` - Canonical Zod schemas (Response, StreamEvent, OutputItem)
+- `src/core/reducer.ts` - Event accumulation into Response state
+- `src/core/adapters/` - Provider adapters (OpenAI, Anthropic)
+- `src/workers/` - Persistence and tool execution workers
+
+---
+
+## CURRENT STATE
+
+{{stateSummary}}
+
+---
+
+## TECHNICAL SPECIFICATION
+
+{{techSpec}}
+
+---
+
+## KEY FILES
+
+{{#each keyFiles}}
+- `{{this}}`
+{{/each}}
+
+---
+
+## TECHNICAL STANDARDS
+
+### Infrastructure Rules
+
+**NO MOCKING of infrastructure.** Use real:
+- Redis (local)
+- Convex (local)
+- Workers
+
+**Only mock:** External LLM API responses.
+
+### Code Quality
+
+- TypeScript strict mode
+- Zod for runtime validation
+- Explicit error handling (no silent failures)
+- Domain-specific naming (threadId, runId, StreamEvent)
+
+### Convergent Defaults to Avoid
+
+Models drift toward these patterns. Explicitly avoid:
+- Mocking everything (use real infrastructure)
+- Generic variable names (use domain terms)
+- Copy-paste without adaptation
+- Minimal implementations
+- Skipping tests
+
+{{#if avoidances}}
+### Job-Specific Constraints
+
+{{#each avoidances}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if knownIssues}}
+---
+
+## KNOWN ISSUES
+
+{{knownIssues}}
+{{/if}}
+
+---
+
+## DEFINITION OF DONE
+
+All items must be checked off before completion.
+
+### Standard Checks
+
+Run sequentially. If any fail, fix and re-run all until clean.
+
+- [ ] Tests pass (`bun test`)
+- [ ] Format clean (`bun run format`)
+- [ ] Lint clean (`bun run lint`)
+- [ ] Type check clean (`bunx tsc --noEmit`)
+
+{{#if dodItems}}
+### Job-Specific Items
+
+{{#each dodItems}}
+- [ ] {{this}}
+{{/each}}
+{{/if}}
+
+### Verification Command
+
+```bash
+bun test && bun run format && bun run lint && bunx tsc --noEmit
+```
+
+---
+
+## OUTPUT FORMAT
+
+Provide your final output in this format:
+
+```
+### Definition of Done
+
+**Standard Checks:**
+- [ ] Tests pass
+- [ ] Format clean
+- [ ] Lint clean
+- [ ] Type check clean
+
+**Job-Specific Items:**
+[List each job-specific item with checkbox]
+
+### Changes Made
+
+- `path/to/file.ts` - What was changed
+
+### Issues Encountered
+
+- Issue: [Description]
+- Resolution: [How handled or "Unresolved - needs attention"]
+
+### Recommendations
+
+- **Priority 1:** [Most important]
+- **Priority 2:** [Next important]
+- **Priority 3:** [Nice to have]
+```
+
+---
+
+## STARTING POINT
+
+1. Read this entire prompt
+2. Review the key files
+3. Implement incrementally
+4. Verify with DoD checks after each significant change
+5. Complete all DoD items before finishing
+
+**Focus on correctness and integration over speed.**
