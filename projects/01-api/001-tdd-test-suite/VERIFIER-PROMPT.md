@@ -60,10 +60,10 @@ Verify `package.json` contains:
 Verify README includes:
 - [ ] Purpose statement (TDD and integrity testing)
 - [ ] NO MOCKS principle stated clearly
-- [ ] Prerequisites list (2 items)
+- [ ] Prerequisites list (4 items)
 - [ ] Statement that suite validates prerequisites
 - [ ] Running instructions (`bun run dev` then `bun run test:tdd-api`)
-- [ ] Environment validation table (2 services)
+- [ ] Environment validation table (4 services)
 - [ ] Test list with simple-prompt.test.ts
 - [ ] Instructions for adding new tests
 
@@ -71,13 +71,15 @@ Verify README includes:
 
 Verify:
 - [ ] Checks Redis on port 6379 using ioredis
+- [ ] Checks Convex by HTTP GET to CONVEX_URL
+- [ ] Checks OpenAI by calling GET /v1/models with API key
 - [ ] Checks Fastify by calling GET /health on port 4010
 - [ ] Reports ALL check results (not just first failure)
 - [ ] Uses ✓ and ✗ symbols in output
 - [ ] Exits with code 1 if any check fails
 - [ ] Supports standalone execution (`if (import.meta.main)`)
 - [ ] Does NOT mock anything
-- [ ] Does NOT load .env or check environment variables
+- [ ] Does NOT do preliminary env var "is set" checks - just attempts connections
 
 ### 3.5 simple-prompt.test.ts Implementation
 
@@ -96,9 +98,12 @@ Verify:
 - [ ] GET /api/v2/stream/:runId
 - [ ] Asserts SSE content-type
 - [ ] Parses events from data: lines
+- [ ] Types events as `StreamEvent[]` (not `any[]`)
+- [ ] Uses `ResponseReducer` to hydrate events
 - [ ] Has timeout (around 15 seconds)
 - [ ] Captures threadId from response_start
 - [ ] Collects until response_done
+- [ ] Saves hydrated response with comment about Phase 3 comparison
 - [ ] Asserts event count > 1 and < 200
 - [ ] Asserts first event is response_start with required fields
 - [ ] Asserts has item_start with item_type "message"
@@ -108,7 +113,7 @@ Verify:
 - [ ] Asserts all events have envelope fields (event_id, timestamp, run_id, trace_context)
 
 **Phase 3 (Thread validation):**
-- [ ] Waits briefly for persistence (around 500ms)
+- [ ] Waits briefly for persistence (around 200ms)
 - [ ] GET /api/v2/threads/:threadId
 - [ ] Asserts status 200
 - [ ] Asserts thread structure (thread object, runs array)
@@ -119,17 +124,26 @@ Verify:
 - [ ] Asserts output_items has agent message
 - [ ] Asserts usage tokens present and valid
 
+**Phase 3 (Hydrated vs Persisted comparison):**
+- [ ] Compares hydrated response to persisted run
+- [ ] Asserts matching: id, turn_id, thread_id, model_id, provider_id
+- [ ] Asserts matching: status, finish_reason
+- [ ] Asserts matching: output_items.length
+- [ ] Compares each output item: id, type, content, origin
+- [ ] Asserts matching: usage tokens (prompt, completion, total)
+
 **Critical - NO MOCKS:**
 - [ ] No mock imports
 - [ ] No jest.mock/vi.mock calls
 - [ ] No fake data injection
 - [ ] All fetches go to real localhost:4010
+- [ ] No `any` types (use strong types throughout)
 
 ---
 
 ## 4. Runtime Verification
 
-With all services running (Redis, Fastify with `bun run dev`):
+With all services running (Redis, Convex, OpenAI accessible, Fastify with `bun run dev`):
 
 ### 4.1 Validation Script
 
@@ -138,7 +152,7 @@ cd cody-fastify
 bun run test-suites/tdd-api/validate-env.ts
 ```
 
-Expected: All 2 checks pass with ✓
+Expected: All 4 checks pass with ✓
 
 ### 4.2 Test Suite
 
@@ -184,16 +198,19 @@ Provide your assessment:
 - [x] Principles clearly stated
 
 ### validate-env.ts
-- [x] All 2 checks implemented (Redis, Fastify)
+- [x] All 4 checks implemented (Redis, Convex, OpenAI, Fastify)
 - [x] Reports all results
 - [x] Exits on failure
 - [x] No mocks
-- [x] No env var checks
+- [x] No preliminary env var "is set" checks
 
 ### simple-prompt.test.ts
 - [x] All 3 phases implemented
+- [x] Uses ResponseReducer for hydration
+- [x] Compares hydrated to persisted
 - [x] All assertions present
 - [x] No mocks
+- [x] No `any` types
 - [x] Proper timeout handling
 
 ### Runtime

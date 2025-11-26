@@ -16,7 +16,7 @@ NO MOCKS. NO SHIMS. NO SPECIAL CONFIG OVERRIDES. NO TEST INJECTIONS.
 ```
 
 This means:
-- DO NOT mock Redis or any infrastructure
+- DO NOT mock Redis, Convex, OpenAI, or any infrastructure
 - DO NOT create test-specific configuration
 - DO NOT inject fake adapters or services
 - Tests hit real endpoints with real infrastructure
@@ -25,7 +25,7 @@ This means:
 
 ## 2. Application Overview
 
-cody-fastify is a streaming-first LLM harness. The API accepts prompts and streams responses via SSE.
+cody-fastify is a streaming-first LLM harness. The API accepts prompts, streams responses via SSE, and persists results to Convex.
 
 **Key endpoints:**
 - `POST /api/v2/submit` - Submit prompt, get runId
@@ -36,6 +36,8 @@ cody-fastify is a streaming-first LLM harness. The API accepts prompts and strea
 - Bun 1.3.3 runtime
 - Fastify server on port 4010
 - Redis for event streaming
+- Convex for persistence
+- OpenAI for LLM inference
 
 ---
 
@@ -96,7 +98,7 @@ mkdir -p test-suites/tdd-api
 Create `test-suites/tdd-api/README.md` with:
 - Purpose: TDD and integrity testing for full integration
 - Principles: NO MOCKS, NO SHIMS, etc.
-- Prerequisites (2 items, all validated by suite)
+- Prerequisites (4 items, all validated by suite)
 - Running instructions
 - Environment validation table
 - Test list (start with simple-prompt.test.ts)
@@ -109,11 +111,12 @@ See SPEC.md Section 7 for exact content.
 Create `test-suites/tdd-api/validate-env.ts`:
 
 **Requirements:**
-- Check 2 services: Redis, Fastify
+- Check 4 services: Redis, Convex, OpenAI, Fastify
 - If ANY check fails, continue checking ALL services
 - Report status of each service with ✓ or ✗
 - Exit with code 1 if any failures
 - Support standalone execution via `import.meta.main`
+- NO preliminary env var checks - just attempt connections and let them fail naturally
 
 **Check implementations:**
 
@@ -122,7 +125,18 @@ Create `test-suites/tdd-api/validate-env.ts`:
    - Call `connect()`, `ping()`, `quit()`
    - Success: PONG response
 
-2. **Fastify Server:**
+2. **Convex:**
+   - HTTP GET to `process.env.CONVEX_URL`
+   - 3000ms timeout
+   - Success: status < 500 (server reachable)
+
+3. **OpenAI:**
+   - GET `https://api.openai.com/v1/models` with `process.env.OPENAI_API_KEY`
+   - 5000ms timeout
+   - Success: status 200
+   - 401/403: key invalid or missing
+
+4. **Fastify Server:**
    - GET `http://localhost:4010/health`
    - 2000ms timeout
    - Success: status 200
@@ -132,6 +146,8 @@ Create `test-suites/tdd-api/validate-env.ts`:
 === Environment Validation ===
 
 ✓ Redis: Running on port 6379
+✓ Convex: Reachable at https://...
+✓ OpenAI: API reachable, key valid
 ✓ Fastify Server: Running on port 4010
 
 ✅ All environment checks passed.
@@ -147,7 +163,7 @@ cd cody-fastify
 bun run test-suites/tdd-api/validate-env.ts
 ```
 
-Verify all 2 checks pass with services running.
+Verify all 4 checks pass with services running.
 
 ### Step 5: CHECKPOINT - Stop and verify with user
 
@@ -156,7 +172,8 @@ Verify all 2 checks pass with services running.
 Tell the user:
 "Environment validation script is ready. Let's verify it correctly detects failures. Please:
 1. Stop Redis and run the script
-2. Stop the Fastify server and run the script
+2. Use invalid OpenAI key and run the script
+3. Stop the Fastify server and run the script
 
 For each, confirm the output shows ALL checks (not just first failure) and reports the correct status."
 
@@ -197,6 +214,8 @@ describe("tdd-api: simple-prompt", () => {
 - Parse SSE events manually (data: lines)
 - Collect until `response_done` or 15 second timeout
 - Capture `threadId` from `response_start` payload
+- **Use `ResponseReducer` from `src/core/reducer.ts` to hydrate events into Response object**
+- Save hydrated Response for comparison in Phase 3 (add comment: "// Hydrated response - will be compared to persisted object in Phase 3")
 
 **PHASE 2 Assertions:**
 - Event count: > 1 and < 200
@@ -208,7 +227,7 @@ describe("tdd-api: simple-prompt", () => {
 - All events have: event_id, timestamp, run_id (matches), trace_context.traceparent
 
 **PHASE 3 - Validate persistence:**
-- Wait 500ms for persistence worker
+- Wait 200ms for persistence worker to complete
 - GET `/api/v2/threads/:threadId`
 - Assert: status 200
 
@@ -237,6 +256,21 @@ describe("tdd-api: simple-prompt", () => {
 - `usage.total_tokens` > 0
 - `total_tokens` equals `prompt_tokens + completion_tokens`
 
+**PHASE 3 Assertions comparing hydrated to persisted:**
+Compare the hydrated Response (from Phase 2) to the persisted run:
+- `hydratedResponse.id` equals `run.id`
+- `hydratedResponse.turn_id` equals `run.turn_id`
+- `hydratedResponse.thread_id` equals `run.thread_id`
+- `hydratedResponse.model_id` equals `run.model_id`
+- `hydratedResponse.provider_id` equals `run.provider_id`
+- `hydratedResponse.status` equals `run.status`
+- `hydratedResponse.finish_reason` equals `run.finish_reason`
+- `hydratedResponse.output_items.length` equals `run.output_items.length`
+- For each output item: `type`, `content`, `origin`, `id` must match
+- `hydratedResponse.usage.prompt_tokens` equals `run.usage.prompt_tokens`
+- `hydratedResponse.usage.completion_tokens` equals `run.usage.completion_tokens`
+- `hydratedResponse.usage.total_tokens` equals `run.usage.total_tokens`
+
 See SPEC.md Section 6.3 for full implementation.
 
 ### Step 7: Update package.json
@@ -263,8 +297,11 @@ bun run test:tdd-api
 ## 7. Technical Standards
 
 **TypeScript:**
-- Use strict types where practical
+- **NO `any` types** - use strong types throughout
+- Weak typing requires explicit user approval - verify with user before using weak types
 - Import from "bun:test" for test utilities
+- Import `StreamEvent`, `Response` from `src/core/schema.ts`
+- Import `ResponseReducer` from `src/core/reducer.ts`
 - Use async/await consistently
 
 **Error handling:**
@@ -275,12 +312,14 @@ bun run test:tdd-api
 - Manual parsing with fetch + getReader()
 - Handle buffer correctly for partial lines
 - Timeout at 15 seconds for LLM response
+- Type events as `StreamEvent[]` not `any[]`
 
 **DO NOT:**
 - Mock any infrastructure
 - Add test-specific configuration
 - Create abstractions or helpers beyond validate-env.ts
 - Over-engineer - keep it simple and direct
+- Use `any` type without explicit user approval
 
 ---
 
@@ -342,4 +381,5 @@ Key source files:
 - `src/api/routes/stream.ts` - SSE streaming
 - `src/api/routes/threads.ts` - Thread retrieval
 - `src/api/schemas/thread.ts` - Thread/run schemas
-- `src/core/schema.ts` - StreamEvent schema
+- `src/core/schema.ts` - StreamEvent, Response schemas
+- `src/core/reducer.ts` - ResponseReducer for hydrating events

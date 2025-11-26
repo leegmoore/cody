@@ -43,6 +43,8 @@ Changes require EXPLICIT user approval after discussion.
 
 These tests exercise the complete system:
 - Real Redis
+- Real Convex
+- Real LLM APIs (OpenAI)
 - Real HTTP endpoints
 
 ---
@@ -50,7 +52,9 @@ These tests exercise the complete system:
 ## 3. Prerequisites
 
 1. Assume Redis configured and running
-2. Assume Fastify Server running on port 4010
+2. Assume Convex configured and running
+3. Assume OpenAI API accessible
+4. Assume Fastify Server running on port 4010
 
 **The test suite validates each of these before running.**
 
@@ -79,7 +83,9 @@ Before any test runs, validate all infrastructure dependencies are available. If
 | # | Service | Check Method | Success Criteria |
 |---|---------|--------------|------------------|
 | 1 | Redis | ioredis PING on port 6379 | PONG response |
-| 2 | Fastify | GET /health on port 4010 | Status 200 |
+| 2 | Convex | HTTP GET to CONVEX_URL | Status < 500 |
+| 3 | OpenAI | GET /v1/models with API key | Status 200 |
+| 4 | Fastify | GET /health on port 4010 | Status 200 |
 
 ### 5.3 Implementation: `validate-env.ts`
 
@@ -98,7 +104,13 @@ export async function validateEnvironment(): Promise<void> {
   // 1. Check Redis on 6379
   results.push(await checkRedis());
 
-  // 2. Check Fastify Server on 4010
+  // 2. Check Convex connectivity
+  results.push(await checkConvex());
+
+  // 3. Check OpenAI API connectivity
+  results.push(await checkOpenAI());
+
+  // 4. Check Fastify Server on 4010
   results.push(await checkFastifyServer());
 
   // Report all results
@@ -136,6 +148,49 @@ async function checkRedis(): Promise<EnvCheckResult> {
   }
 }
 
+async function checkConvex(): Promise<EnvCheckResult> {
+  try {
+    const convexUrl = process.env.CONVEX_URL ?? "";
+    const healthUrl = convexUrl.replace(/\/$/, "");
+    const res = await fetch(healthUrl, {
+      method: "GET",
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (res.status < 500) {
+      return { name: "Convex", status: "ok", message: `Reachable at ${convexUrl}` };
+    }
+    return { name: "Convex", status: "fail", message: `Server error: ${res.status}` };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return { name: "Convex", status: "fail", message: `Not reachable: ${msg}` };
+  }
+}
+
+async function checkOpenAI(): Promise<EnvCheckResult> {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY ?? "";
+    const res = await fetch("https://api.openai.com/v1/models", {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (res.status === 200) {
+      return { name: "OpenAI", status: "ok", message: "API reachable, key valid" };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return { name: "OpenAI", status: "fail", message: "API key invalid or missing" };
+    }
+    return { name: "OpenAI", status: "fail", message: `Unexpected status: ${res.status}` };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return { name: "OpenAI", status: "fail", message: `Not reachable: ${msg}` };
+  }
+}
+
 async function checkFastifyServer(): Promise<EnvCheckResult> {
   try {
     const res = await fetch("http://localhost:4010/health", {
@@ -163,6 +218,8 @@ if (import.meta.main) {
 === Environment Validation ===
 
 ✓ Redis: Running on port 6379
+✓ Convex: Reachable at https://...
+✓ OpenAI: API reachable, key valid
 ✓ Fastify Server: Running on port 4010
 
 ✅ All environment checks passed.
@@ -172,8 +229,10 @@ if (import.meta.main) {
 ```
 === Environment Validation ===
 
-✗ Redis: Not reachable on port 6379
-✗ Fastify Server: Not running on port 4010
+✓ Redis: Running on port 6379
+✗ Convex: Not reachable: fetch failed
+✗ OpenAI: API key invalid or missing
+✓ Fastify Server: Running on port 4010
 
 ❌ 2 environment check(s) failed. Cannot run tests.
 ```
@@ -196,13 +255,17 @@ PHASE 1: Submit prompt
 PHASE 2: Stream response
   GET /api/v2/stream/:runId (SSE)
   → Collect events until response_done
+  → Hydrate events using ResponseReducer
   → Assert event sequence and shapes
+  → Save hydrated Response for comparison
 
 PHASE 3: Validate persistence
+  Wait 200ms for persistence worker
   GET /api/v2/threads/:threadId
   → Assert thread structure
   → Assert run persisted correctly
   → Assert output items present
+  → Compare hydrated Response to persisted run
 ```
 
 ### 6.3 Implementation
@@ -210,6 +273,8 @@ PHASE 3: Validate persistence
 ```typescript
 import { describe, test, expect, beforeAll } from "bun:test";
 import { validateEnvironment } from "./validate-env";
+import { StreamEvent, Response } from "../../src/core/schema";
+import { ResponseReducer } from "../../src/core/reducer";
 
 const BASE_URL = "http://localhost:4010";
 
@@ -231,7 +296,7 @@ describe("tdd-api: simple-prompt", () => {
 
     // Assert: Submit response
     expect(submitRes.status).toBe(202);
-    const submitBody = await submitRes.json();
+    const submitBody = await submitRes.json() as { runId: string };
     expect(submitBody.runId).toBeDefined();
     expect(typeof submitBody.runId).toBe("string");
     expect(submitBody.runId).toMatch(/^[0-9a-f-]{36}$/); // UUID format
@@ -241,8 +306,9 @@ describe("tdd-api: simple-prompt", () => {
     // ========================================
     // PHASE 2: Stream response
     // ========================================
-    const events: any[] = [];
+    const events: StreamEvent[] = [];
     let threadId: string | undefined;
+    const reducer = new ResponseReducer();
 
     const streamRes = await fetch(`${BASE_URL}/api/v2/stream/${runId}`);
     expect(streamRes.ok).toBe(true);
@@ -269,8 +335,9 @@ describe("tdd-api: simple-prompt", () => {
 
       for (const line of lines) {
         if (line.startsWith("data: ")) {
-          const event = JSON.parse(line.slice(6));
+          const event = JSON.parse(line.slice(6)) as StreamEvent;
           events.push(event);
+          reducer.apply(event);
 
           // Capture threadId from response_start
           if (event.payload?.type === "response_start") {
@@ -350,12 +417,16 @@ describe("tdd-api: simple-prompt", () => {
       expect(event.trace_context.traceparent).toBeDefined();
     }
 
+    // Hydrated response - will be compared to persisted object in Phase 3
+    const hydratedResponse = reducer.snapshot();
+    expect(hydratedResponse).toBeDefined();
+
     // ========================================
     // PHASE 3: Pull thread and validate persistence
     // ========================================
 
-    // Small delay to allow persistence worker to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for persistence worker to complete
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     const threadRes = await fetch(`${BASE_URL}/api/v2/threads/${threadId}`);
     expect(threadRes.status).toBe(200);
@@ -397,15 +468,15 @@ describe("tdd-api: simple-prompt", () => {
     expect(run.output_items.length).toBeGreaterThanOrEqual(1);
 
     // Assert: Has at least one message output item
-    const messageItems = run.output_items.filter((i: any) => i.type === "message");
+    const messageItems = run.output_items.filter((i: { type: string }) => i.type === "message");
     expect(messageItems.length).toBeGreaterThanOrEqual(1);
 
-    const agentMessage = messageItems.find((i: any) => i.origin === "agent");
+    const agentMessage = messageItems.find((i) => i.origin === "agent");
     expect(agentMessage).toBeDefined();
-    expect(agentMessage.content).toBeDefined();
-    expect(typeof agentMessage.content).toBe("string");
-    expect(agentMessage.content.length).toBeGreaterThan(0);
-    expect(agentMessage.id).toBeDefined();
+    expect(agentMessage!.content).toBeDefined();
+    expect(typeof agentMessage!.content).toBe("string");
+    expect(agentMessage!.content.length).toBeGreaterThan(0);
+    expect(agentMessage!.id).toBeDefined();
 
     // Assert: Usage present
     expect(run.usage).toBeDefined();
@@ -413,6 +484,35 @@ describe("tdd-api: simple-prompt", () => {
     expect(run.usage.completion_tokens).toBeGreaterThan(0);
     expect(run.usage.total_tokens).toBeGreaterThan(0);
     expect(run.usage.total_tokens).toBe(run.usage.prompt_tokens + run.usage.completion_tokens);
+
+    // ========================================
+    // PHASE 3: Compare hydrated response to persisted run
+    // ========================================
+    expect(hydratedResponse!.id).toBe(run.id);
+    expect(hydratedResponse!.turn_id).toBe(run.turn_id);
+    expect(hydratedResponse!.thread_id).toBe(run.thread_id);
+    expect(hydratedResponse!.model_id).toBe(run.model_id);
+    expect(hydratedResponse!.provider_id).toBe(run.provider_id);
+    expect(hydratedResponse!.status).toBe(run.status);
+    expect(hydratedResponse!.finish_reason).toBe(run.finish_reason);
+    expect(hydratedResponse!.output_items.length).toBe(run.output_items.length);
+
+    // Compare each output item
+    for (let i = 0; i < hydratedResponse!.output_items.length; i++) {
+      const hydratedItem = hydratedResponse!.output_items[i];
+      const persistedItem = run.output_items[i];
+      expect(hydratedItem.id).toBe(persistedItem.id);
+      expect(hydratedItem.type).toBe(persistedItem.type);
+      if (hydratedItem.type === "message" && persistedItem.type === "message") {
+        expect(hydratedItem.content).toBe(persistedItem.content);
+        expect(hydratedItem.origin).toBe(persistedItem.origin);
+      }
+    }
+
+    // Compare usage
+    expect(hydratedResponse!.usage?.prompt_tokens).toBe(run.usage.prompt_tokens);
+    expect(hydratedResponse!.usage?.completion_tokens).toBe(run.usage.completion_tokens);
+    expect(hydratedResponse!.usage?.total_tokens).toBe(run.usage.total_tokens);
   });
 });
 ```
@@ -441,7 +541,9 @@ Changes to these principles require EXPLICIT user approval after discussion.
 ## Prerequisites
 
 1. Assume Redis configured and running
-2. Assume Fastify Server running on port 4010
+2. Assume Convex configured and running
+3. Assume OpenAI API accessible
+4. Assume Fastify Server running on port 4010
 
 **The test suite validates each of these before running.**
 
@@ -462,6 +564,8 @@ Before tests execute, the suite validates:
 | Service | Check | Success |
 |---------|-------|---------|
 | Redis | PING on port 6379 | PONG response |
+| Convex | HTTP GET to CONVEX_URL | Status < 500 |
+| OpenAI | GET /v1/models | Status 200 |
 | Fastify | GET /health on 4010 | Status 200 |
 
 If any check fails, all checks complete, status is reported, then tests exit.
@@ -516,6 +620,7 @@ Assume all services running. Verify output shows all checks passing.
 ### Step 5: CHECKPOINT - Verify validation with user
 **STOP HERE.** Work with user to:
 - Turn off Redis → verify correct failure output
+- Use invalid OpenAI key → verify correct failure output
 - Turn off Fastify server → verify correct failure output
 - Confirm all failures report status for ALL checks, not just first failure
 
