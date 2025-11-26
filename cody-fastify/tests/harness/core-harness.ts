@@ -60,7 +60,8 @@ export class Core2TestHarness {
   private readonly toolWorkerOptions: ToolWorkerOptions;
   private readonly scriptToolRegistry: ToolRegistry | undefined; // Changed from ScriptToolRegistry
 
-  constructor(scriptToolRegistry?: ToolRegistry) { // Changed from ScriptToolRegistry
+  constructor(scriptToolRegistry?: ToolRegistry) {
+    // Changed from ScriptToolRegistry
     this.factory = new MockModelFactory({
       adapterFactory: createMockStreamAdapter,
     });
@@ -207,7 +208,10 @@ export class Core2TestHarness {
     }
 
     try {
-      const res = await fetch(urlWithBlockMs, { signal: controller.signal, keepalive: false });
+      const res = await fetch(urlWithBlockMs, {
+        signal: controller.signal,
+        keepalive: false,
+      });
       if (!res.ok || !res.body) {
         const text = await res.text();
         throw new Error(

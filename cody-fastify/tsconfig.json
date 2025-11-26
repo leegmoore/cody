@@ -21,6 +21,8 @@
     "src/**/*.ts",
     "src/**/*.d.ts",
     "tests/**/*.ts",
+    "test-suites/**/*.ts",
+    "test-suites/**/*.d.ts",
     "scripts/**/*.ts",
     "playwright.config.ts"
   ],

@@ -25,6 +25,7 @@ type RedisClientLike = {
     cursor: string,
     ...args: Array<string | number>
   ) => Promise<[string, string[]]>;
+  keys: (pattern: string) => Promise<string[]>;
   del: (...args: Array<string | number>) => Promise<unknown>;
   quit?: () => Promise<void>;
   ping?: () => Promise<string>;
@@ -204,6 +205,16 @@ export class RedisStream {
       cursor: nextCursor,
       keys: Array.isArray(keys) ? keys : [],
     };
+  }
+
+  /**
+   * Use KEYS command to find all streams matching a pattern.
+   * WARNING: O(N) operation - use only in development or when SCAN fails.
+   * This is more reliable than SCAN for finding streams in sparse keyspaces.
+   */
+  async keysMatch(pattern: string): Promise<string[]> {
+    const keys = await this.client.keys(pattern);
+    return Array.isArray(keys) ? keys : [];
   }
 
   async deleteStream(streamKey: string): Promise<void> {

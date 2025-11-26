@@ -58,7 +58,6 @@ export class PersistenceWorker {
   private readonly reducers = new Map<string, ResponseReducer>();
   private readonly streams = new Set<string>();
   private readonly streamOffsets = new Map<string, string>();
-  private discoveryCursor = "0";
   private readonly persistIntermediateSnapshots: boolean;
 
   constructor(private readonly config: PersistenceWorkerOptions = {}) {
@@ -68,9 +67,9 @@ export class PersistenceWorker {
     this.streamPattern =
       config.streamPattern ?? `${REDIS_STREAM_KEY_PREFIX}:*:events`;
     this.options = {
-      discoveryIntervalMs: config.discoveryIntervalMs ?? 1500,
+      discoveryIntervalMs: config.discoveryIntervalMs ?? 50,
       scanCount: config.scanCount ?? 100,
-      blockMs: config.blockMs ?? 5000,
+      blockMs: config.blockMs ?? 50,
       batchSize: config.batchSize ?? 50,
       reclaimIntervalMs: config.reclaimIntervalMs ?? 15000,
       reclaimMinIdleMs: config.reclaimMinIdleMs ?? 60000,
@@ -110,7 +109,6 @@ export class PersistenceWorker {
     this.reducers.clear();
     this.streams.clear();
     this.streamOffsets.clear();
-    this.discoveryCursor = "0";
   }
 
   async join(): Promise<void> {
@@ -307,26 +305,30 @@ export class PersistenceWorker {
   private async discoverOnce(): Promise<void> {
     const redis = this.redis;
     if (!redis) return;
-    const { cursor, keys } = await redis.scanStreams(
-      this.streamPattern,
-      this.discoveryCursor,
-      this.options.scanCount,
-    );
-    this.discoveryCursor = cursor;
-    for (const key of keys) {
+
+    // Always use KEYS for discovery - it's O(N) but reliable and fast for dev workloads.
+    // SCAN is unreliable for sparse keyspaces and can miss keys entirely.
+    const discoveredKeys = await redis.keysMatch(this.streamPattern);
+
+    let newCount = 0;
+    for (const key of discoveredKeys) {
       if (!this.streams.has(key)) {
         await redis.ensureGroup(key, this.groupName);
         this.streams.add(key);
-        this.streamOffsets.set(key, "0");
+        // Use ">" to read new messages immediately (not PEL which is empty for new consumers)
+        this.streamOffsets.set(key, ">");
+        newCount++;
       }
+    }
+
+    if (newCount > 0) {
+      console.log(`[projector] Discovered ${newCount} new stream(s)`);
     }
   }
 
   private async fullDiscoveryCycle(): Promise<void> {
-    this.discoveryCursor = "0";
-    do {
-      await this.discoverOnce();
-    } while (this.running && this.discoveryCursor !== "0");
+    // Single discovery call is sufficient since we use KEYS command
+    await this.discoverOnce();
   }
 
   private isNoGroupError(error: unknown): boolean {

@@ -66,18 +66,35 @@ export async function createServer(options: ServerOptions = {}) {
     await persistenceWorker.start();
     app.log.info("Persistence worker started");
   } catch (error) {
-    app.log.warn(
-      { err: error },
-      "Persistence worker disabled (set CONVEX_URL to enable)",
-    );
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const convexUrl = process.env.CONVEX_URL?.trim() ?? "";
+
+    if (!convexUrl) {
+      app.log.error(
+        { err: error },
+        "Persistence worker failed to start: CONVEX_URL is not set in environment variables",
+      );
+    } else if (
+      errorMessage.includes("Unable to connect") ||
+      errorMessage.includes("connect") ||
+      errorMessage.includes("ECONNREFUSED")
+    ) {
+      app.log.error(
+        { err: error },
+        "Persistence worker failed to start: Cannot connect to Convex. Ensure Convex is running and CONVEX_URL is correct",
+      );
+    } else {
+      app.log.error(
+        { err: error },
+        `Persistence worker failed to start: ${errorMessage}`,
+      );
+    }
     persistenceWorker = undefined;
   }
 
   app.addHook("onClose", async () => {
     if (persistenceWorker) {
-      console.log("[DEBUG - Server onClose] Before persistenceWorker.stop()");
       await persistenceWorker.stop().catch(() => undefined);
-      console.log("[DEBUG - Server onClose] After persistenceWorker.stop()");
     }
   });
   app.get("/health", async () => ({
