@@ -1,37 +1,32 @@
 # CURRENT.md - Active Slice
 
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-11-26
 
 ---
 
-## Slice: Complete Process Foundation
+## Slice: Test Strategy & Baseline
 
 ### The ONE Thing
-Finish refining process docs and tools so we can use them for real work.
+Evaluate test harness strategy and establish 2 baseline tests (with/without tools)
 
 ### Done When
-- [x] STATE.md - ground truth (stable)
-- [x] PROCESS.md - workflow/checkpoints (stable)
-- [x] CURRENT.md - active focus (this file)
-- [x] NEXT.md - work queue (created)
-- [x] CLAUDE.md - references all docs
-- [x] TOOLS.md - designs sketched
-- [x] templates/ - SPEC, PROMPT, LARGE-FEATURE
-- [x] Beads documented in PROCESS.md
-- [x] Context checkpoints defined
-- [ ] Slash commands created in `.claude/commands/`
-- [ ] Beads initialized in cody-fastify
-- [ ] Process tested on real slice (test infrastructure recovery)
+- [ ] Test strategy decided (new approach OR refactor harness)
+- [ ] 2 baseline tests implemented and passing
+  - Basic turn (no tools)
+  - Turn with tool call
+- [ ] Tests verify real behavior (no infrastructure mocks)
+- [ ] Ready to add history tests
 
 ### NOT Touching
-- Test infrastructure code (next slice)
+- History implementation
+- Thinking implementation
 - UI code
-- Feature work
+- Other providers (Anthropic, Chat Completions, OpenRouter)
 
 ### Integration Points
-- CLAUDE.md → references all process docs
-- PLANNER-INIT.md → instructs to read STATE.md, PROCESS.md
-- NEXT.md → tracks work queue separately
+- Tests use real Redis, Convex, workers
+- Tests mock only LLM API responses
+- Baseline establishes pattern for future tests
 
 ---
 
@@ -45,9 +40,11 @@ None.
 
 *Clear on session end.*
 
-- 2025-11-25 (early): Created STATE, PROCESS, CURRENT, TOOLS, templates, updated CLAUDE.md
-- 2025-11-25 (100k): Added beads docs, refined checkpoints, created NEXT.md, renamed /review → /doccheck
+**Completed:**
+- 2025-11-25: Created STATE, PROCESS, CURRENT, TOOLS, NEXT, templates, updated CLAUDE.md
+- 2025-11-25 (100k): Added beads docs, refined checkpoints, renamed /doccheck
+- 2025-11-26: Built prompt assembly skill, evaluated UI (staying vanilla JS), documented API details, established phased roadmap
 
 ---
 
-**See NEXT.md for work queue.**
+**See NEXT.md for full roadmap.**

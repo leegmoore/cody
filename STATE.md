@@ -6,16 +6,18 @@
 
 ## System Health: YELLOW
 
-Core pipeline works. Tests are unreliable. UI functional but hitting limits.
+Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 
-**Process Health: IN PROGRESS** - Foundation docs established, still refining:
+**Process Health: IN PROGRESS** - Foundation docs established, tools building:
 - [x] STATE.md - Ground truth (stable)
-- [x] PROCESS.md - Workflow/checkpoints (stable, orchestration section under development)
-- [~] CURRENT.md - Active focus (working, may evolve)
-- [~] TOOLS.md - Extension tools (designed, not yet implemented)
-- [~] NEXT.md - Work queue (needs creation)
-- [ ] Slash commands - Not yet created in `.claude/commands/`
-- [ ] Beads initialization - Not yet done
+- [x] PROCESS.md - Workflow/checkpoints (stable, working modes defined)
+- [x] CURRENT.md - Active focus tracking
+- [x] TOOLS.md - Extension tools documented
+- [x] NEXT.md - Work queue established
+- [x] Prompt assembly skill - built, light testing, needs more real-world use
+- [x] /core-doc-review command - created, needs testing
+- [x] Projects structure - 01-api, 02-ui with prompts directories
+- [ ] Beads initialization - deferred
 
 ---
 
@@ -76,10 +78,31 @@ Core pipeline works. Tests are unreliable. UI functional but hitting limits.
 
 ## What's Incomplete (Confidence: MEDIUM)
 
-### Thinking Display
+### Multi-Turn History (Critical - Blocking)
+- **Current:** Each turn is independent, no conversation context
+- **OpenAI Responses:** Needs conversation history loading from Convex + sending in `input`
+  - Should include reasoning from previous turns
+  - codex-ts reference implementation available
+- **Anthropic Messages:** Needs history with reasoning filtered out
+  - Always required (stateless API)
+  - codex-ts filters reasoning in `convertMessages()`
+- **See:** `docs/response-messages-api-details.md` for format details
+
+### Thinking/Reasoning Display
 - `reasoning` OutputItems exist in schema
-- Adapters produce them (sometimes)
-- UI not rendering them properly
+- Adapters produce them
+- UI has partial support (thinking blocks exist but buggy)
+- Need to complete implementation and verify full flow
+
+### Test Infrastructure
+- Current harness may be corrupted (agents snuck in mocks)
+- Need to baseline with 2 simple tests (with/without tools)
+- Then build out: history tests, thinking tests, provider coverage
+
+### Client Library Evaluation (Future)
+- Consider extending hydration lib to contain UI complexity
+- Evaluate after implementing thought bubbles (see pain points first)
+- Keep vanilla JS manageable as features grow
 
 ### Legacy v1 Routes
 - Code exists in `src/api/routes/` (conversations, messages, turns)
@@ -124,12 +147,25 @@ Core pipeline works. Tests are unreliable. UI functional but hitting limits.
 - Smoke tests with real APIs: 3/3 passing (after OpenAI tool continuation + Anthropic max_tokens fixes)
 - UI wired to v2 API, basic flows working
 
-**Process (2025-11-25):**
-- Established process foundation docs (STATE, CURRENT, PROCESS, TOOLS)
-- Created templates (SPEC, PROMPT, LARGE-FEATURE)
-- Defined context checkpoints (100k doc review, 150k wrap-up)
+**Process (2025-11-25 session):**
+- Established process foundation docs (STATE, CURRENT, NEXT, PROCESS, TOOLS)
+- Defined working modes (informal vs formal) in PROCESS.md
+- Built prompt assembly skill (.claude/skills/prompt-assembly/)
+  - Templates for coder and verifier prompts
+  - Assembly script with handlebars
+  - Tested successfully, needs more real-world use
+- Created /core-doc-review command (needs testing)
+- Established projects structure (projects/01-api/, projects/02-ui/)
+- Defined context checkpoints (75k/100k/125k/150k/160k/170k)
 - Documented beads (bd) for work tracking/orchestration
-- Defined subagent patterns and artifact workflow
+
+**Decisions (2025-11-26 session):**
+- **UI evaluation:** Staying vanilla JS (manageable at ~1600 lines, not hitting complexity ceiling)
+  - Possibly exploring iframe approach for better modularity
+  - Tauri desktop app remains viable distribution path
+  - New features (file tree, file viewer) won't push vanilla JS limits
+- **Test strategy:** Need to baseline with 2 simple tests before building out full suite
+- **API research:** Documented Responses vs Messages API history handling differences
 
 ---
 
@@ -137,8 +173,8 @@ Core pipeline works. Tests are unreliable. UI functional but hitting limits.
 
 1. **How much of the passing tests are real?** Need to audit test harness for mocking that changes behavior.
 2. **What's the right testing strategy going forward?** E2E only? Re-scaffold service mocks? Both?
-3. **UI migration timing?** Vanilla JS working but complexity ceiling approaching.
-4. **Tool scoping design?** How to limit tools per agent/thread?
+3. **Tool scoping design?** How to limit tools per agent/thread?
+4. **Client library scope?** How much UI complexity should live in an extended hydration lib?
 
 ---
 
