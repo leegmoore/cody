@@ -16,7 +16,7 @@ NO MOCKS. NO SHIMS. NO SPECIAL CONFIG OVERRIDES. NO TEST INJECTIONS.
 ```
 
 This means:
-- DO NOT mock Redis, Convex, OpenAI, or any infrastructure
+- DO NOT mock Redis or any infrastructure
 - DO NOT create test-specific configuration
 - DO NOT inject fake adapters or services
 - Tests hit real endpoints with real infrastructure
@@ -25,7 +25,7 @@ This means:
 
 ## 2. Application Overview
 
-cody-fastify is a streaming-first LLM harness. The API accepts prompts, streams responses via SSE, and persists results to Convex.
+cody-fastify is a streaming-first LLM harness. The API accepts prompts and streams responses via SSE.
 
 **Key endpoints:**
 - `POST /api/v2/submit` - Submit prompt, get runId
@@ -36,8 +36,6 @@ cody-fastify is a streaming-first LLM harness. The API accepts prompts, streams 
 - Bun 1.3.3 runtime
 - Fastify server on port 4010
 - Redis for event streaming
-- Convex for persistence
-- OpenAI for LLM inference
 
 ---
 
@@ -81,7 +79,6 @@ cody-fastify/
     api/routes/stream.ts     # GET /api/v2/stream/:runId
     api/routes/threads.ts    # GET /api/v2/threads/:id
     core/schema.ts           # StreamEvent, Response schemas
-  .env                       # Environment variables
 ```
 
 ---
@@ -99,7 +96,7 @@ mkdir -p test-suites/tdd-api
 Create `test-suites/tdd-api/README.md` with:
 - Purpose: TDD and integrity testing for full integration
 - Principles: NO MOCKS, NO SHIMS, etc.
-- Prerequisites (4 items, all validated by suite)
+- Prerequisites (2 items, all validated by suite)
 - Running instructions
 - Environment validation table
 - Test list (start with simple-prompt.test.ts)
@@ -112,8 +109,7 @@ See SPEC.md Section 7 for exact content.
 Create `test-suites/tdd-api/validate-env.ts`:
 
 **Requirements:**
-- Load .env from cody-fastify root using dotenv
-- Check 4 services: Redis, Convex, OpenAI, Fastify
+- Check 2 services: Redis, Fastify
 - If ANY check fails, continue checking ALL services
 - Report status of each service with ✓ or ✗
 - Exit with code 1 if any failures
@@ -126,21 +122,7 @@ Create `test-suites/tdd-api/validate-env.ts`:
    - Call `connect()`, `ping()`, `quit()`
    - Success: PONG response
 
-2. **Convex:**
-   - Read `CONVEX_URL` from environment
-   - If not set, fail with message
-   - HTTP GET to the URL with 3000ms timeout
-   - Success: status < 500 (server reachable)
-
-3. **OpenAI:**
-   - Read `OPENAI_API_KEY` from environment
-   - If not set, fail with message
-   - GET `https://api.openai.com/v1/models` with Authorization header
-   - 5000ms timeout
-   - Success: status 200
-   - 401/403: key invalid
-
-4. **Fastify Server:**
+2. **Fastify Server:**
    - GET `http://localhost:4010/health`
    - 2000ms timeout
    - Success: status 200
@@ -150,8 +132,6 @@ Create `test-suites/tdd-api/validate-env.ts`:
 === Environment Validation ===
 
 ✓ Redis: Running on port 6379
-✓ Convex: Reachable at https://...
-✓ OpenAI: API key valid, endpoint reachable
 ✓ Fastify Server: Running on port 4010
 
 ✅ All environment checks passed.
@@ -167,7 +147,7 @@ cd cody-fastify
 bun run test-suites/tdd-api/validate-env.ts
 ```
 
-Verify all 4 checks pass with services running.
+Verify all 2 checks pass with services running.
 
 ### Step 5: CHECKPOINT - Stop and verify with user
 
@@ -176,8 +156,7 @@ Verify all 4 checks pass with services running.
 Tell the user:
 "Environment validation script is ready. Let's verify it correctly detects failures. Please:
 1. Stop Redis and run the script
-2. Unset CONVEX_URL and run the script
-3. Stop the Fastify server and run the script
+2. Stop the Fastify server and run the script
 
 For each, confirm the output shows ALL checks (not just first failure) and reports the correct status."
 
@@ -356,7 +335,7 @@ When complete, report:
 
 ## 10. Reference
 
-Full specification: `projects/02-api/001-tdd-test-suite/SPEC.md`
+Full specification: `projects/01-api/001-tdd-test-suite/SPEC.md`
 
 Key source files:
 - `src/api/routes/submit.ts` - Submit endpoint

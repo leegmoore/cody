@@ -60,26 +60,24 @@ Verify `package.json` contains:
 Verify README includes:
 - [ ] Purpose statement (TDD and integrity testing)
 - [ ] NO MOCKS principle stated clearly
-- [ ] Prerequisites list (4 items)
+- [ ] Prerequisites list (2 items)
 - [ ] Statement that suite validates prerequisites
 - [ ] Running instructions (`bun run dev` then `bun run test:tdd-api`)
-- [ ] Environment validation table (4 services)
+- [ ] Environment validation table (2 services)
 - [ ] Test list with simple-prompt.test.ts
 - [ ] Instructions for adding new tests
 
 ### 3.4 validate-env.ts Implementation
 
 Verify:
-- [ ] Loads .env using dotenv from correct path (`../../.env` relative to file)
 - [ ] Checks Redis on port 6379 using ioredis
-- [ ] Checks Convex by reading CONVEX_URL and making HTTP request
-- [ ] Checks OpenAI by calling GET /v1/models with API key
 - [ ] Checks Fastify by calling GET /health on port 4010
 - [ ] Reports ALL check results (not just first failure)
 - [ ] Uses ✓ and ✗ symbols in output
 - [ ] Exits with code 1 if any check fails
 - [ ] Supports standalone execution (`if (import.meta.main)`)
 - [ ] Does NOT mock anything
+- [ ] Does NOT load .env or check environment variables
 
 ### 3.5 simple-prompt.test.ts Implementation
 
@@ -131,7 +129,7 @@ Verify:
 
 ## 4. Runtime Verification
 
-With all services running (Redis, Convex, Fastify with `bun run dev`):
+With all services running (Redis, Fastify with `bun run dev`):
 
 ### 4.1 Validation Script
 
@@ -140,7 +138,7 @@ cd cody-fastify
 bun run test-suites/tdd-api/validate-env.ts
 ```
 
-Expected: All 4 checks pass with ✓
+Expected: All 2 checks pass with ✓
 
 ### 4.2 Test Suite
 
@@ -186,10 +184,11 @@ Provide your assessment:
 - [x] Principles clearly stated
 
 ### validate-env.ts
-- [x] All 4 checks implemented
+- [x] All 2 checks implemented (Redis, Fastify)
 - [x] Reports all results
 - [x] Exits on failure
 - [x] No mocks
+- [x] No env var checks
 
 ### simple-prompt.test.ts
 - [x] All 3 phases implemented
@@ -222,5 +221,5 @@ Provide your assessment:
 
 ## 6. Reference
 
-- Specification: `projects/02-api/001-tdd-test-suite/SPEC.md`
-- Coder prompt: `projects/02-api/001-tdd-test-suite/CODER-PROMPT.md`
+- Specification: `projects/01-api/001-tdd-test-suite/SPEC.md`
+- Coder prompt: `projects/01-api/001-tdd-test-suite/CODER-PROMPT.md`

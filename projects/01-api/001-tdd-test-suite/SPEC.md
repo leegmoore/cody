@@ -43,8 +43,6 @@ Changes require EXPLICIT user approval after discussion.
 
 These tests exercise the complete system:
 - Real Redis
-- Real Convex
-- Real LLM APIs (OpenAI)
 - Real HTTP endpoints
 
 ---
@@ -52,9 +50,7 @@ These tests exercise the complete system:
 ## 3. Prerequisites
 
 1. Assume Redis configured and running
-2. Assume Convex configured and running
-3. Assume all API keys are available
-4. Assume Fastify Server running on port 4010
+2. Assume Fastify Server running on port 4010
 
 **The test suite validates each of these before running.**
 
@@ -66,7 +62,6 @@ These tests exercise the complete system:
 |-----------|---------|-------|
 | Bun | 1.3.3 | Runtime and test runner |
 | bun:test | built-in | Jest-compatible API |
-| dotenv | ^17.2.3 | Load .env file (devDependency) |
 | ioredis | ^5.8.2 | Redis connectivity check |
 
 **Test timeout:** 20 seconds (runner level)
@@ -84,19 +79,12 @@ Before any test runs, validate all infrastructure dependencies are available. If
 | # | Service | Check Method | Success Criteria |
 |---|---------|--------------|------------------|
 | 1 | Redis | ioredis PING on port 6379 | PONG response |
-| 2 | Convex | HTTP GET to CONVEX_URL | Status < 500 |
-| 3 | OpenAI | GET /v1/models with API key | Status 200 |
-| 4 | Fastify | GET /health on port 4010 | Status 200 |
+| 2 | Fastify | GET /health on port 4010 | Status 200 |
 
 ### 5.3 Implementation: `validate-env.ts`
 
 ```typescript
 // validate-env.ts
-import { config } from "dotenv";
-import { resolve } from "path";
-
-// Load .env from cody-fastify root
-config({ path: resolve(import.meta.dir, "../../.env") });
 
 interface EnvCheckResult {
   name: string;
@@ -110,13 +98,7 @@ export async function validateEnvironment(): Promise<void> {
   // 1. Check Redis on 6379
   results.push(await checkRedis());
 
-  // 2. Check Convex connectivity
-  results.push(await checkConvex());
-
-  // 3. Check OpenAI API key validity
-  results.push(await checkOpenAI());
-
-  // 4. Check Fastify Server on 4010
+  // 2. Check Fastify Server on 4010
   results.push(await checkFastifyServer());
 
   // Report all results
@@ -154,59 +136,6 @@ async function checkRedis(): Promise<EnvCheckResult> {
   }
 }
 
-async function checkConvex(): Promise<EnvCheckResult> {
-  const convexUrl = process.env.CONVEX_URL;
-  if (!convexUrl) {
-    return { name: "Convex", status: "fail", message: "CONVEX_URL not set in environment" };
-  }
-
-  try {
-    const healthUrl = convexUrl.replace(/\/$/, "");
-    const res = await fetch(healthUrl, {
-      method: "GET",
-      signal: AbortSignal.timeout(3000),
-    });
-
-    // Convex returns various status codes; we just want to confirm it's reachable
-    if (res.status < 500) {
-      return { name: "Convex", status: "ok", message: `Reachable at ${convexUrl}` };
-    }
-    return { name: "Convex", status: "fail", message: `Server error: ${res.status}` };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    return { name: "Convex", status: "fail", message: `Not reachable: ${msg}` };
-  }
-}
-
-async function checkOpenAI(): Promise<EnvCheckResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return { name: "OpenAI", status: "fail", message: "OPENAI_API_KEY not set in environment" };
-  }
-
-  try {
-    // GET /v1/models - validates API key + connectivity without inference
-    const res = await fetch("https://api.openai.com/v1/models", {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (res.status === 200) {
-      return { name: "OpenAI", status: "ok", message: "API key valid, endpoint reachable" };
-    }
-    if (res.status === 401 || res.status === 403) {
-      return { name: "OpenAI", status: "fail", message: "API key invalid or expired" };
-    }
-    return { name: "OpenAI", status: "fail", message: `Unexpected status: ${res.status}` };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    return { name: "OpenAI", status: "fail", message: `Not reachable: ${msg}` };
-  }
-}
-
 async function checkFastifyServer(): Promise<EnvCheckResult> {
   try {
     const res = await fetch("http://localhost:4010/health", {
@@ -234,8 +163,6 @@ if (import.meta.main) {
 === Environment Validation ===
 
 ✓ Redis: Running on port 6379
-✓ Convex: Reachable at https://foo-bar-123.convex.cloud
-✓ OpenAI: API key valid, endpoint reachable
 ✓ Fastify Server: Running on port 4010
 
 ✅ All environment checks passed.
@@ -245,9 +172,7 @@ if (import.meta.main) {
 ```
 === Environment Validation ===
 
-✓ Redis: Running on port 6379
-✗ Convex: CONVEX_URL not set in environment
-✓ OpenAI: API key valid, endpoint reachable
+✗ Redis: Not reachable on port 6379
 ✗ Fastify Server: Not running on port 4010
 
 ❌ 2 environment check(s) failed. Cannot run tests.
@@ -516,9 +441,7 @@ Changes to these principles require EXPLICIT user approval after discussion.
 ## Prerequisites
 
 1. Assume Redis configured and running
-2. Assume Convex configured and running
-3. Assume all API keys are available
-4. Assume Fastify Server running on port 4010
+2. Assume Fastify Server running on port 4010
 
 **The test suite validates each of these before running.**
 
@@ -539,8 +462,6 @@ Before tests execute, the suite validates:
 | Service | Check | Success |
 |---------|-------|---------|
 | Redis | PING on port 6379 | PONG response |
-| Convex | HTTP GET to CONVEX_URL | Status < 500 |
-| OpenAI | GET /v1/models | Status 200 (key valid) |
 | Fastify | GET /health on 4010 | Status 200 |
 
 If any check fails, all checks complete, status is reported, then tests exit.
@@ -595,7 +516,6 @@ Assume all services running. Verify output shows all checks passing.
 ### Step 5: CHECKPOINT - Verify validation with user
 **STOP HERE.** Work with user to:
 - Turn off Redis → verify correct failure output
-- Unset CONVEX_URL → verify correct failure output
 - Turn off Fastify server → verify correct failure output
 - Confirm all failures report status for ALL checks, not just first failure
 
