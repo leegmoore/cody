@@ -14,7 +14,7 @@ Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 - [x] CURRENT.md - Active focus tracking
 - [x] TOOLS.md - Extension tools documented
 - [x] NEXT.md - Work queue established
-- [x] Prompt assembly skill - wired up with YAML frontmatter, tested
+- [x] Prompt assembly skill - wired up with YAML frontmatter, tested, supports `--output` for custom paths
 - [x] /core-doc-review command - created and tested
 - [x] Projects structure - 01-api, 02-ui with prompts directories
 - [x] tdd-api test suite - implemented and passing
@@ -50,14 +50,15 @@ Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 - Basic conversation flow works
 - Connected to v2 API
 
-### TDD-API Test Suite (NEW)
+### TDD-API Test Suite
 - Full integration test suite at `test-suites/tdd-api/`
 - Environment validation: Redis, Convex, OpenAI, Fastify connectivity checks
-- First test: submit → stream → persist → verify
+- Tests: simple-prompt, tool-calls (pwd/ls with hydrated vs persisted comparison)
 - Uses ResponseReducer for hydration, compares to persisted data
 - Polling for persistence (not fixed wait)
 - Strong types throughout (no `any`)
 - No mocks - real infrastructure only
+- Legacy tests moved to `tests-old-notused/` (gitignored)
 
 ---
 

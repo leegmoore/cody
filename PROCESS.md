@@ -347,6 +347,15 @@ Verifier outputs recommendation
 
 Trigger phrases: "build a prompt", "assemble a prompt", "assemble prompts", "generate a prompt"
 
+### Output Options
+
+Output directory can be customized:
+- `--output /path` CLI flag (highest priority)
+- `outputDir` field in config.json
+- Default: `projects/{project}/prompts/`
+
+Specs and prompts for tasks live in `projects/{project}/{task-id}/` (e.g., `projects/01-api/002-more-tdd-tests/`)
+
 ---
 
 ## Orchestration & Work Tracking (Under Development)

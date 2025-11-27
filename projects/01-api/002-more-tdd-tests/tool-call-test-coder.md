@@ -208,28 +208,23 @@ for (const call of functionCalls) {
 
 ### Coder Workflow
 
-**Step 1:** Update package.json timeout from 20000 to 10000:
-```json
-"test:tdd-api": "bun test test-suites/tdd-api/ --timeout 10000"
-```
-
-**Step 2:** Ensure package.json has a `typecheck` script (if not present, add it):
+**Step 1:** Ensure package.json has a `typecheck` script (if not present, add it):
 ```json
 "typecheck": "tsc --noEmit"
 ```
 
-**Step 3:** Rename test file:
+**Step 2:** Rename test file:
 ```bash
 mv test-suites/tdd-api/simple-prompt.test.ts test-suites/tdd-api/openai-prompts.test.ts
 ```
 
-**Step 4:** Update describe block name from `"tdd-api: simple-prompt"` to `"tdd-api: openai-prompts"`.
+**Step 3:** Update describe block name from `"tdd-api: simple-prompt"` to `"tdd-api: openai-prompts"`.
 
-**Step 5:** Add tool call test in `openai-prompts.test.ts` that runs parallel with existing test.
+**Step 4:** Add tool call test in `openai-prompts.test.ts` that runs parallel with existing test.
 
-**Step 6:** Update README.md with file rename and new test case.
+**Step 5:** Update README.md with file rename and new test case.
 
-**Step 7:** Run verification - both tests pass, no hang, under 10 second timeout.
+**Step 6:** Run verification - both tests pass, no hang, under 20 second timeout.
 
 ---
 
@@ -297,11 +292,10 @@ Run these sequentially. If any produces changes or errors, fix and re-run ALL fr
 
 - [ ] README.md updated with new test and file rename
 - [ ] `simple-prompt.test.ts` renamed to `openai-prompts.test.ts`
-- [ ] package.json timeout updated to 10000
 - [ ] package.json has `typecheck` script
 - [ ] `bun run test:tdd-api` executes
 - [ ] Both tests pass
-- [ ] Tests complete within 10 second timeout
+- [ ] Tests complete within 20 second timeout
 - [ ] Tests do NOT hang after pass/fail
 
 ---
@@ -322,11 +316,10 @@ Provide your final output in this format:
 **Job-Specific Items:**
 - [ ] README.md updated with new test
 - [ ] simple-prompt.test.ts renamed to openai-prompts.test.ts
-- [ ] package.json timeout updated to 10000
 - [ ] package.json has typecheck script
 - [ ] bun run test:tdd-api executes
 - [ ] Both tests pass
-- [ ] Tests complete within 10 second timeout
+- [ ] Tests complete within 20 second timeout
 - [ ] Tests do NOT hang after pass/fail
 
 ### Changes Made

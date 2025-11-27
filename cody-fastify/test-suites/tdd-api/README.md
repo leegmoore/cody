@@ -46,9 +46,10 @@ If any check fails, all checks complete, status is reported, then tests exit.
 
 ## Tests
 
-| Test File             | Description                                                      |
-| --------------------- | ---------------------------------------------------------------- |
-| simple-prompt.test.ts | Submit "hi cody", verify SSE stream, validate thread persistence |
+| Test File                  | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| openai-prompts.test.ts     | Submit "hi cody", verify SSE stream, validate thread persistence |
+| openai-prompts.test.ts     | Submit tool call prompt (pwd + ls), verify tool call streaming, validate tool outputs, compare hydrated to persisted |
 
 ## Adding Tests
 

@@ -29,26 +29,34 @@ Phased roadmap for cody-fastify development.
 
 ### Phase 2: OpenAI Full Support ← CURRENT
 
-**Status:** Ready to Start
+**Status:** In Progress
 **Depends on:** Phase 1 complete ✓
 
-3. **Add test: multi-turn history** (will fail initially)
+3. **Add test: tool calls** ✓ IN VERIFICATION
+   - Prompt: pwd + ls shell commands
+   - Verify >= 2 function_call items stream and persist
+   - Verify call_id matching between function_call and function_call_output
+   - Detailed hydrated vs persisted comparison
+   - Spec: `projects/01-api/002-more-tdd-tests/SPEC.md`
+   - **Timeout:** 20 seconds (tool calls need more time)
+
+4. **Add test: multi-turn history** (will fail initially)
    - Turn 1: "What's 2+2?"
    - Turn 2: "What about that number plus 3?"
    - Verify turn 2 has context from turn 1
 
-4. **Implement OpenAI history support**
+5. **Implement OpenAI history support**
    - Load previous turns from Convex
    - Convert OutputItems → ResponseItems for input array
    - Include reasoning items in history
    - Reference: codex-ts conversation-history implementation
 
-5. **Add test: thinking display**
+6. **Add test: thinking display**
    - Request with reasoning enabled
    - Verify reasoning OutputItems in response
    - Verify UI displays thinking bubbles
 
-6. **Implement thinking support**
+7. **Implement thinking support**
    - Complete UI rendering for reasoning items
    - Test streaming and refresh paths
 

@@ -24,7 +24,7 @@ cody-fastify/
 
 **Script:**
 ```json
-"test:tdd-api": "bun test test-suites/tdd-api/ --timeout 10000"
+"test:tdd-api": "bun test test-suites/tdd-api/ --timeout 20000"
 ```
 
 ---
@@ -70,7 +70,7 @@ These tests exercise the complete system:
 | bun:test | built-in | Jest-compatible API |
 | ioredis | ^5.8.2 | Redis connectivity check |
 
-**Test timeout:** 10 seconds (runner level)
+**Test timeout:** 20 seconds (runner level)
 
 ---
 
@@ -184,27 +184,21 @@ Verify each function_call has a corresponding function_call_output with matching
 
 ## 7. Coder Workflow
 
-### Step 1: Update package.json timeout
-Change timeout from 20000 to 10000:
-```json
-"test:tdd-api": "bun test test-suites/tdd-api/ --timeout 10000"
-```
-
-### Step 2: Ensure package.json has typecheck script
+### Step 1: Ensure package.json has typecheck script
 If not present, add:
 ```json
 "typecheck": "tsc --noEmit"
 ```
 
-### Step 3: Rename test file
+### Step 2: Rename test file
 ```bash
 mv test-suites/tdd-api/simple-prompt.test.ts test-suites/tdd-api/openai-prompts.test.ts
 ```
 
-### Step 4: Update describe block
+### Step 3: Update describe block
 Change describe name from `"tdd-api: simple-prompt"` to `"tdd-api: openai-prompts"`.
 
-### Step 5: Add tool call test
+### Step 4: Add tool call test
 Add new test in `openai-prompts.test.ts` that runs parallel with existing test:
 
 ```typescript
@@ -217,15 +211,15 @@ test("tool calls: pwd and ls", async () => {
 
 The new test follows the same structure as the simple prompt test but adds tool-call-specific assertions.
 
-### Step 6: Update README.md
+### Step 5: Update README.md
 Update test table to reflect:
 - File rename
 - New test case
 
-### Step 7: Run and verify
+### Step 6: Run and verify
 - Both tests must pass
 - Tests must NOT hang after completion
-- Total time should be under 10 second timeout
+- Total time should be under 20 second timeout
 
 ---
 
@@ -235,18 +229,17 @@ Update test table to reflect:
 |---|----------|---|
 | 1 | README.md updated with new test | |
 | 2 | `simple-prompt.test.ts` renamed to `openai-prompts.test.ts` | |
-| 3 | package.json timeout updated to 10000 | |
-| 4 | package.json has `typecheck` script | |
-| 5 | `bun run test:tdd-api` executes | |
-| 6 | Both tests pass | |
-| 7 | Tests complete within 10 second timeout | |
-| 8 | Tests do NOT hang after pass/fail | |
-| 9 | `bun run format` - no changes | |
-| 10 | `bun run lint` - no errors | |
-| 11 | `bun run typecheck` - no errors | |
-| 12 | **Checks 9-11 run sequentially with NO changes or errors between runs** | |
+| 3 | package.json has `typecheck` script | |
+| 4 | `bun run test:tdd-api` executes | |
+| 5 | Both tests pass | |
+| 6 | Tests complete within 20 second timeout | |
+| 7 | Tests do NOT hang after pass/fail | |
+| 8 | `bun run format` - no changes | |
+| 9 | `bun run lint` - no errors | |
+| 10 | `bun run typecheck` - no errors | |
+| 11 | **Checks 8-10 run sequentially with NO changes or errors between runs** | |
 
-**Criterion 12 is critical:** Run format, lint, typecheck in order. If any produces changes or errors, fix and re-run ALL from the beginning. Final verification is all three passing sequentially with zero modifications.
+**Criterion 11 is critical:** Run format, lint, typecheck in order. If any produces changes or errors, fix and re-run ALL from the beginning. Final verification is all three passing sequentially with zero modifications.
 
 ---
 
@@ -257,7 +250,7 @@ Update test table to reflect:
 | `test-suites/tdd-api/README.md` | Update |
 | `test-suites/tdd-api/simple-prompt.test.ts` | Rename to `openai-prompts.test.ts` |
 | `test-suites/tdd-api/openai-prompts.test.ts` | Add tool call test |
-| `package.json` | Update timeout to 10000, add `typecheck` script |
+| `package.json` | Add `typecheck` script if not present |
 
 ---
 

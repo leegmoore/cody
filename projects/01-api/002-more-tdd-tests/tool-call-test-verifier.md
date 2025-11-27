@@ -85,7 +85,6 @@ Usage sub-object:
 - prompt_tokens, completion_tokens, total_tokens
 
 **Package.json:**
-- Timeout changed from 20000 to 10000
 - `typecheck` script present
 
 ---
@@ -171,11 +170,10 @@ Run these sequentially. All must pass with no changes or errors.
 
 - [ ] README.md updated with new test and file rename
 - [ ] `simple-prompt.test.ts` renamed to `openai-prompts.test.ts`
-- [ ] package.json timeout updated to 10000
 - [ ] package.json has `typecheck` script
 - [ ] `bun run test:tdd-api` executes
 - [ ] Both tests pass
-- [ ] Tests complete within 10 second timeout
+- [ ] Tests complete within 20 second timeout
 - [ ] Tests do NOT hang after pass/fail
 
 ---
@@ -188,7 +186,7 @@ Run these sequentially. All must pass with no changes or errors.
 
 2. **Run the tests**
    - Execute `bun run test:tdd-api`
-   - Time the execution (must be < 10 seconds)
+   - Time the execution (must be < 20 seconds)
    - Verify no hang after completion
 
 3. **Review the changes**
@@ -210,7 +208,6 @@ Run these sequentially. All must pass with no changes or errors.
    - No `any` types
 
 6. **Review package.json**
-   - timeout is 10000
    - typecheck script exists
 
 7. **Review README.md**
@@ -242,11 +239,10 @@ Provide your final output in this format:
 **Job-Specific Items:**
 - [ ] README.md updated with new test
 - [ ] simple-prompt.test.ts renamed to openai-prompts.test.ts
-- [ ] package.json timeout updated to 10000
 - [ ] package.json has typecheck script
 - [ ] bun run test:tdd-api executes
 - [ ] Both tests pass
-- [ ] Tests complete within 10 second timeout
+- [ ] Tests complete within 20 second timeout
 - [ ] Tests do NOT hang after pass/fail
 
 ### Code Review Findings

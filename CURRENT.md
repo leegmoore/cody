@@ -4,51 +4,54 @@
 
 ---
 
-## Slice: Test Strategy & Baseline - COMPLETE ✓
+## Slice: Tool Call Integration Test - IN VERIFICATION
 
 ### The ONE Thing
-~~Evaluate test harness strategy and establish 2 baseline tests (with/without tools)~~
-
-**Outcome:** New test suite created at `test-suites/tdd-api/`
+Add tool call integration test to tdd-api suite, validating complete tool execution flow.
 
 ### Done When
-- [x] Test strategy decided → New suite, full integration, no mocks
-- [x] Baseline test implemented and passing
-  - Submit "hi cody" → stream → persist → verify
-  - Includes ResponseReducer hydration comparison
-- [x] Tests verify real behavior (4 connectivity checks, no infrastructure mocks)
-- [x] Ready to add history tests
+- [x] Spec created (`projects/01-api/002-more-tdd-tests/SPEC.md`)
+- [x] Coder prompt generated
+- [x] Verifier prompt generated
+- [x] Coder implemented the test
+- [ ] Verifier approved
 
-### What Was Delivered
-- `test-suites/tdd-api/validate-env.ts` - 4 connectivity checks
-- `test-suites/tdd-api/simple-prompt.test.ts` - Full integration test
-- `test-suites/tdd-api/README.md` - Documentation
-- `package.json` - Added `test:tdd-api` script
+### What's Being Verified
+- `simple-prompt.test.ts` renamed to `openai-prompts.test.ts`
+- New test: tool calls (pwd + ls) with >= 2 function_call assertions
+- Detailed hydrated vs persisted comparison (field-by-field by item type)
+- call_id matching between function_call and function_call_output
+- Tests run in parallel, complete within 20 second timeout
+- typecheck script added to package.json
 
 ### Key Decisions Made
-- No mocks, no shims, no special config - full integration only
-- Connectivity checks (not env var pre-checks) for validation
-- Use ResponseReducer to hydrate stream events
-- Compare hydrated response to persisted run
-- Strong typing (no `any` types)
-- Polling for persistence (not fixed wait)
+- Keep timeout at 20 seconds (tool calls take longer)
+- Assert >= 2 tool calls (not ==2) to allow for retries
+- Compare all fields by output item type (message, function_call, function_call_output)
+- Exclude timestamp fields from comparison
 
 ---
 
-## Next Slice
+## Previous Slice: Test Strategy & Baseline - COMPLETE ✓
 
-**Phase 2: OpenAI Full Support** - Add multi-turn history test (will fail), then implement
+**Outcome:** New test suite created at `test-suites/tdd-api/`
 
-See NEXT.md for details.
+- Test strategy: Full integration, no mocks
+- Baseline test: submit → stream → persist → verify
+- 4 connectivity checks (Redis, Convex, OpenAI, Fastify)
+- ResponseReducer hydration with persisted comparison
 
 ---
 
 ## Session Notes
 
-**2025-11-26:**
-- Spec'd tdd-api test suite with planner
-- Coder implemented with verifier checkpoint
-- Resolved Convex URL confusion (connectivity check, not env var check)
-- Added ResponseReducer hydration and comparison assertions
-- Test passing, no timeouts, no hangs
+**2025-11-26 (evening):**
+- Spec'd 002-more-tdd-tests (tool call integration)
+- Enhanced prompt-assembly with `--output` flag for custom paths
+- Moved legacy tests to `tests-old-notused/` (gitignored)
+- Coder completed implementation
+- Awaiting verifier result
+
+**2025-11-26 (afternoon):**
+- Implemented tdd-api test suite (Phase 1)
 - Phase 1 complete
