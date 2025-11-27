@@ -44,6 +44,23 @@ The coder was asked to: **Add a multi-turn conversation test with 3 turns on the
 - Thread ends with exactly 3 runs
 - All runs have status "complete"
 - No function_call or reasoning items
+- **Hydrated vs persisted comparison for all 3 turns**
+
+### Hydrated vs Persisted Comparison
+
+For each of the 3 turns, the coder should compare:
+
+**Response-level fields:**
+- id, turn_id, thread_id, model_id, provider_id, status, finish_reason
+- output_items.length
+
+**For each output_item (message type):**
+- id, type, content, origin
+
+**Usage sub-object:**
+- prompt_tokens, completion_tokens, total_tokens
+
+**Should NOT compare:** created_at, updated_at (timestamps)
 
 ### Failure Handling Instruction
 
@@ -83,6 +100,38 @@ If tests fail due to application code (not test code):
 - [ ] Polling used for persistence check (not fixed wait)
 - [ ] Strong types (no `any`)
 - [ ] No mocks
+
+### Hydrated vs Persisted Comparison Verification
+
+Verify the test compares for EACH of the 3 turns:
+
+**Response-level (must compare):**
+- [ ] id
+- [ ] turn_id
+- [ ] thread_id
+- [ ] model_id
+- [ ] provider_id
+- [ ] status
+- [ ] finish_reason
+- [ ] output_items.length
+
+**OutputItem fields (must compare for each item):**
+- [ ] id
+- [ ] type
+- [ ] content (for message items)
+- [ ] origin (for message items)
+
+**Usage sub-object (must compare):**
+- [ ] prompt_tokens
+- [ ] completion_tokens
+- [ ] total_tokens
+
+**Must NOT compare:**
+- [ ] Confirms timestamps (created_at, updated_at) are excluded
+
+**Implementation pattern:**
+- [ ] Hydrated response stored during each turn's streaming phase
+- [ ] After thread fetch, each hydrated response compared to corresponding persisted run
 
 ---
 
@@ -148,13 +197,20 @@ Watch for these issues in the analysis:
    - Verify threadId handling across turns
    - Check assertions match requirements
 
-4. **Provide recommendation**
+4. **Verify hydrated vs persisted comparison**
+   - Response-level fields compared for all 3 turns
+   - OutputItem fields compared (id, type, content, origin)
+   - Usage sub-object compared
+   - Timestamps excluded
+
+5. **Provide recommendation**
 
 ### For Failing Tests (Application Issues):
 
 1. **Verify test code is correct**
    - The test itself should be properly written
    - Failure should be in application, not test
+   - Test includes hydrated vs persisted comparison (even if failing)
 
 2. **Assess analysis quality**
    - Use checklist above
@@ -202,6 +258,32 @@ Watch for these issues in the analysis:
 **Issues Found:**
 - [Issue]: [Description] - [Severity]
 
+### Hydrated vs Persisted Comparison
+
+**Response-level (all 3 turns):**
+- [ ] id compared
+- [ ] turn_id compared
+- [ ] thread_id compared
+- [ ] model_id compared
+- [ ] provider_id compared
+- [ ] status compared
+- [ ] finish_reason compared
+- [ ] output_items.length compared
+
+**OutputItem fields:**
+- [ ] id compared
+- [ ] type compared
+- [ ] content compared (message items)
+- [ ] origin compared (message items)
+
+**Usage sub-object:**
+- [ ] prompt_tokens compared
+- [ ] completion_tokens compared
+- [ ] total_tokens compared
+
+**Timestamps:**
+- [ ] created_at/updated_at correctly excluded
+
 ### Reasoning
 
 [Explain recommendation]
@@ -218,6 +300,7 @@ Watch for these issues in the analysis:
 ### Test Code Verification
 
 - [ ] Test code is correctly written
+- [ ] Test includes hydrated vs persisted comparison
 - [ ] Failure is confirmed to be in application code
 
 ### Analysis Assessment

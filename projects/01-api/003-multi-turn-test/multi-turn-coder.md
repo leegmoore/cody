@@ -132,12 +132,59 @@ PHASE 4: Validate Thread Persistence
 | All runs complete | status == "complete" for all |
 | Each run has message | output_items includes message type |
 
-### Hydrated vs Persisted Comparison
+### Hydrated vs Persisted Comparison (Detailed)
 
-For each turn:
-- Response-level: id, turn_id, thread_id, model_id, provider_id, status, finish_reason
-- Message items: id, type, content, origin
-- Usage: prompt_tokens, completion_tokens, total_tokens
+For each of the 3 turns, compare the hydrated response (from ResponseReducer) to the persisted run (from GET /api/v2/threads/:threadId). This is a critical verification step. Exclude timestamp fields (created_at, updated_at).
+
+**Response-level fields to compare:**
+```typescript
+expect(hydratedResponse.id).toBe(persistedRun.id);
+expect(hydratedResponse.turn_id).toBe(persistedRun.turn_id);
+expect(hydratedResponse.thread_id).toBe(persistedRun.thread_id);
+expect(hydratedResponse.model_id).toBe(persistedRun.model_id);
+expect(hydratedResponse.provider_id).toBe(persistedRun.provider_id);
+expect(hydratedResponse.status).toBe(persistedRun.status);
+expect(hydratedResponse.finish_reason).toBe(persistedRun.finish_reason);
+expect(hydratedResponse.output_items.length).toBe(persistedRun.output_items.length);
+```
+
+**For each output_item (message type only in this test):**
+```typescript
+for (let i = 0; i < hydratedResponse.output_items.length; i++) {
+  const hydratedItem = hydratedResponse.output_items[i];
+  const persistedItem = persistedRun.output_items[i];
+
+  // Common fields for all output item types
+  expect(hydratedItem.id).toBe(persistedItem.id);
+  expect(hydratedItem.type).toBe(persistedItem.type);
+
+  // Message-specific fields
+  if (hydratedItem.type === "message") {
+    expect(hydratedItem.content).toBe(persistedItem.content);
+    expect(hydratedItem.origin).toBe(persistedItem.origin);
+  }
+}
+```
+
+**Usage sub-object:**
+```typescript
+expect(hydratedResponse.usage?.prompt_tokens).toBe(persistedRun.usage.prompt_tokens);
+expect(hydratedResponse.usage?.completion_tokens).toBe(persistedRun.usage.completion_tokens);
+expect(hydratedResponse.usage?.total_tokens).toBe(persistedRun.usage.total_tokens);
+```
+
+**Summary of fields:**
+
+| Object | Fields to Compare |
+|--------|-------------------|
+| Response | id, turn_id, thread_id, model_id, provider_id, status, finish_reason, output_items.length |
+| OutputItem (all) | id, type |
+| OutputItem (message) | content, origin |
+| Usage | prompt_tokens, completion_tokens, total_tokens |
+
+**Fields to EXCLUDE:** created_at, updated_at
+
+**Important:** Perform this comparison for EACH of the 3 turns. Store the hydrated response from each turn during streaming, then compare to the corresponding persisted run after fetching the thread.
 
 ---
 
@@ -231,6 +278,11 @@ If the test reveals problems in the Fastify application code:
 
 - [ ] Multi-turn test added to `openai-prompts.test.ts`
 - [ ] README.md updated with new test
+- [ ] Hydrated vs persisted comparison for all 3 turns
+  - [ ] Response-level fields (id, turn_id, thread_id, model_id, provider_id, status, finish_reason, output_items.length)
+  - [ ] OutputItem fields (id, type, content, origin for messages)
+  - [ ] Usage fields (prompt_tokens, completion_tokens, total_tokens)
+  - [ ] Timestamps excluded (created_at, updated_at)
 - [ ] `bun run test:tdd-api` executes
 - [ ] All tests pass
 - [ ] Tests complete within 20 second timeout
@@ -238,11 +290,12 @@ If the test reveals problems in the Fastify application code:
 - [ ] `bun run format` - no changes
 - [ ] `bun run lint` - no errors
 - [ ] `bun run typecheck` - no errors
-- [ ] Checks 7-9 run sequentially with no changes or errors
+- [ ] Format/lint/typecheck run sequentially with no changes or errors
 
 ### If Tests Fail (Application Issues):
 
 - [ ] Multi-turn test added to `openai-prompts.test.ts`
+- [ ] Test code includes hydrated vs persisted comparison (even if failing)
 - [ ] Test code is correct (issue confirmed in application)
 - [ ] Analysis completed per failure handling workflow
 - [ ] Hypotheses formed and investigated
@@ -274,6 +327,12 @@ If the test reveals problems in the Fastify application code:
 - [ ] All tests pass
 - [ ] Tests complete within 20 seconds
 - [ ] Tests do NOT hang
+
+**Hydrated vs Persisted Comparison (all 3 turns):**
+- [ ] Response-level fields compared (id, turn_id, thread_id, model_id, provider_id, status, finish_reason, output_items.length)
+- [ ] OutputItem fields compared (id, type, content, origin for messages)
+- [ ] Usage fields compared (prompt_tokens, completion_tokens, total_tokens)
+- [ ] Timestamps correctly excluded
 
 ### Changes Made
 

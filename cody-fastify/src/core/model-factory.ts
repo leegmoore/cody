@@ -41,6 +41,8 @@ export interface StreamAdapterParams {
   agentId?: string;
   traceContext?: TraceContext;
   tools?: ToolSpec[];
+  reasoningEffort?: "low" | "medium" | "high";
+  thinkingBudget?: number;
 }
 
 /**

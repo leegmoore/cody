@@ -26,6 +26,8 @@ const SubmitBody = z.object({
   prompt: z.string().min(1, "prompt cannot be empty"),
   model: z.string().min(1).optional(),
   providerId: z.string().min(1).optional(),
+  reasoningEffort: z.enum(["low", "medium", "high"]).optional(),
+  thinkingBudget: z.number().int().positive().optional(),
   runId: z.string().uuid().optional(),
   turnId: z.string().uuid().optional(),
   threadId: z.string().uuid().optional(),
@@ -177,6 +179,8 @@ export async function registerSubmitRoutes(
                   agentId: body.agentId,
                   traceContext,
                   tools: toolSpecs,
+                  reasoningEffort: body.reasoningEffort,
+                  thinkingBudget: body.thinkingBudget,
                 });
               } catch (error) {
                 span.recordException(error as Error);

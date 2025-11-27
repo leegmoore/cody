@@ -31,6 +31,7 @@ interface StreamParams {
   agentId?: string;
   traceContext?: TraceContext;
   tools?: ToolSpec[];
+  reasoningEffort?: "low" | "medium" | "high";
 }
 
 type StreamableItemType = Extract<
@@ -134,6 +135,7 @@ export class OpenAIStreamAdapter {
         baseTrace,
         conversation: conversationInput,
         formattedTools,
+        reasoningEffort: params.reasoningEffort,
         items,
         pendingToolCalls,
         setUsageTotals: (usage) => {
@@ -179,6 +181,7 @@ export class OpenAIStreamAdapter {
     baseTrace: TraceContext;
     conversation: unknown[];
     formattedTools?: unknown[];
+    reasoningEffort?: "low" | "medium" | "high";
     items: Map<string, ItemAccumulator>;
     pendingToolCalls: PendingToolCall[];
     setUsageTotals: (usage: UsageTotals) => void;
@@ -189,7 +192,9 @@ export class OpenAIStreamAdapter {
       model: this.model,
       input: options.conversation,
       stream: true,
-      reasoning: { effort: "medium" },
+      ...(options.reasoningEffort && {
+        reasoning: { effort: options.reasoningEffort, summary: "auto" },
+      }),
       tools: options.formattedTools,
       tool_choice: options.formattedTools ? "auto" : undefined,
     };
@@ -198,6 +203,7 @@ export class OpenAIStreamAdapter {
         "[openai] iteration conversation",
         JSON.stringify(options.conversation, null, 2),
       );
+      console.log("[openai] request body:", JSON.stringify(reqBody, null, 2));
     }
 
     const res = await fetch(this.baseUrl, {
@@ -265,6 +271,13 @@ export class OpenAIStreamAdapter {
         if (parsed.data === "[DONE]") {
           done = true;
           break;
+        }
+
+        if (debugOpenAI) {
+          console.log(
+            `[openai] SSE event: ${parsed.event}`,
+            parsed.data.substring(0, 200),
+          );
         }
 
         await this.handleOpenAIEvent({
@@ -540,6 +553,9 @@ export class OpenAIStreamAdapter {
     }
 
     if (block.event === "response.reasoning.delta" && dataJson) {
+      if (debugOpenAI) {
+        console.log("[openai] reasoning.delta received:", dataJson);
+      }
       const itemPayload = asObject(dataJson.item);
       const itemId = ensureValidItemId(
         getString(itemPayload?.id) ?? getString(dataJson.item_id),
@@ -549,13 +565,77 @@ export class OpenAIStreamAdapter {
       await this.publishItemStartIfNeeded(trace, runId, accumulator);
       await this.publishItemDelta(trace, runId, itemId, delta);
       accumulator.content.push(delta);
+      if (debugOpenAI) {
+        console.log(
+          `[openai] reasoning item ${itemId} now has ${accumulator.content.length} chunks`,
+        );
+      }
       return;
     }
 
     if (block.event === "response.output_item.done" && dataJson) {
       const itemPayload = asObject(dataJson.item);
       const itemId = getString(itemPayload?.id) || "message-default";
-      const item = items.get(itemId);
+      const itemType = getString(itemPayload?.type);
+      let item = items.get(itemId);
+
+      // Handle reasoning items that come with summary field (not content)
+      if (itemType === "reasoning" && !item) {
+        const summaryArray = itemPayload?.summary;
+        if (Array.isArray(summaryArray) && summaryArray.length > 0) {
+          // Extract text from summary array (usually [{type: "summary_text", text: "..."}])
+          const summaryTexts = summaryArray
+            .map((s: unknown) => {
+              if (s && typeof s === "object" && "text" in s) {
+                return String(s.text);
+              }
+              return "";
+            })
+            .filter(Boolean);
+          const content = summaryTexts.join("\n");
+
+          if (content) {
+            // Publish item_start first (reducer requires it)
+            const startEvent = this.makeEvent(trace, runId, {
+              type: "item_start",
+              item_id: itemId,
+              item_type: "reasoning",
+              initial_content: undefined,
+            });
+            await this.redis.publish(startEvent);
+
+            // Create reasoning item from summary
+            const reasoningItem: OutputItem = {
+              id: itemId,
+              type: "reasoning",
+              content,
+              origin: "agent",
+            };
+            const doneEvent = this.makeEvent(trace, runId, {
+              type: "item_done",
+              item_id: itemId,
+              final_item: reasoningItem,
+            });
+            await this.redis.publish(doneEvent);
+            if (itemPayload) {
+              appendOutputItem(itemPayload);
+            }
+            return;
+          }
+        }
+      }
+
+      // For reasoning items, try to find by type if ID doesn't match
+      if (!item && itemType === "reasoning") {
+        for (const [id, candidate] of items.entries()) {
+          if (candidate.type === "reasoning") {
+            item = candidate;
+            items.delete(id);
+            break;
+          }
+        }
+      }
+
       if (item) {
         if (item.type === "function_call") {
           item.name =
@@ -584,7 +664,9 @@ export class OpenAIStreamAdapter {
           });
         }
         await this.publishItemDone(trace, runId, item);
-        items.delete(item.id);
+        if (item.id !== itemId) {
+          items.delete(item.id);
+        }
       }
       if (itemPayload) {
         appendOutputItem(itemPayload);
@@ -615,6 +697,19 @@ export class OpenAIStreamAdapter {
           },
         });
         await this.redis.publish(usageEvent);
+      }
+      // Finalize any remaining reasoning items that haven't been finalized yet
+      const remainingReasoningItems = Array.from(items.entries()).filter(
+        ([_, item]) => item.type === "reasoning",
+      );
+      if (debugOpenAI && remainingReasoningItems.length > 0) {
+        console.log(
+          `[openai] Finalizing ${remainingReasoningItems.length} remaining reasoning items`,
+        );
+      }
+      for (const [itemId, item] of remainingReasoningItems) {
+        await this.publishItemDone(trace, runId, item);
+        items.delete(itemId);
       }
       return;
     }

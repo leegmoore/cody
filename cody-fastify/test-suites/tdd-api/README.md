@@ -41,6 +41,7 @@ Before tests execute, the suite validates:
 | Convex  | Query API call       | Connected and reachable    |
 | OpenAI  | GET /v1/models      | Status 200                 |
 | Fastify | GET /health on 4010 | Status 200                 |
+| Anthropic | GET /v1/models    | Status 200                 |
 
 If any check fails, all checks complete, status is reported, then tests exit.
 
@@ -50,6 +51,12 @@ If any check fails, all checks complete, status is reported, then tests exit.
 | -------------------------- | ---------------------------------------------------------------- |
 | openai-prompts.test.ts     | Submit "hi cody", verify SSE stream, validate thread persistence |
 | openai-prompts.test.ts     | Submit tool call prompt (pwd + ls), verify tool call streaming, validate tool outputs, compare hydrated to persisted |
+| openai-prompts.test.ts     | Multi-turn conversation: submit 3 prompts on same thread, verify conversation context maintained, validate all 3 runs persisted correctly |
+| openai-prompts.test.ts     | Submit puzzle with reasoningEffort "low", verify reasoning output items are streamed and persisted, compare hydrated to persisted |
+| anthropic-prompts.test.ts  | Submit "hi cody" with Anthropic provider, verify SSE stream, validate thread persistence, compare hydrated to persisted |
+| anthropic-prompts.test.ts  | Submit tool call prompt (pwd + ls) with Anthropic provider, verify tool call streaming, validate tool outputs, compare hydrated to persisted |
+| anthropic-prompts.test.ts  | Multi-turn conversation: submit 3 prompts on same thread with Anthropic provider, verify conversation context maintained, validate all 3 runs persisted correctly, compare hydrated to persisted |
+| anthropic-prompts.test.ts  | Submit puzzle with thinkingBudget 4096 (extended thinking), verify reasoning output items are streamed and persisted, compare hydrated to persisted |
 
 ## Adding Tests
 

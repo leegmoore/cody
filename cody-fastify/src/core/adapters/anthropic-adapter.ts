@@ -27,6 +27,7 @@ interface StreamParams {
   agentId?: string;
   traceContext?: TraceContext;
   tools?: ToolSpec[];
+  thinkingBudget?: number;
 }
 
 type StreamableItemType = Extract<
@@ -97,6 +98,7 @@ export class AnthropicStreamAdapter {
         content: Array<{ type: "text"; text: string }>;
       }>;
       tools?: ReturnType<typeof formatToolsForAnthropicMessages>;
+      thinking?: { type: "enabled"; budget_tokens: number };
     } = {
       model: this.model,
       max_tokens: this.maxOutputTokens,
@@ -108,6 +110,12 @@ export class AnthropicStreamAdapter {
         },
       ],
       tools: formattedTools,
+      ...(params.thinkingBudget && {
+        thinking: {
+          type: "enabled" as const,
+          budget_tokens: params.thinkingBudget,
+        },
+      }),
     };
 
     const headers: Record<string, string> = {
@@ -118,6 +126,11 @@ export class AnthropicStreamAdapter {
     if (formattedTools) {
       headers["anthropic-beta"] =
         process.env.ANTHROPIC_BETA_TOOLS ?? "tools-2024-04-04";
+    }
+    if (params.thinkingBudget) {
+      headers["anthropic-beta"] =
+        process.env.ANTHROPIC_BETA_THINKING ??
+        "interleaved-thinking-2025-05-14";
     }
 
     const res = await fetch(this.baseUrl, {

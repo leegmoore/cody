@@ -186,19 +186,58 @@ PHASE 4: Validate Thread Persistence
 | Each run has message | output_items includes message type |
 | Run order | turn 1 < turn 2 < turn 3 |
 
-### 6.5 Hydrated vs Persisted Comparison
+### 6.5 Hydrated vs Persisted Comparison (Detailed)
 
-For each turn, compare hydrated response to persisted run:
+For each of the 3 turns, compare the hydrated response (from ResponseReducer) to the persisted run (from GET /api/v2/threads/:threadId). Exclude timestamp fields (created_at, updated_at).
 
-**Response-level fields:**
-- id, turn_id, thread_id, model_id, provider_id, status, finish_reason
-- output_items.length
+**Response-level fields to compare:**
+```typescript
+expect(hydratedResponse.id).toBe(persistedRun.id);
+expect(hydratedResponse.turn_id).toBe(persistedRun.turn_id);
+expect(hydratedResponse.thread_id).toBe(persistedRun.thread_id);
+expect(hydratedResponse.model_id).toBe(persistedRun.model_id);
+expect(hydratedResponse.provider_id).toBe(persistedRun.provider_id);
+expect(hydratedResponse.status).toBe(persistedRun.status);
+expect(hydratedResponse.finish_reason).toBe(persistedRun.finish_reason);
+expect(hydratedResponse.output_items.length).toBe(persistedRun.output_items.length);
+```
 
-**For message output_items:**
-- id, type, content, origin
+**For each output_item (message type only in this test):**
+```typescript
+for (let i = 0; i < hydratedResponse.output_items.length; i++) {
+  const hydratedItem = hydratedResponse.output_items[i];
+  const persistedItem = persistedRun.output_items[i];
+
+  // Common fields for all output item types
+  expect(hydratedItem.id).toBe(persistedItem.id);
+  expect(hydratedItem.type).toBe(persistedItem.type);
+
+  // Message-specific fields
+  if (hydratedItem.type === "message") {
+    expect(hydratedItem.content).toBe(persistedItem.content);
+    expect(hydratedItem.origin).toBe(persistedItem.origin);
+  }
+}
+```
 
 **Usage sub-object:**
-- prompt_tokens, completion_tokens, total_tokens
+```typescript
+expect(hydratedResponse.usage?.prompt_tokens).toBe(persistedRun.usage.prompt_tokens);
+expect(hydratedResponse.usage?.completion_tokens).toBe(persistedRun.usage.completion_tokens);
+expect(hydratedResponse.usage?.total_tokens).toBe(persistedRun.usage.total_tokens);
+```
+
+**Summary table:**
+
+| Object | Fields to Compare |
+|--------|-------------------|
+| Response | id, turn_id, thread_id, model_id, provider_id, status, finish_reason, output_items.length |
+| OutputItem (all) | id, type |
+| OutputItem (message) | content, origin |
+| Usage | prompt_tokens, completion_tokens, total_tokens |
+
+**Fields to EXCLUDE (timestamps):**
+- created_at, updated_at
 
 ---
 
@@ -288,28 +327,34 @@ Add multi-turn test to test documentation.
 |---|----------|---|
 | 1 | Multi-turn test added to `openai-prompts.test.ts` | |
 | 2 | README.md updated with new test | |
-| 3 | `bun run test:tdd-api` executes | |
-| 4 | All tests pass | |
-| 5 | Tests complete within 20 second timeout | |
-| 6 | Tests do NOT hang after pass/fail | |
-| 7 | `bun run format` - no changes | |
-| 8 | `bun run lint` - no errors | |
-| 9 | `bun run typecheck` - no errors | |
-| 10 | **Checks 7-9 run sequentially with NO changes or errors between runs** | |
+| 3 | Hydrated vs persisted comparison for all 3 turns | |
+| 3a | - Response-level fields (id, turn_id, thread_id, model_id, provider_id, status, finish_reason, output_items.length) | |
+| 3b | - OutputItem fields (id, type, content, origin for messages) | |
+| 3c | - Usage fields (prompt_tokens, completion_tokens, total_tokens) | |
+| 3d | - Timestamps excluded (created_at, updated_at) | |
+| 4 | `bun run test:tdd-api` executes | |
+| 5 | All tests pass | |
+| 6 | Tests complete within 20 second timeout | |
+| 7 | Tests do NOT hang after pass/fail | |
+| 8 | `bun run format` - no changes | |
+| 9 | `bun run lint` - no errors | |
+| 10 | `bun run typecheck` - no errors | |
+| 11 | **Checks 8-10 run sequentially with NO changes or errors between runs** | |
 
 ### If Tests Fail (Application Issues):
 
 | # | Criteria | |
 |---|----------|---|
 | 1 | Multi-turn test added to `openai-prompts.test.ts` | |
-| 2 | Test code is correct (issue is in application) | |
-| 3 | Analysis completed per Section 7.2 | |
-| 4 | Hypotheses formed and investigated | |
-| 5 | Recommendations provided with file:line references | |
-| 6 | `bun run format` - no changes | |
-| 7 | `bun run lint` - no errors | |
-| 8 | `bun run typecheck` - no errors | |
-| 9 | **Checks 6-8 run sequentially with NO changes or errors between runs** | |
+| 2 | Test code includes hydrated vs persisted comparison (even if failing) | |
+| 3 | Test code is correct (issue is in application) | |
+| 4 | Analysis completed per Section 7.2 | |
+| 5 | Hypotheses formed and investigated | |
+| 6 | Recommendations provided with file:line references | |
+| 7 | `bun run format` - no changes | |
+| 8 | `bun run lint` - no errors | |
+| 9 | `bun run typecheck` - no errors | |
+| 10 | **Checks 7-9 run sequentially with NO changes or errors between runs** | |
 
 ---
 

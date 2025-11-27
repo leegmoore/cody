@@ -20,6 +20,9 @@ export async function validateEnvironment(): Promise<void> {
   // 4. Check Fastify Server on 4010
   results.push(await checkFastifyServer());
 
+  // 5. Check Anthropic API connectivity
+  results.push(await checkAnthropic());
+
   const endTime = performance.now();
   const totalTimeMs = Math.round(endTime - startTime);
 
@@ -157,6 +160,47 @@ async function checkFastifyServer(): Promise<EnvCheckResult> {
       name: "Fastify Server",
       status: "fail",
       message: "Not running on port 4010",
+    };
+  }
+}
+
+async function checkAnthropic(): Promise<EnvCheckResult> {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY ?? "";
+    const res = await fetch("https://api.anthropic.com/v1/models", {
+      method: "GET",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (res.status === 200) {
+      return {
+        name: "Anthropic",
+        status: "ok",
+        message: "API reachable, key valid",
+      };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return {
+        name: "Anthropic",
+        status: "fail",
+        message: "API key invalid or missing",
+      };
+    }
+    return {
+      name: "Anthropic",
+      status: "fail",
+      message: `Unexpected status: ${res.status}`,
+    };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return {
+      name: "Anthropic",
+      status: "fail",
+      message: `Not reachable: ${msg}`,
     };
   }
 }
