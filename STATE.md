@@ -1,6 +1,6 @@
 # STATE.md - Ground Truth
 
-**Last Updated:** 2025-11-25 (100k checkpoint)
+**Last Updated:** 2025-11-26
 
 ---
 
@@ -14,9 +14,10 @@ Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 - [x] CURRENT.md - Active focus tracking
 - [x] TOOLS.md - Extension tools documented
 - [x] NEXT.md - Work queue established
-- [x] Prompt assembly skill - built, light testing, needs more real-world use
-- [x] /core-doc-review command - created, needs testing
+- [x] Prompt assembly skill - wired up with YAML frontmatter, tested
+- [x] /core-doc-review command - created and tested
 - [x] Projects structure - 01-api, 02-ui with prompts directories
+- [x] tdd-api test suite - implemented and passing
 - [ ] Beads initialization - deferred
 
 ---
@@ -49,19 +50,27 @@ Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 - Basic conversation flow works
 - Connected to v2 API
 
+### TDD-API Test Suite (NEW)
+- Full integration test suite at `test-suites/tdd-api/`
+- Environment validation: Redis, Convex, OpenAI, Fastify connectivity checks
+- First test: submit → stream → persist → verify
+- Uses ResponseReducer for hydration, compares to persisted data
+- Polling for persistence (not fixed wait)
+- Strong types throughout (no `any`)
+- No mocks - real infrastructure only
+
 ---
 
 ## What's Broken (Confidence: HIGH)
 
-### Test Infrastructure Integrity
-**This is the biggest problem.**
+### Legacy Test Infrastructure
+**Status:** Legacy tests unreliable, but new tdd-api suite provides reliable baseline.
 
 - Service-level mocks were corrupted by agents who snuck in scaffolds that changed behavior
 - Test harness (`tests/harness/core-harness.ts`) resets app state in ways that don't reflect production
 - Tool mocks were added where real tools should run
-- Lost confidence in what tests are actually verifying
 
-**Evidence:** Live test run shows 20 pass / 13 fail / 8 errors. But which passes are real vs. passing because of mocked shortcuts?
+**Mitigation:** New `test-suites/tdd-api/` suite uses full integration with no mocks. Legacy tests in `tests/` are suspect until audited.
 
 ### Specific Test Failures (from live run)
 - `TC-HP-08: Tool call (simple)` - `response.output_items.map is not a function` (undefined)
@@ -167,6 +176,15 @@ Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 - **Test strategy:** Need to baseline with 2 simple tests before building out full suite
 - **API research:** Documented Responses vs Messages API history handling differences
 
+**2025-11-26 (afternoon session):**
+- Implemented tdd-api test suite (full integration, no mocks)
+- 4 connectivity checks: Redis, Convex, OpenAI, Fastify
+- First test validates submit → stream → persist pipeline
+- ResponseReducer hydration with persisted data comparison
+- Wired up prompt-assembly skill (YAML frontmatter for discovery)
+- Tracked .claude/ directory in git
+- Phase 1 (Test Foundation) complete
+
 ---
 
 ## Key Unknowns
@@ -182,6 +200,7 @@ Core pipeline works. Tests are unreliable. UI functional and staying vanilla JS.
 
 - `src/core/schema.ts` - Canonical shapes (source of truth)
 - `src/core/reducer.ts` - Event → Response accumulation
+- `test-suites/tdd-api/` - New integration test suite (trustworthy)
 - `tests/harness/core-harness.ts` - **Compromised** - needs audit
 - `TEST_RESULTS.md` - Detailed test history
 - `docs/codex-core-2.0-tech-design.md` - Architecture spec

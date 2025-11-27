@@ -341,6 +341,12 @@ Verifier outputs recommendation
 
 `cody-fastify/docs/.prompt-parts/` - Composable prompt elements
 
+### Skill Location
+
+`.claude/skills/prompt-assembly/SKILL.md` - Requires YAML frontmatter for discovery
+
+Trigger phrases: "build a prompt", "assemble a prompt", "assemble prompts", "generate a prompt"
+
 ---
 
 ## Orchestration & Work Tracking (Under Development)
@@ -500,6 +506,11 @@ These are known failure modes. Watch for them actively.
 **Pattern:** Agent drifts toward mocking, minimal implementations, generic patterns
 **Detection:** Solutions feel "cookie cutter" or over-abstracted
 **Prevention:** Explicit constraints in every prompt. "DO NOT mock X. USE real Y."
+
+### Env Var Pre-Checks
+**Pattern:** Checking if env vars are set before attempting connectivity
+**Detection:** `if (!process.env.X) return fail` instead of just trying the connection
+**Prevention:** "Just attempt the connection. Let it fail naturally with descriptive error."
 
 ---
 

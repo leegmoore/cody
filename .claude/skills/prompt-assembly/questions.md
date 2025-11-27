@@ -113,6 +113,19 @@ What should the agent NOT do?
   "knownIssues": "Optional: known issues",
   "avoidances": [
     "Optional: things to avoid"
-  ]
+  ],
+  "outputDir": "Optional: full path for output directory"
 }
+```
+
+## Output Options
+
+Output directory is determined in this order:
+1. `--output` CLI flag (highest priority)
+2. `outputDir` in config JSON
+3. Default: `projects/{project}/prompts/`
+
+**CLI usage:**
+```bash
+node assemble.js --config config.json --output /path/to/output
 ```

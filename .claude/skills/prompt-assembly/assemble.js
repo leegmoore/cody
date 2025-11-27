@@ -7,7 +7,7 @@
  *
  * Usage:
  *   node assemble.js --config config.json
- *   node assemble.js --interactive
+ *   node assemble.js --config config.json --output /path/to/output
  *
  * Config JSON format:
  * {
@@ -20,7 +20,8 @@
  *   "dodItems": ["Thinking events accumulate correctly", "UI displays thinking"],
  *   "projectWhy": "Optional: why we need this work",
  *   "knownIssues": "Optional: known issues",
- *   "avoidances": ["Optional: things to avoid"]
+ *   "avoidances": ["Optional: things to avoid"],
+ *   "outputDir": "Optional: full path for output (overrides default)"
  * }
  */
 
@@ -81,7 +82,7 @@ function loadPartials(partsDir) {
   return partials;
 }
 
-function assemble(config) {
+function assemble(config, cliOutputDir = null) {
   const skillDir = __dirname;
   const templatesDir = path.join(skillDir, 'templates');
   const partsDir = path.join(skillDir, 'parts');
@@ -101,8 +102,17 @@ function assemble(config) {
   const verifierTemplate = fs.readFileSync(path.join(templatesDir, 'verifier-prompt.hbs'), 'utf8');
   const verifierPrompt = compile(verifierTemplate, config, partials);
 
+  // Determine output directory (CLI flag > config.outputDir > default)
+  let outputDir;
+  if (cliOutputDir) {
+    outputDir = cliOutputDir;
+  } else if (config.outputDir) {
+    outputDir = config.outputDir;
+  } else {
+    outputDir = path.join(projectsDir, config.project, 'prompts');
+  }
+
   // Ensure output directory exists
-  const outputDir = path.join(projectsDir, config.project, 'prompts');
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
@@ -133,10 +143,25 @@ if (require.main === module) {
       process.exit(1);
     }
 
+    // Check for optional --output flag
+    let outputDir = null;
+    if (args.includes('--output')) {
+      const outputIndex = args.indexOf('--output');
+      outputDir = args[outputIndex + 1];
+      if (!outputDir) {
+        console.error('Error: --output requires a path argument');
+        process.exit(1);
+      }
+    }
+
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    assemble(config);
+    assemble(config, outputDir);
   } else {
-    console.log('Usage: node assemble.js --config config.json');
+    console.log('Usage: node assemble.js --config config.json [--output /path/to/output]');
+    console.log('');
+    console.log('Options:');
+    console.log('  --config <path>   Path to config JSON file (required)');
+    console.log('  --output <path>   Output directory for prompts (optional, overrides config.outputDir)');
     console.log('');
     console.log('Config JSON format:');
     console.log(JSON.stringify({
@@ -149,7 +174,8 @@ if (require.main === module) {
       dodItems: ['Job-specific DoD item 1', 'Job-specific DoD item 2'],
       projectWhy: 'Optional: why we need this work',
       knownIssues: 'Optional: known issues',
-      avoidances: ['Optional: things to avoid']
+      avoidances: ['Optional: things to avoid'],
+      outputDir: 'Optional: output directory (can also use --output flag)'
     }, null, 2));
   }
 }

@@ -36,9 +36,25 @@ Before assembling, gather:
 1. Gather answers using `questions.md`
 2. Create config.json with the data
 3. Run: `node .claude/skills/prompt-assembly/assemble.js --config config.json`
-4. Review generated prompts in `projects/{project}/prompts/`
+4. Review generated prompts
 
-## Output
+## Output Options
+
+Output directory priority:
+1. `--output /path` CLI flag
+2. `outputDir` field in config.json
+3. Default: `projects/{project}/prompts/`
+
+**Examples:**
+```bash
+# Default output
+node .claude/skills/prompt-assembly/assemble.js --config config.json
+
+# Custom output directory
+node .claude/skills/prompt-assembly/assemble.js --config config.json --output /path/to/project/dir
+```
+
+## Output Files
 
 - `{job-name}-coder.md` - For implementation agent
 - `{job-name}-verifier.md` - For verification agent

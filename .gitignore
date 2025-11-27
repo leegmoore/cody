@@ -90,3 +90,6 @@ tmp-cody-home/
 dump.rdb
 gemini-conversation-*.json
 gemini-export.md
+
+# deprecated test directory
+cody-fastify/tests-old-notused/

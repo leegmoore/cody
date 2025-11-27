@@ -8,27 +8,29 @@ Phased roadmap for cody-fastify development.
 
 ## Phases
 
-### Phase 1: Test Foundation (CURRENT)
+### Phase 1: Test Foundation ✓ COMPLETE
 
-**Status:** In Progress
+**Status:** Complete
 
-1. **Evaluate test harness strategy**
-   - Audit current harness for mock corruption
-   - Decide: new approach OR refactor with clean mocks
+1. ✓ **Test harness strategy decided**
+   - New approach: `test-suites/tdd-api/`
+   - Full integration, no mocks
+   - Connectivity checks for infrastructure validation
 
-2. **Baseline 2 tests**
-   - Test 1: Basic turn (no tools) - submit → stream → persist
-   - Test 2: Turn with tool call - submit → tool execution → persist
-   - Both must use real Redis, Convex, workers (mock only LLM responses)
+2. ✓ **Baseline test implemented**
+   - `simple-prompt.test.ts`: submit → stream → persist → verify
+   - Uses ResponseReducer for event hydration
+   - Compares hydrated response to persisted run
+   - Strong types throughout
 
-**Done when:** 2 baseline tests passing, pattern established for future tests
+**Completed:** Test suite working, ready for Phase 2
 
 ---
 
-### Phase 2: OpenAI Full Support
+### Phase 2: OpenAI Full Support ← CURRENT
 
-**Status:** Not Started
-**Depends on:** Phase 1 complete
+**Status:** Ready to Start
+**Depends on:** Phase 1 complete ✓
 
 3. **Add test: multi-turn history** (will fail initially)
    - Turn 1: "What's 2+2?"
@@ -122,7 +124,7 @@ Items deferred to later:
 
 ## Completed This Session (2025-11-26)
 
-**Process Foundation:**
+**Process Foundation (morning):**
 - ✓ Created STATE.md, CURRENT.md, NEXT.md, PROCESS.md, TOOLS.md
 - ✓ Defined working modes (informal vs formal)
 - ✓ Built prompt assembly skill with templates
@@ -131,6 +133,14 @@ Items deferred to later:
 - ✓ Evaluated UI framework decision → staying vanilla JS
 - ✓ Documented API history handling (response-messages-api-details.md)
 - ✓ Established phased roadmap
+
+**Phase 1 Complete (afternoon):**
+- ✓ Implemented tdd-api test suite
+- ✓ First integration test passing (simple-prompt.test.ts)
+- ✓ 4 connectivity checks (Redis, Convex, OpenAI, Fastify)
+- ✓ ResponseReducer hydration with comparison assertions
+- ✓ Wired up prompt-assembly skill (YAML frontmatter)
+- ✓ Tracked .claude/ directory in git
 
 ---
 
