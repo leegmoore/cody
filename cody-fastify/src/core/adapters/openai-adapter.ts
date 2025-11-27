@@ -124,7 +124,10 @@ export class OpenAIStreamAdapter {
           total_tokens: number;
         }
       | undefined;
-    const maxToolIterations = 4;
+    const maxToolIterations =
+      process.env.MAX_TOOL_ITERATIONS !== undefined
+        ? parseInt(process.env.MAX_TOOL_ITERATIONS, 10)
+        : 50;
     for (let iteration = 0; iteration < maxToolIterations; iteration++) {
       const pendingToolCalls: PendingToolCall[] = [];
       const iterationOutputItems: unknown[] = [];

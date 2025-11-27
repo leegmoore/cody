@@ -9,7 +9,7 @@ import type { TraceContext } from "./schema.js";
  * The set is intentionally small to match the guidance in GEMINI/GEM docs.
  */
 const VALID_PROVIDER_MODELS = {
-  openai: new Set(["gpt-5-mini", "gpt-5-codex"]),
+  openai: new Set(["gpt-5-mini", "gpt-5-codex", "gpt-5.1-codex-mini"]),
   anthropic: new Set([
     "claude-haiku-4.5",
     "claude-haiku-4-5",

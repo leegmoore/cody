@@ -19,7 +19,7 @@ describe("tdd-api: openai-prompts", () => {
       const submitRes = await fetch(`${BASE_URL}/api/v2/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: "hi cody" }),
+        body: JSON.stringify({ prompt: "hi cody", model: "gpt-5.1-codex-mini" }),
       });
 
       // Assert: Submit response
@@ -410,7 +410,7 @@ describe("tdd-api: openai-prompts", () => {
     const submitRes = await fetch(`${BASE_URL}/api/v2/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, model: "gpt-5.1-codex-mini" }),
     });
 
     // Assert: Submit response
@@ -976,7 +976,7 @@ describe("tdd-api: openai-prompts", () => {
         // ========================================
         // PHASE: Submit prompt
         // ========================================
-        const submitBody: { prompt: string; threadId?: string } = { prompt };
+        const submitBody: { prompt: string; threadId?: string; model: string } = { prompt, model: "gpt-5.1-codex-mini" };
         if (threadIdToUse) {
           submitBody.threadId = threadIdToUse;
         }
@@ -1434,6 +1434,7 @@ describe("tdd-api: openai-prompts", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: puzzlePrompt,
+          model: "gpt-5.1-codex-mini",
           reasoningEffort: "low",
         }),
       });

@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { ToolSpec } from "codex-ts/src/core/client/client-common.js";
+import {
+  serializeFunctionCallOutputPayload,
+  type FunctionCallOutputPayload,
+} from "codex-ts/src/protocol/models.js";
+import { toolRegistry } from "codex-ts/src/tools/registry.js";
 import { RedisStream } from "../redis.js";
 import {
   OutputItem,
@@ -89,13 +94,220 @@ export class AnthropicStreamAdapter {
       params.tools && params.tools.length > 0
         ? formatToolsForAnthropicMessages(params.tools)
         : undefined;
+
+    // Build initial conversation
+    const conversationMessages: Array<{
+      role: "user" | "assistant";
+      content: Array<
+        | { type: "text"; text: string }
+        | { type: "tool_use"; id: string; name: string; input: unknown }
+        | { type: "tool_result"; tool_use_id: string; content: string }
+      >;
+    }> = [
+      {
+        role: "user" as const,
+        content: [{ type: "text" as const, text: params.prompt }],
+      },
+    ];
+
+    const items = new Map<string, ItemAccumulator>();
+    let usageTotals:
+      | {
+          prompt_tokens: number;
+          completion_tokens: number;
+          total_tokens: number;
+        }
+      | undefined;
+
+    const maxToolIterations =
+      process.env.MAX_TOOL_ITERATIONS !== undefined
+        ? parseInt(process.env.MAX_TOOL_ITERATIONS, 10)
+        : 50;
+
+    for (let iteration = 0; iteration < maxToolIterations; iteration++) {
+      const iterationContentBlocks: Array<{
+        type: "text" | "tool_use";
+        id?: string;
+        text?: string;
+        name?: string;
+        input?: unknown;
+      }> = [];
+      const pendingToolCalls: Array<{
+        callId: string;
+        toolUseId: string;
+        name: string;
+        input: unknown;
+      }> = [];
+
+      // Run one iteration
+      const iterationResult = await this.runIteration({
+        runId,
+        turnId,
+        threadId,
+        baseTrace,
+        conversationMessages,
+        formattedTools,
+        thinkingBudget: params.thinkingBudget,
+        items,
+        iterationContentBlocks,
+        pendingToolCalls,
+        setUsageTotals: (usage) => {
+          usageTotals = usage;
+        },
+      });
+
+      // Add assistant message with content blocks to conversation
+      if (iterationContentBlocks.length > 0) {
+        conversationMessages.push({
+          role: "assistant" as const,
+          content: iterationContentBlocks.map((block) => {
+            if (block.type === "text") {
+              return { type: "text" as const, text: block.text ?? "" };
+            } else {
+              return {
+                type: "tool_use" as const,
+                id: block.id ?? "",
+                name: block.name ?? "",
+                input: block.input ?? {},
+              };
+            }
+          }),
+        });
+      }
+
+      // If no tool calls, we're done
+      // Also check finishReason - if it's not "tool_use", we're done
+      if (
+        pendingToolCalls.length === 0 ||
+        (iterationResult.finishReason &&
+          iterationResult.finishReason !== "tool_use")
+      ) {
+        break;
+      }
+
+      // Inline tool execution (OpenAI parity): execute tools now, publish outputs, then add tool_result blocks
+      const toolResultsInline: Array<{ toolUseId: string; output: string; isError?: boolean }> = [];
+      for (const call of pendingToolCalls) {
+        try {
+          const tool = toolRegistry.get(call.name);
+          if (!tool) {
+            throw new Error(`Tool "${call.name}" is not registered`);
+          }
+          const args = call.input ?? {};
+          const result = await tool.execute(args as never);
+          const payload = this.normalizeToolResult(result);
+          const serializedOutput = this.serializeToolOutput(payload);
+          // Publish function_call_output for reducers/persistence
+          await this.publishFunctionCallOutput(
+            baseTrace,
+            runId,
+            call.callId,
+            serializedOutput,
+            payload.success ?? true,
+          );
+          toolResultsInline.push({
+            toolUseId: call.toolUseId,
+            output: serializedOutput,
+            isError: payload.success === false,
+          });
+        } catch (error) {
+          const content = `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`;
+          await this.publishFunctionCallOutput(baseTrace, runId, call.callId, content, false);
+          toolResultsInline.push({
+            toolUseId: call.toolUseId,
+            output: content,
+            isError: true,
+          });
+        }
+      }
+
+      if (toolResultsInline.length > 0) {
+        // Add user message with tool_result blocks for next Anthropic iteration
+        conversationMessages.push({
+          role: "user" as const,
+          content: toolResultsInline.map((result) => ({
+            type: "tool_result" as const,
+            tool_use_id: result.toolUseId,
+            content: result.output,
+            is_error: result.isError ?? false,
+          })),
+        });
+      }
+    }
+
+    // Final response_done event
+    const responseDone = this.makeEvent(childTraceContext(baseTrace), runId, {
+      type: "response_done",
+      response_id: runId,
+      status: "complete",
+      usage: usageTotals,
+      finish_reason: null,
+    });
+    await this.redis.publish(responseDone);
+
+    return { runId };
+  }
+
+  private async runIteration(options: {
+    runId: string;
+    turnId: string;
+    threadId: string;
+    baseTrace: TraceContext;
+    conversationMessages: Array<{
+      role: "user" | "assistant";
+      content: Array<
+        | { type: "text"; text: string }
+        | { type: "tool_use"; id: string; name: string; input: unknown }
+        | { type: "tool_result"; tool_use_id: string; content: string }
+      >;
+    }>;
+    formattedTools?: ReturnType<typeof formatToolsForAnthropicMessages>;
+    thinkingBudget?: number;
+    items: Map<string, ItemAccumulator>;
+    iterationContentBlocks: Array<{
+      type: "text" | "tool_use";
+      id?: string;
+      text?: string;
+      name?: string;
+      input?: unknown;
+    }>;
+    pendingToolCalls: Array<{
+      callId: string;
+      toolUseId: string;
+      name: string;
+      input: unknown;
+    }>;
+    setUsageTotals: (usage: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    }) => void;
+  }): Promise<{ finishReason: string | null }> {
+    const {
+      runId,
+      turnId,
+      threadId,
+      baseTrace,
+      conversationMessages,
+      formattedTools,
+      thinkingBudget,
+      items,
+      iterationContentBlocks,
+      pendingToolCalls,
+      setUsageTotals,
+    } = options;
+
     const reqBody: {
       model: string;
       max_tokens: number;
       stream: true;
       messages: Array<{
-        role: "user";
-        content: Array<{ type: "text"; text: string }>;
+        role: "user" | "assistant";
+        content: Array<
+          | { type: "text"; text: string }
+          | { type: "tool_use"; id: string; name: string; input: unknown }
+          | { type: "tool_result"; tool_use_id: string; content: string }
+        >;
       }>;
       tools?: ReturnType<typeof formatToolsForAnthropicMessages>;
       thinking?: { type: "enabled"; budget_tokens: number };
@@ -103,17 +315,12 @@ export class AnthropicStreamAdapter {
       model: this.model,
       max_tokens: this.maxOutputTokens,
       stream: true,
-      messages: [
-        {
-          role: "user" as const,
-          content: [{ type: "text" as const, text: params.prompt }],
-        },
-      ],
+      messages: conversationMessages,
       tools: formattedTools,
-      ...(params.thinkingBudget && {
+      ...(thinkingBudget && {
         thinking: {
           type: "enabled" as const,
-          budget_tokens: params.thinkingBudget,
+          budget_tokens: thinkingBudget,
         },
       }),
     };
@@ -127,7 +334,7 @@ export class AnthropicStreamAdapter {
       headers["anthropic-beta"] =
         process.env.ANTHROPIC_BETA_TOOLS ?? "tools-2024-04-04";
     }
-    if (params.thinkingBudget) {
+    if (thinkingBudget) {
       headers["anthropic-beta"] =
         process.env.ANTHROPIC_BETA_THINKING ??
         "interleaved-thinking-2025-05-14";
@@ -158,8 +365,17 @@ export class AnthropicStreamAdapter {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     const buffer: string[] = [];
-    const items = new Map<string, ItemAccumulator>();
     const blockIndexToItemId = new Map<number, string>();
+    const blockIndexToContentBlock = new Map<
+      number,
+      {
+        type: "text" | "tool_use";
+        id?: string;
+        text?: string;
+        name?: string;
+        input?: unknown;
+      }
+    >();
     let finishReason: string | null = null;
     let usage: { input_tokens?: number; output_tokens?: number } | undefined;
 
@@ -202,12 +418,16 @@ export class AnthropicStreamAdapter {
 
         const trace = childTraceContext(baseTrace);
         const dataJson = safeJson(parsed.data);
-        if (!dataJson) continue;
+        if (!dataJson) {
+          continue;
+        }
 
         switch (parsed.event) {
           case "content_block_start": {
             const blockInfo = asObject(dataJson.content_block);
-            if (!blockInfo) break;
+            if (!blockInfo) {
+              break;
+            }
             const blockIndex = getNumber(dataJson.index);
             const existingId =
               typeof blockIndex === "number"
@@ -220,25 +440,42 @@ export class AnthropicStreamAdapter {
             if (blockInfo.type === "text") {
               const accumulator = ensureItem(items, itemId, "message");
               await this.publishItemStartIfNeeded(trace, runId, accumulator);
+              if (typeof blockIndex === "number") {
+                blockIndexToContentBlock.set(blockIndex, {
+                  type: "text",
+                  text: "",
+                });
+              }
             } else if (blockInfo.type === "thinking") {
               const accumulator = ensureItem(items, itemId, "reasoning");
               await this.publishItemStartIfNeeded(trace, runId, accumulator);
             } else if (blockInfo.type === "tool_use") {
               const accumulator = ensureItem(items, itemId, "function_call");
+              const toolUseId = getString(blockInfo?.id) ?? itemId;
               accumulator.name =
                 typeof blockInfo.name === "string"
                   ? blockInfo.name
                   : "tool_use";
-              accumulator.callId = itemId;
+              accumulator.callId = toolUseId;
               accumulator.argumentsChunks = [];
               await this.publishItemStartIfNeeded(trace, runId, accumulator);
+              if (typeof blockIndex === "number") {
+                blockIndexToContentBlock.set(blockIndex, {
+                  type: "tool_use",
+                  id: toolUseId,
+                  name: accumulator.name,
+                  input: {},
+                });
+              }
             }
             break;
           }
 
           case "content_block_delta": {
             const delta = asObject(dataJson.delta);
-            if (!delta) break;
+            if (!delta) {
+              break;
+            }
             const blockIndex = getNumber(dataJson.index);
             const itemId =
               typeof blockIndex === "number"
@@ -261,6 +498,15 @@ export class AnthropicStreamAdapter {
               if (text) {
                 await this.publishItemDelta(trace, runId, itemId, text);
                 accumulator.content.push(text);
+                if (
+                  typeof blockIndex === "number" &&
+                  accumulator.type === "message"
+                ) {
+                  const contentBlock = blockIndexToContentBlock.get(blockIndex);
+                  if (contentBlock && contentBlock.type === "text") {
+                    contentBlock.text = (contentBlock.text ?? "") + text;
+                  }
+                }
               }
             } else if (accumulator.type === "function_call") {
               if (!accumulator.argumentsChunks) {
@@ -284,9 +530,13 @@ export class AnthropicStreamAdapter {
               typeof blockIndex === "number"
                 ? blockIndexToItemId.get(blockIndex)
                 : undefined;
-            if (!itemId) break;
+            if (!itemId) {
+              break;
+            }
             const accumulator = items.get(itemId);
-            if (!accumulator) break;
+            if (!accumulator) {
+              break;
+            }
             const blockInfo = asObject(dataJson.content_block);
 
             if (accumulator.type === "function_call") {
@@ -296,7 +546,28 @@ export class AnthropicStreamAdapter {
                   ? blockInfo.input
                   : JSON.stringify(blockInfo?.input ?? {}));
               accumulator.content = [finalArgs];
-              accumulator.callId = accumulator.callId ?? itemId;
+              // Ensure we use the Anthropic tool_use block id if available
+              const anthropicToolUseId = getString(blockInfo?.id);
+              accumulator.callId = anthropicToolUseId ?? accumulator.callId ?? itemId;
+              const toolUseId = accumulator.callId;
+              let input: unknown;
+              try {
+                input = JSON.parse(finalArgs);
+              } catch {
+                input = finalArgs;
+              }
+              pendingToolCalls.push({
+                callId: toolUseId,
+                toolUseId,
+                name: accumulator.name ?? "tool_use",
+                input,
+              });
+              if (typeof blockIndex === "number") {
+                const contentBlock = blockIndexToContentBlock.get(blockIndex);
+                if (contentBlock && contentBlock.type === "tool_use") {
+                  contentBlock.input = input;
+                }
+              }
             }
             await this.publishItemDone(trace, runId, accumulator);
             items.delete(itemId);
@@ -329,6 +600,10 @@ export class AnthropicStreamAdapter {
                     : undefined,
               };
             }
+            // Also check stop_reason from message_stop event
+            if (message?.stop_reason && !finishReason) {
+              finishReason = String(message.stop_reason);
+            }
             break;
           }
 
@@ -358,6 +633,12 @@ export class AnthropicStreamAdapter {
       }
     }
 
+    // Add content blocks to iteration result
+    for (const [_, contentBlock] of blockIndexToContentBlock) {
+      iterationContentBlocks.push(contentBlock);
+    }
+
+    // Publish usage update
     const usagePayload =
       usage && (usage.input_tokens ?? usage.output_tokens ?? 0) > 0
         ? {
@@ -369,6 +650,7 @@ export class AnthropicStreamAdapter {
         : undefined;
 
     if (usagePayload) {
+      setUsageTotals(usagePayload);
       const usageEvent = this.makeEvent(childTraceContext(baseTrace), runId, {
         type: "usage_update",
         response_id: runId,
@@ -377,16 +659,7 @@ export class AnthropicStreamAdapter {
       await this.redis.publish(usageEvent);
     }
 
-    const responseDone = this.makeEvent(childTraceContext(baseTrace), runId, {
-      type: "response_done",
-      response_id: runId,
-      status: "complete",
-      usage: usagePayload,
-      finish_reason: finishReason,
-    });
-    await this.redis.publish(responseDone);
-
-    return { runId };
+    return { finishReason };
   }
 
   private async publishItemStartIfNeeded(
@@ -459,6 +732,65 @@ export class AnthropicStreamAdapter {
       final_item: finalItem,
     });
     await this.redis.publish(event);
+  }
+
+  private async publishFunctionCallOutput(
+    trace: TraceContext,
+    runId: string,
+    callId: string,
+    output: string,
+    success: boolean,
+  ): Promise<void> {
+    const redis = this.redis;
+    const outputItemId = randomUUID();
+    const startEvent = this.makeEvent(childTraceContext(trace), runId, {
+      type: "item_start",
+      item_id: outputItemId,
+      item_type: "function_call_output",
+    });
+    await redis.publish(startEvent);
+    const doneEvent = this.makeEvent(childTraceContext(trace), runId, {
+      type: "item_done",
+      item_id: outputItemId,
+      final_item: {
+        id: outputItemId,
+        type: "function_call_output",
+        call_id: callId,
+        output,
+        success,
+        origin: "tool_harness",
+      },
+    });
+    await redis.publish(doneEvent);
+  }
+
+  private normalizeToolResult(result: unknown): FunctionCallOutputPayload {
+    if (result && typeof result === "object" && "content" in result) {
+      const contentValue = (result as { content: unknown }).content;
+      const successValue = (result as { success?: boolean }).success ?? true;
+      return {
+        content:
+          typeof contentValue === "string"
+            ? contentValue
+            : JSON.stringify(contentValue),
+        success: successValue,
+      };
+    }
+    if (typeof result === "string") {
+      return { content: result, success: true };
+    }
+    return {
+      content: JSON.stringify(result),
+      success: true,
+    };
+  }
+
+  private serializeToolOutput(payload: FunctionCallOutputPayload): string {
+    const serialized = serializeFunctionCallOutputPayload(payload);
+    if (typeof serialized === "string") {
+      return serialized;
+    }
+    return JSON.stringify(serialized, null, 2);
   }
 
   private makeEvent(

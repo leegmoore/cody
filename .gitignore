@@ -93,3 +93,6 @@ gemini-export.md
 
 # deprecated test directory
 cody-fastify/tests-old-notused/
+
+# proxy logs
+proxy-logs/
