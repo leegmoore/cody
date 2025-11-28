@@ -1,4 +1,0 @@
-{"type":"tool_use","call_id":"call_b0EAEboRJYJp89pBkAStqSsI","name":"apply_patch","input":{"patch":"*** Begin Patch\n*** Add File: tmp/agent-notes.txt\n+tools verified\n*** End Patch\n"}}
-{"type":"tool_result","call_id":"call_b0EAEboRJYJp89pBkAStqSsI","output":{"success":true,"stdout":"Success. Updated the following files:\nA tmp/agent-notes.txt\n","stderr":""}}
-{"role":"assistant","content":[{"type":"text","text":"Added `tmp/agent-notes.txt` with the requested note."}]}
-{"type":"usage","usage":{"input_tokens":5940,"input_tokens_details":{"cached_tokens":5504},"output_tokens":18,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":5958}}

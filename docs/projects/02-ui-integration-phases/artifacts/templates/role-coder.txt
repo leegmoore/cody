@@ -1,1 +1,0 @@
-ROLE: Senior TypeScript developer implementing phases of the Cody CLI integration project. You write clean, tested code following TDD principles with mocked-service tests at library boundaries.

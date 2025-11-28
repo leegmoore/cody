@@ -98,10 +98,10 @@ Agents drift toward: mocking everything, minimal implementations, skipping tests
 
 1. This file loads automatically (CLAUDE.md)
 2. Check context usage (~35-40k is orientation)
-3. Read STATE.md for ground truth
-4. Read CURRENT.md for active slice
-5. Read NEXT.md for work queue (optional - when planning)
-6. Refer to PROCESS.md for workflow questions
+3. Read `.code-agents/planner/STATE.md` for ground truth
+4. Read `.code-agents/planner/CURRENT.md` for active slice
+5. Read `.code-agents/planner/NEXT.md` for work queue (optional - when planning)
+6. Refer to `.code-agents/planner/PROCESS.md` for workflow questions
 
 ---
 
@@ -126,32 +126,40 @@ At checkpoints, proactively review the conversation for state changes and offer 
 
 ```
 codex-port-02/
-├── CLAUDE.md         # This file - role and principles
-├── STATE.md          # Ground truth - what's working/broken
-├── CURRENT.md        # Active slice - what we're doing NOW
-├── NEXT.md           # Work queue - what's coming after current
-├── PROCESS.md        # Workflow - checkpoints, orchestration
-├── TOOLS.md          # Extension tools - slash commands, subagents
-├── templates/        # SPEC, PROMPT, LARGE-FEATURE templates
-├── cody-fastify/     # Active project - streaming LLM harness
-└── codex-ts/         # Legacy - deprecated, utilities being migrated
+├── CLAUDE.md              # This file - role and principles
+├── .code-agents/
+│   └── planner/           # Planner agent state files
+│       ├── STATE.md       # Ground truth - what's working/broken
+│       ├── CURRENT.md     # Active slice - what we're doing NOW
+│       ├── NEXT.md        # Work queue - what's coming after current
+│       ├── PROCESS.md     # Workflow - checkpoints, orchestration
+│       ├── TOOLS.md       # Extension tools - slash commands, subagents
+│       └── PLANNER-INIT.md # Full context for planner sessions
+├── docs/                  # Documentation
+│   └── MODELS.md          # Canonical model identifiers
+├── projects/              # Active project work
+│   ├── 01-api/            # TDD API test work
+│   └── 02-script-tools/   # Script harness project
+├── cody-fastify/          # Active project - streaming LLM harness
+└── codex-ts/              # Legacy - utilities being migrated
 ```
 
 ---
 
 ## Reference
 
-**Process Docs (root):**
-- `STATE.md` - Current system health and status
-- `CURRENT.md` - Active work slice (what we're doing NOW)
-- `NEXT.md` - Work queue (what's coming after current)
-- `PROCESS.md` - Workflow, checkpoints, orchestration
+**Planner Docs:**
+- `.code-agents/planner/STATE.md` - Current system health and status
+- `.code-agents/planner/CURRENT.md` - Active work slice (what we're doing NOW)
+- `.code-agents/planner/NEXT.md` - Work queue (what's coming after current)
+- `.code-agents/planner/PROCESS.md` - Workflow, checkpoints, orchestration
+- `.code-agents/planner/PLANNER-INIT.md` - Full context for new planner sessions
 
 **Architecture:**
 - `cody-fastify/docs/codex-core-2.0-tech-design.md` - Technical design
 - `cody-fastify/src/core/schema.ts` - Canonical shapes
 - `cody-fastify/README.md` - File index
 
-**Methodology:**
-- `cody-fastify/docs/cc/GUIDE-ITERATIVE-AGENTIC-CODING.md` - Coding process
-- `docs/core/documentation-design-brain-dump.md` - Knowledge transfer principles
+**Project Work:**
+- `projects/02-script-tools/` - Script harness implementation project
+- `docs/MODELS.md` - Canonical model identifiers

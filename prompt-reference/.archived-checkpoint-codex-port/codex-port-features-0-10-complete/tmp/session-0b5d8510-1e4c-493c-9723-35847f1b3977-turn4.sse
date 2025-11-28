@@ -1,4 +1,0 @@
-{"type":"tool_use","call_id":"call_AkLNDQo3zwpmkraQvWRGMqk5","name":"shell","input":{"command":["bash","-lc","rg -l 'constructPrompt\\(' src"],"workdir":"/Users/leemoore/code/v/codex-port"}}
-{"type":"tool_result","call_id":"call_AkLNDQo3zwpmkraQvWRGMqk5","output":{"content":"src/agent/prompt.ts\n","success":true}}
-{"role":"assistant","content":[{"type":"text","text":"`constructPrompt(` appears in: `src/agent/prompt.ts`."}]}
-{"type":"usage","usage":{"input_tokens":5879,"input_tokens_details":{"cached_tokens":0},"output_tokens":19,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":5898}}

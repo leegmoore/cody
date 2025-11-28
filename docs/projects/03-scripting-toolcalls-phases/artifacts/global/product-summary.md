@@ -1,1 +1,0 @@
-Cody (CLI + library) now supports script-based tool calling alongside structured function calls. Scripts are TypeScript snippets wrapped in `<tool-calls>` blocks that run inside a hardened QuickJS runtime and route through the existing tool registry, approvals, and persistence layers.

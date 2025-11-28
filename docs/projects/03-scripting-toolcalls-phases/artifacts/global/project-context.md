@@ -1,4 +1,0 @@
-- **Goal:** Make script harness a first-class capability so models can compose multiple tools in a single turn while sharing the same tool registry as structured calls.
-- **Why:** Structured tool calls require one JSON payload per turn; scripts shrink multi-step workflows, unlock cheap models, and provide deterministic automation for humans.
-- **Deliverables:** End-to-end harness, CLI/REST UX, documentation, and benchmark report showing improved workflow completion rates.
-- **Constraints:** QuickJS sandbox only, scripts capped at 20 KB / 32 tool calls / 5 s runtime, no direct host APIs, approvals identical to structured path.

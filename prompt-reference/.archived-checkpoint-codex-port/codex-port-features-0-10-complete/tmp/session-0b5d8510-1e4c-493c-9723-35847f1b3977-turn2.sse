@@ -1,6 +1,0 @@
-{"type":"tool_use","call_id":"call_JfHuHSWbWNQAioJ8Utj5I1hQ","name":"list_dir","input":{"dir_path":".","offset":1,"limit":200,"depth":1}}
-{"type":"tool_result","call_id":"call_JfHuHSWbWNQAioJ8Utj5I1hQ","output":{"content":"Absolute path: /Users/leemoore/code/v/codex-port\n.codex/\n.DS_Store\n.git/\n.gitignore\n.transitions/\nbun.lock\ncodys-log.md\ndecision-log.md\ndocs/\nlogs/\nnode_modules/\npackage.json\nREADME.md\nscripts/\nsrc/\ntests/\ntmp/\ntsconfig.json\nuser-feedback-questions.md\nweb/","success":true}}
-{"type":"tool_use","call_id":"call_KlO7Vsw3e7pjM6VkMAKCk7zm","name":"list_dir","input":{"dir_path":"/Users/leemoore/code/v/codex-port/src/agent","offset":1,"limit":50,"depth":2}}
-{"type":"tool_result","call_id":"call_KlO7Vsw3e7pjM6VkMAKCk7zm","output":{"content":"Absolute path: /Users/leemoore/code/v/codex-port/src/agent\ninstructions.ts\nprompt.ts\nsession.ts\nturn.ts","success":true}}
-{"role":"assistant","content":[{"type":"text","text":"- `src/agent` entries (depth 2, limit 50): `instructions.ts`, `prompt.ts`, `session.ts`, `turn.ts`."}]}
-{"type":"usage","usage":{"input_tokens":5536,"input_tokens_details":{"cached_tokens":0},"output_tokens":36,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":5572}}

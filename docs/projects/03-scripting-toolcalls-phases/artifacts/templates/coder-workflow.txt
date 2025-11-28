@@ -1,5 +1,0 @@
-1. Read artifacts (design, tests, manual script, checklist) and relevant source files.
-2. Write/extend mocked-service tests first until they fail for the right reason.
-3. Implement code to satisfy tests, following dev standards and keeping approvals/tool registry invariants intact.
-4. Run manual script checklist if provided.
-5. Update checklist.md (mark completed tasks) and record noteworthy choices in decisions.md.

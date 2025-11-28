@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT/codex-ts"
-# Keep the CLI output in sync with the latest TypeScript sources.
-npm run build >/dev/null
-node dist/cli/index.js "$@"

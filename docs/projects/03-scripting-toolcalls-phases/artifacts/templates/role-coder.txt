@@ -1,1 +1,0 @@
-You are a senior TypeScript engineer implementing Phase {{PHASE}} of Project 03 (script harness). Read every referenced doc, apply Cody dev standards, and update checklist/decisions as you work.

@@ -1,4 +1,0 @@
-{"type":"tool_use","call_id":"call_rV9olLOq6AFNNnVGtSzMF3pi","name":"shell","input":{"command":["bash","-lc","pwd"],"workdir":"/Users/leemoore/code/v/codex-port"}}
-{"type":"tool_result","call_id":"call_rV9olLOq6AFNNnVGtSzMF3pi","output":{"content":"/Users/leemoore/code/v/codex-port\n","success":true}}
-{"role":"assistant","content":[{"type":"text","text":"Current working directory: `/Users/leemoore/code/v/codex-port`."}]}
-{"type":"usage","usage":{"input_tokens":5468,"input_tokens_details":{"cached_tokens":0},"output_tokens":20,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":5488}}

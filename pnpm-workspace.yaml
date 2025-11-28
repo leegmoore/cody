@@ -1,8 +1,0 @@
-packages:
-  - docs
-  - codex-ts
-  - cody-fastify
-  - sdk/typescript
-
-ignoredBuiltDependencies:
-  - esbuild

@@ -1,98 +1,47 @@
-# deps
-# Node.js dependencies
-node_modules
-.pnpm-store
-.pnpm-debug.log
+# Dependencies
+node_modules/
 
-# Keep pnpm-lock.yaml
-!pnpm-lock.yaml
-
-# build
+# Build outputs
 dist/
 build/
 out/
-storybook-static/
 
-# ignore README for publishing
-codex-cli/README.md
-
-# ignore Nix derivation results
-result
-
-# editor
-.vscode/
+# Editor
 .idea/
 .history/
-.zed/
 *.swp
 *~
 
-# cli tools
-CLAUDE.md
-AGENTS.override.md
-
-# caches
+# Caches
 .cache/
-.turbo/
-.parcel-cache/
 .eslintcache
-.nyc_output/
-.jest/
 *.tsbuildinfo
 
-# logs
+# Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+logs/
 
-# env
+# Environment
 .env*
 !.env.example
 
-# package
-*.tgz
-
-# ci
-.vercel/
-.netlify/
-
-# patches
-apply_patch/
-
-# coverage
+# Coverage
 coverage/
 
-# os
+# OS
 .DS_Store
 Thumbs.db
-Icon?
-.Spotlight-V100/
 
-# Unwanted package managers
-.yarn/
-yarn.lock
+# Redis
+dump.rdb
 
-# release
-package.json-e
-session.ts-e
-CHANGELOG.ignore.md
-
-# nix related
-.direnv
-.envrc
+# Archive (local only)
 .archive/
 
-# external projects
-gemini-cli-main/
-tmp-cody-home/
+# Playwright
+playwright-report/
+test-results/
 
-dump.rdb
-gemini-conversation-*.json
-gemini-export.md
-
-# deprecated test directory
-cody-fastify/tests-old-notused/
-
-# proxy logs
-proxy-logs/
+# Temporary files
+tmp-*/
+*.tmp
