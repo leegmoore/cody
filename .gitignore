@@ -38,6 +38,9 @@ dump.rdb
 # Archive (local only)
 .archive/
 
+# Context working directory
+.context-work-dir
+
 # Playwright
 playwright-report/
 test-results/

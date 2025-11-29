@@ -80,7 +80,9 @@ describe("capture-streams: tool calls", () => {
       JSON.stringify(output, null, 2),
     );
 
-    console.log(`[OPENAI] Captured ${allEvents.length} events, saved to /tmp/openai-tool-calls-stream.json`);
+    console.log(
+      `[OPENAI] Captured ${allEvents.length} events, saved to /tmp/openai-tool-calls-stream.json`,
+    );
   });
 
   test("capture Anthropic tool call stream", async () => {
@@ -120,7 +122,9 @@ describe("capture-streams: tool calls", () => {
         }
         // If we've been waiting a while and have some events, save what we have
         if (allEvents.length > 0 && Date.now() - startTime > timeout - 2000) {
-          console.log(`[ANTHROPIC] Timeout approaching, saving ${allEvents.length} events captured so far`);
+          console.log(
+            `[ANTHROPIC] Timeout approaching, saving ${allEvents.length} events captured so far`,
+          );
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -153,15 +157,19 @@ describe("capture-streams: tool calls", () => {
       JSON.stringify(output, null, 2),
     );
 
-    console.log(`[ANTHROPIC] Captured ${allEvents.length} events, saved to /tmp/anthropic-tool-calls-stream.json`);
-    
+    console.log(
+      `[ANTHROPIC] Captured ${allEvents.length} events, saved to /tmp/anthropic-tool-calls-stream.json`,
+    );
+
     // Also log summary of event types
     const eventTypes = new Map<string, number>();
     for (const e of allEvents) {
       const type = e.event.payload?.type ?? "unknown";
       eventTypes.set(type, (eventTypes.get(type) ?? 0) + 1);
     }
-    console.log(`[ANTHROPIC] Event type counts:`, Object.fromEntries(eventTypes));
+    console.log(
+      `[ANTHROPIC] Event type counts:`,
+      Object.fromEntries(eventTypes),
+    );
   });
 });
-

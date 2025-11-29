@@ -186,7 +186,11 @@ export class AnthropicStreamAdapter {
       }
 
       // Inline tool execution (OpenAI parity): execute tools now, publish outputs, then add tool_result blocks
-      const toolResultsInline: Array<{ toolUseId: string; output: string; isError?: boolean }> = [];
+      const toolResultsInline: Array<{
+        toolUseId: string;
+        output: string;
+        isError?: boolean;
+      }> = [];
       for (const call of pendingToolCalls) {
         try {
           const tool = toolRegistry.get(call.name);
@@ -212,7 +216,13 @@ export class AnthropicStreamAdapter {
           });
         } catch (error) {
           const content = `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`;
-          await this.publishFunctionCallOutput(baseTrace, runId, call.callId, content, false);
+          await this.publishFunctionCallOutput(
+            baseTrace,
+            runId,
+            call.callId,
+            content,
+            false,
+          );
           toolResultsInline.push({
             toolUseId: call.toolUseId,
             output: content,
@@ -285,8 +295,8 @@ export class AnthropicStreamAdapter {
   }): Promise<{ finishReason: string | null }> {
     const {
       runId,
-      turnId,
-      threadId,
+      turnId: _turnId,
+      threadId: _threadId,
       baseTrace,
       conversationMessages,
       formattedTools,
@@ -548,7 +558,8 @@ export class AnthropicStreamAdapter {
               accumulator.content = [finalArgs];
               // Ensure we use the Anthropic tool_use block id if available
               const anthropicToolUseId = getString(blockInfo?.id);
-              accumulator.callId = anthropicToolUseId ?? accumulator.callId ?? itemId;
+              accumulator.callId =
+                anthropicToolUseId ?? accumulator.callId ?? itemId;
               const toolUseId = accumulator.callId;
               let input: unknown;
               try {
