@@ -717,12 +717,1512 @@ Cumulative thresholds: 10, 20, 40, 60, 110, 160, 210, 260, 360, 460, ...
 
 ---
 
+## Test Layer Architecture
+
+### Overview
+
+The UpsertStreamProcessor is tested using Bun's built-in test framework (`bun test`). Tests are service-mocked unit tests - they run in-process with no external dependencies (no Redis, no network). The processor is tested in isolation by mocking the `onEmit` callback.
+
+### Processor Lifecycle in Production
+
+In production, the adapter creates and manages the processor:
+
+1. Client submits prompt via API
+2. Adapter's `stream()` method is called
+3. Adapter creates new `UpsertStreamProcessor` instance with `onEmit` callback that writes to Redis Stream B
+4. Adapter calls provider API (OpenAI/Anthropic)
+5. As provider streams events, adapter transforms each to `StreamEvent` format
+6. Adapter calls `processor.processEvent(streamEvent)` for each event
+7. Processor buffers, batches, and calls `onEmit(StreamBMessage)` as thresholds are reached
+8. When provider stream completes, adapter calls `processor.destroy()`
+
+Key points:
+- **One processor instance per turn** - not a singleton
+- **Created by adapter** when turn starts
+- **Fed events sequentially** via `processEvent()`
+- **Outputs captured** via `onEmit` callback
+- **Destroyed** when turn ends
+
+### Test Strategy
+
+Tests simulate what the adapter does:
+
+1. Create processor with mock `onEmit` that captures emissions
+2. Feed `StreamEvent` objects one at a time (simulating adapter output)
+3. Capture `StreamBMessage` objects emitted via callback
+4. Assert captured outputs match expected fixtures
+
+Each test is scoped to **one turn**:
+- Starts with `response_start` event
+- Ends with `response_done` or `response_error` event
+- One processor instance created and destroyed per test
+
+No multi-turn tests needed - processor has no knowledge of previous or future turns.
+
+### Bun Test Framework
+
+Bun provides a Jest-compatible test runner with:
+- `describe()` for test suites
+- `test()` or `it()` for individual tests
+- `expect()` for assertions
+- `beforeEach()` / `afterEach()` for setup/teardown
+- Built-in TypeScript support (no compilation step)
+- Fast execution (native runtime)
+
+Test files: `*.test.ts` in `cody-fastify/src/core/upsert-stream-processor/__tests__/`
+
+Run tests: `bun test` from `cody-fastify/` directory
+
+### File Structure
+
+```
+cody-fastify/src/core/upsert-stream-processor/
+├── __tests__/
+│   ├── fixtures/
+│   │   ├── types.ts              # TestFixture interface
+│   │   ├── tc-01-simple-message.ts
+│   │   ├── tc-02-batching.ts
+│   │   ├── tc-03-user-message.ts
+│   │   ├── tc-04-reasoning.ts
+│   │   ├── tc-05-tool-call.ts
+│   │   ├── tc-06-multiple-tools.ts
+│   │   ├── tc-07-item-error.ts
+│   │   ├── tc-08-response-error.ts
+│   │   ├── tc-09-batch-timeout.ts
+│   │   ├── tc-10-gradient-progression.ts
+│   │   ├── tc-11-empty-content.ts
+│   │   ├── tc-12-flush-on-destroy.ts
+│   │   ├── tc-13-retry-success.ts
+│   │   └── tc-14-retry-exhausted.ts
+│   ├── helpers.ts                # Test utilities
+│   └── processor.test.ts         # Main test file
+├── index.ts
+├── types.ts
+├── processor.ts
+├── item-buffer.ts
+└── utils.ts
+```
+
+### Fixture Format
+
+```typescript
+// __tests__/fixtures/types.ts
+
+import type { StreamEvent } from '../../../schema.js';
+import type { StreamBMessage } from '../../types.js';
+
+export interface TestFixture {
+  /** Test case identifier (e.g., "TC-01") */
+  id: string;
+
+  /** Human-readable test name */
+  name: string;
+
+  /** Description of what this test verifies */
+  description: string;
+
+  /** Processor options overrides (optional) */
+  options?: {
+    batchGradient?: number[];
+    batchTimeoutMs?: number;
+    retryAttempts?: number;
+    retryBaseMs?: number;
+    retryMaxMs?: number;
+  };
+
+  /** Input: Array of StreamEvents to feed to processEvent() in order */
+  input: StreamEvent[];
+
+  /** Expected: Array of StreamBMessages that onEmit should receive */
+  expected: ExpectedMessage[];
+
+  /** For retry tests: configure onEmit behavior */
+  onEmitBehavior?: OnEmitBehavior;
+}
+
+export interface ExpectedMessage {
+  /** Payload type to verify */
+  payloadType: 'item_upsert' | 'turn_event';
+
+  /** Parsed payload to match against (partial matching supported) */
+  payload: Partial<UIUpsert | UITurnEvent>;
+}
+
+export type OnEmitBehavior =
+  | { type: 'success' }                          // Always succeed
+  | { type: 'fail_then_succeed'; failCount: number }  // Fail N times then succeed
+  | { type: 'always_fail' };                     // Always fail
+```
+
+### Test Helpers
+
+```typescript
+// __tests__/helpers.ts
+
+import { UpsertStreamProcessor } from '../processor.js';
+import type { StreamEvent } from '../../../schema.js';
+import type { StreamBMessage, UpsertStreamProcessorOptions } from '../types.js';
+import type { TestFixture, OnEmitBehavior } from './fixtures/types.js';
+
+/** Captured emission for assertions */
+export interface CapturedEmission {
+  message: StreamBMessage;
+  timestamp: number;
+}
+
+/** Result of running a test fixture */
+export interface TestResult {
+  emissions: CapturedEmission[];
+  errors: Error[];
+}
+
+/**
+ * Creates a mock onEmit function that captures emissions
+ */
+export function createMockOnEmit(
+  behavior: OnEmitBehavior = { type: 'success' }
+): {
+  onEmit: (message: StreamBMessage) => Promise<void>;
+  getEmissions: () => CapturedEmission[];
+  getCallCount: () => number;
+} {
+  const emissions: CapturedEmission[] = [];
+  let callCount = 0;
+  let failuresRemaining = behavior.type === 'fail_then_succeed' ? behavior.failCount : 0;
+
+  const onEmit = async (message: StreamBMessage): Promise<void> => {
+    callCount++;
+
+    if (behavior.type === 'always_fail') {
+      throw new Error('Mock Redis failure');
+    }
+
+    if (behavior.type === 'fail_then_succeed' && failuresRemaining > 0) {
+      failuresRemaining--;
+      throw new Error('Mock Redis failure');
+    }
+
+    emissions.push({
+      message,
+      timestamp: Date.now(),
+    });
+  };
+
+  return {
+    onEmit,
+    getEmissions: () => emissions,
+    getCallCount: () => callCount,
+  };
+}
+
+/**
+ * Runs a test fixture and returns results
+ */
+export async function runFixture(fixture: TestFixture): Promise<TestResult> {
+  const mock = createMockOnEmit(fixture.onEmitBehavior ?? { type: 'success' });
+  const errors: Error[] = [];
+
+  const processor = new UpsertStreamProcessor({
+    turnId: 'test-turn-id',
+    threadId: 'test-thread-id',
+    onEmit: mock.onEmit,
+    ...fixture.options,
+  });
+
+  try {
+    for (const event of fixture.input) {
+      try {
+        await processor.processEvent(event);
+      } catch (error) {
+        errors.push(error as Error);
+      }
+    }
+  } finally {
+    processor.destroy();
+  }
+
+  return {
+    emissions: mock.getEmissions(),
+    errors,
+  };
+}
+
+/**
+ * Parses payload from StreamBMessage for assertion
+ */
+export function parsePayload(message: StreamBMessage): UIUpsert | UITurnEvent {
+  return JSON.parse(message.payload);
+}
+
+/**
+ * Asserts emissions match expected, ignoring dynamic fields (eventId, timestamp)
+ */
+export function assertEmissionsMatch(
+  actual: CapturedEmission[],
+  expected: ExpectedMessage[]
+): void {
+  expect(actual.length).toBe(expected.length);
+
+  for (let i = 0; i < expected.length; i++) {
+    const actualMsg = actual[i].message;
+    const expectedMsg = expected[i];
+
+    // Check payload type
+    expect(actualMsg.payloadType).toBe(expectedMsg.payloadType);
+
+    // Parse and check payload (partial matching)
+    const actualPayload = parsePayload(actualMsg);
+    expect(actualPayload).toMatchObject(expectedMsg.payload);
+  }
+}
+```
+
+### Main Test File Structure
+
+```typescript
+// __tests__/processor.test.ts
+
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { runFixture, assertEmissionsMatch } from './helpers.js';
+
+// Import all fixtures
+import { tc01SimpleMessage } from './fixtures/tc-01-simple-message.js';
+import { tc02Batching } from './fixtures/tc-02-batching.js';
+// ... import all fixtures
+
+const fixtures = [
+  tc01SimpleMessage,
+  tc02Batching,
+  // ... all fixtures
+];
+
+describe('UpsertStreamProcessor', () => {
+
+  describe('Happy Path Tests', () => {
+
+    test('TC-01: Simple agent message', async () => {
+      const fixture = tc01SimpleMessage;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test('TC-02: Agent message with batching', async () => {
+      const fixture = tc02Batching;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    // ... tests for TC-03 through TC-06
+  });
+
+  describe('Error Handling Tests', () => {
+
+    test('TC-07: Item error mid-stream', async () => {
+      const fixture = tc07ItemError;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test('TC-08: Response error', async () => {
+      const fixture = tc08ResponseError;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+  });
+
+  describe('Batching Behavior Tests', () => {
+
+    test('TC-09: Batch timeout safety fallback', async () => {
+      // This test needs special handling for timing
+      const fixture = tc09BatchTimeout;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test('TC-10: Batch gradient progression', async () => {
+      const fixture = tc10GradientProgression;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+  });
+
+  describe('Edge Cases', () => {
+
+    test('TC-11: Empty content item', async () => {
+      const fixture = tc11EmptyContent;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test('TC-12: Flush on destroy', async () => {
+      // Special test - doesn't complete normally
+      const fixture = tc12FlushOnDestroy;
+      const result = await runFixture(fixture);
+
+      // Verify buffered content was flushed
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+  });
+
+  describe('Retry Logic Tests', () => {
+
+    test('TC-13: Redis emit retry succeeds', async () => {
+      const fixture = tc13RetrySuccess;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test('TC-14: Redis emit retry exhausted', async () => {
+      const fixture = tc14RetryExhausted;
+      const result = await runFixture(fixture);
+
+      // Should have error after retries exhausted
+      expect(result.errors.length).toBeGreaterThan(0);
+    });
+  });
+
+});
+```
+
+### Example Fixture
+
+```typescript
+// __tests__/fixtures/tc-01-simple-message.ts
+
+import type { TestFixture } from './types.js';
+import type { StreamEvent } from '../../../../schema.js';
+
+export const tc01SimpleMessage: TestFixture = {
+  id: 'TC-01',
+  name: 'Simple agent message',
+  description: 'Agent responds with a short message under one batch threshold',
+
+  input: [
+    // response_start
+    {
+      event_id: 'evt-1',
+      timestamp: 1000,
+      run_id: 'test-turn-id',
+      type: 'response_start',
+      payload: {
+        type: 'response_start',
+        response_id: 'test-turn-id',
+        turn_id: 'test-turn-id',
+        thread_id: 'test-thread-id',
+        model_id: 'claude-sonnet-4-20250514',
+        provider_id: 'anthropic',
+        created_at: 1000,
+      },
+    },
+    // item_start for message
+    {
+      event_id: 'evt-2',
+      timestamp: 1001,
+      run_id: 'test-turn-id',
+      type: 'item_start',
+      payload: {
+        type: 'item_start',
+        item_id: 'msg-1',
+        item_type: 'message',
+      },
+    },
+    // item_delta with content
+    {
+      event_id: 'evt-3',
+      timestamp: 1002,
+      run_id: 'test-turn-id',
+      type: 'item_delta',
+      payload: {
+        type: 'item_delta',
+        item_id: 'msg-1',
+        delta_content: 'Hello there!',
+      },
+    },
+    // item_done
+    {
+      event_id: 'evt-4',
+      timestamp: 1003,
+      run_id: 'test-turn-id',
+      type: 'item_done',
+      payload: {
+        type: 'item_done',
+        item_id: 'msg-1',
+        final_item: {
+          id: 'msg-1',
+          type: 'message',
+          content: 'Hello there!',
+          origin: 'agent',
+        },
+      },
+    },
+    // response_done
+    {
+      event_id: 'evt-5',
+      timestamp: 1004,
+      run_id: 'test-turn-id',
+      type: 'response_done',
+      payload: {
+        type: 'response_done',
+        response_id: 'test-turn-id',
+        status: 'complete',
+        usage: {
+          prompt_tokens: 10,
+          completion_tokens: 5,
+          total_tokens: 15,
+        },
+      },
+    },
+  ] as StreamEvent[],
+
+  expected: [
+    // turn_started
+    {
+      payloadType: 'turn_event',
+      payload: {
+        type: 'turn_started',
+        turnId: 'test-turn-id',
+        threadId: 'test-thread-id',
+        modelId: 'claude-sonnet-4-20250514',
+        providerId: 'anthropic',
+      },
+    },
+    // item_upsert created
+    {
+      payloadType: 'item_upsert',
+      payload: {
+        type: 'item_upsert',
+        itemType: 'message',
+        changeType: 'created',
+        content: 'Hello there!',
+        origin: 'agent',
+      },
+    },
+    // item_upsert completed
+    {
+      payloadType: 'item_upsert',
+      payload: {
+        type: 'item_upsert',
+        itemType: 'message',
+        changeType: 'completed',
+        content: 'Hello there!',
+        origin: 'agent',
+      },
+    },
+    // turn_completed
+    {
+      payloadType: 'turn_event',
+      payload: {
+        type: 'turn_completed',
+        turnId: 'test-turn-id',
+        threadId: 'test-thread-id',
+        status: 'complete',
+      },
+    },
+  ],
+};
+```
+
+### Test Execution Flow
+
+1. **Setup**: Create processor with mock onEmit
+2. **Execute**: Feed input events sequentially via `processEvent()`
+3. **Capture**: Mock onEmit collects all StreamBMessages
+4. **Teardown**: Call `processor.destroy()`
+5. **Assert**: Compare captured emissions against expected fixtures
+
+### Handling Special Cases
+
+**TC-09 (Batch Timeout)**: Need to simulate time passing. Options:
+- Use Bun's timer mocking if available
+- Use short timeout (10ms) in test fixture
+- Accept real-time delay in test
+
+**TC-12 (Flush on Destroy)**: Input doesn't include `response_done`. Processor should flush buffered content when `destroy()` is called.
+
+**TC-13/TC-14 (Retry)**: Use `onEmitBehavior` to configure mock failures. Need to account for retry delays in test timeout.
+
+### Running Tests
+
+```bash
+# From cody-fastify directory
+bun test
+
+# Run specific test file
+bun test src/core/upsert-stream-processor/__tests__/processor.test.ts
+
+# Run with verbose output
+bun test --verbose
+
+# Run specific test by name
+bun test --test-name-pattern "TC-01"
+```
+
+---
+
+## Detailed Test Fixture Specifications
+
+This section provides complete functional specifications for all 14 test cases. Each specification includes exact input data and expected output data. The engineer should use these to create the fixture files.
+
+**Common Test Constants:**
+
+All fixtures use these standard IDs unless otherwise specified:
+- `turnId`: "test-turn-00000000-0000-0000-0000-000000000001"
+- `threadId`: "test-thread-0000-0000-0000-0000-000000000001"
+- `trace_context`: `{ traceparent: "00-test-trace-id-000000000000000000-span-id-00000000-01" }`
+
+Event IDs follow pattern: `evt-{test-number}-{sequence}` (e.g., "evt-01-001")
+
+Timestamps start at 1000 and increment by 1 for each event.
+
+---
+
+### TC-01: Simple Agent Message
+
+**Purpose:** Verify basic flow - response starts, agent sends short message, response completes.
+
+**Processor Options:** Default (no overrides)
+
+**Input Events (5 events):**
+
+1. **response_start**
+   - event_id: "evt-01-001"
+   - timestamp: 1000
+   - run_id: {turnId}
+   - type: "response_start"
+   - payload:
+     - type: "response_start"
+     - response_id: {turnId}
+     - turn_id: {turnId}
+     - thread_id: {threadId}
+     - model_id: "claude-sonnet-4-20250514"
+     - provider_id: "anthropic"
+     - created_at: 1000
+
+2. **item_start** (message)
+   - event_id: "evt-01-002"
+   - timestamp: 1001
+   - run_id: {turnId}
+   - type: "item_start"
+   - payload:
+     - type: "item_start"
+     - item_id: "msg-01-001"
+     - item_type: "message"
+
+3. **item_delta**
+   - event_id: "evt-01-003"
+   - timestamp: 1002
+   - run_id: {turnId}
+   - type: "item_delta"
+   - payload:
+     - type: "item_delta"
+     - item_id: "msg-01-001"
+     - delta_content: "Hello there!" (12 chars = ~3 tokens, under 10 token threshold)
+
+4. **item_done**
+   - event_id: "evt-01-004"
+   - timestamp: 1003
+   - run_id: {turnId}
+   - type: "item_done"
+   - payload:
+     - type: "item_done"
+     - item_id: "msg-01-001"
+     - final_item:
+       - id: "msg-01-001"
+       - type: "message"
+       - content: "Hello there!"
+       - origin: "agent"
+
+5. **response_done**
+   - event_id: "evt-01-005"
+   - timestamp: 1004
+   - run_id: {turnId}
+   - type: "response_done"
+   - payload:
+     - type: "response_done"
+     - response_id: {turnId}
+     - status: "complete"
+     - usage: { prompt_tokens: 10, completion_tokens: 3, total_tokens: 13 }
+     - finish_reason: "end_turn"
+
+**Expected Outputs (4 emissions):**
+
+1. **turn_started** (turn_event)
+   - type: "turn_started"
+   - turnId: {turnId}
+   - threadId: {threadId}
+   - modelId: "claude-sonnet-4-20250514"
+   - providerId: "anthropic"
+
+2. **item_upsert** (created)
+   - type: "item_upsert"
+   - turnId: {turnId}
+   - threadId: {threadId}
+   - itemId: "msg-01-001"
+   - itemType: "message"
+   - changeType: "created"
+   - content: "Hello there!"
+   - origin: "agent"
+
+3. **item_upsert** (completed)
+   - type: "item_upsert"
+   - turnId: {turnId}
+   - threadId: {threadId}
+   - itemId: "msg-01-001"
+   - itemType: "message"
+   - changeType: "completed"
+   - content: "Hello there!"
+   - origin: "agent"
+
+4. **turn_completed** (turn_event)
+   - type: "turn_completed"
+   - turnId: {turnId}
+   - threadId: {threadId}
+   - status: "complete"
+   - usage: { promptTokens: 10, completionTokens: 3, totalTokens: 13 }
+
+---
+
+### TC-02: Agent Message With Batching
+
+**Purpose:** Verify batch gradient triggers "updated" emissions when token thresholds are crossed.
+
+**Processor Options:**
+- batchGradient: [10, 10, 20] (simplified for test - thresholds at 10, 20, 40 cumulative tokens)
+
+**Input Events (7 events):**
+
+1. **response_start** (same structure as TC-01)
+
+2. **item_start** (message)
+   - item_id: "msg-02-001"
+   - item_type: "message"
+
+3. **item_delta** #1
+   - item_id: "msg-02-001"
+   - delta_content: "This is the first part of a longer message. " (45 chars = ~11 tokens)
+   - Note: Crosses first threshold (10 tokens)
+
+4. **item_delta** #2
+   - item_id: "msg-02-001"
+   - delta_content: "Here is some more content that continues. " (42 chars = ~10 tokens)
+   - Note: Cumulative ~21 tokens, crosses second threshold (20)
+
+5. **item_delta** #3
+   - item_id: "msg-02-001"
+   - delta_content: "And finally the conclusion of this message." (43 chars = ~11 tokens)
+   - Note: Cumulative ~32 tokens, under third threshold (40)
+
+6. **item_done**
+   - item_id: "msg-02-001"
+   - final_item:
+     - content: "This is the first part of a longer message. Here is some more content that continues. And finally the conclusion of this message."
+     - origin: "agent"
+
+7. **response_done** (status: "complete")
+
+**Expected Outputs (6 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (created) - emitted after first delta crosses threshold
+   - changeType: "created"
+   - content: "This is the first part of a longer message. "
+
+3. **item_upsert** (updated) - emitted after second delta crosses next threshold
+   - changeType: "updated"
+   - content: "This is the first part of a longer message. Here is some more content that continues. "
+
+4. **item_upsert** (completed) - emitted on item_done
+   - changeType: "completed"
+   - content: "This is the first part of a longer message. Here is some more content that continues. And finally the conclusion of this message."
+
+5. **turn_completed**
+
+---
+
+### TC-03: User Message (Held Until Complete)
+
+**Purpose:** Verify user messages are held and only emitted once on item_done with correct origin.
+
+**Processor Options:** Default
+
+**Input Events (8 events):**
+
+1. **response_start** (provider: "anthropic")
+
+2. **item_start** (user message)
+   - item_id: "msg-03-001-user-prompt"
+   - item_type: "message"
+   - Note: item_id contains "user-prompt" pattern indicating this should be held
+
+3. **item_done** (user message)
+   - item_id: "msg-03-001-user-prompt"
+   - final_item:
+     - content: "What is the weather like today?"
+     - origin: "user"
+
+4. **item_start** (agent message)
+   - item_id: "msg-03-002"
+   - item_type: "message"
+
+5. **item_delta** (agent)
+   - item_id: "msg-03-002"
+   - delta_content: "I don't have access to weather data."
+
+6. **item_done** (agent)
+   - item_id: "msg-03-002"
+   - final_item:
+     - content: "I don't have access to weather data."
+     - origin: "agent"
+
+7. **response_done** (status: "complete")
+
+**Expected Outputs (5 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (user message - completed only, no created/updated)
+   - itemId: "msg-03-001-user-prompt"
+   - itemType: "message"
+   - changeType: "completed"
+   - content: "What is the weather like today?"
+   - origin: "user"
+
+3. **item_upsert** (agent created)
+   - itemId: "msg-03-002"
+   - changeType: "created"
+   - origin: "agent"
+
+4. **item_upsert** (agent completed)
+   - itemId: "msg-03-002"
+   - changeType: "completed"
+   - origin: "agent"
+
+5. **turn_completed**
+
+---
+
+### TC-04: Anthropic Reasoning Block
+
+**Purpose:** Verify reasoning/thinking blocks are emitted with providerId for UI filtering.
+
+**Processor Options:** Default
+
+**Input Events (10 events):**
+
+1. **response_start**
+   - provider_id: "anthropic"
+   - model_id: "claude-sonnet-4-20250514"
+
+2. **item_start** (reasoning)
+   - item_id: "reasoning-04-001"
+   - item_type: "reasoning"
+
+3. **item_delta** (reasoning) #1
+   - item_id: "reasoning-04-001"
+   - delta_content: "Let me think about this problem. " (33 chars = ~8 tokens)
+
+4. **item_delta** (reasoning) #2
+   - item_id: "reasoning-04-001"
+   - delta_content: "I should consider multiple factors here." (41 chars = ~10 tokens)
+
+5. **item_done** (reasoning)
+   - item_id: "reasoning-04-001"
+   - final_item:
+     - type: "reasoning"
+     - content: "Let me think about this problem. I should consider multiple factors here."
+     - origin: "agent"
+
+6. **item_start** (message)
+   - item_id: "msg-04-001"
+   - item_type: "message"
+
+7. **item_delta** (message)
+   - item_id: "msg-04-001"
+   - delta_content: "Based on my analysis, the answer is 42."
+
+8. **item_done** (message)
+   - item_id: "msg-04-001"
+   - final_item:
+     - content: "Based on my analysis, the answer is 42."
+     - origin: "agent"
+
+9. **response_done** (status: "complete")
+
+**Expected Outputs (7 emissions):**
+
+1. **turn_started**
+   - providerId: "anthropic"
+
+2. **item_upsert** (reasoning created)
+   - itemType: "reasoning"
+   - changeType: "created"
+   - content: "Let me think about this problem. "
+   - providerId: "anthropic"
+
+3. **item_upsert** (reasoning updated) - after second delta crosses threshold
+   - itemType: "reasoning"
+   - changeType: "updated"
+   - content: "Let me think about this problem. I should consider multiple factors here."
+   - providerId: "anthropic"
+
+4. **item_upsert** (reasoning completed)
+   - itemType: "reasoning"
+   - changeType: "completed"
+   - providerId: "anthropic"
+
+5. **item_upsert** (message created)
+   - itemType: "message"
+   - changeType: "created"
+   - origin: "agent"
+
+6. **item_upsert** (message completed)
+   - itemType: "message"
+   - changeType: "completed"
+   - origin: "agent"
+
+7. **turn_completed**
+
+---
+
+### TC-05: Tool Call and Output
+
+**Purpose:** Verify function_call and function_call_output are transformed to tool_call and tool_output with parsed arguments.
+
+**Processor Options:** Default
+
+**Input Events (9 events):**
+
+1. **response_start** (provider: "anthropic")
+
+2. **item_start** (function_call)
+   - item_id: "fc-05-001"
+   - item_type: "function_call"
+   - name: "read_file"
+
+3. **item_done** (function_call)
+   - item_id: "fc-05-001"
+   - final_item:
+     - type: "function_call"
+     - name: "read_file"
+     - arguments: '{"path": "/tmp/test.txt", "encoding": "utf-8"}'
+     - call_id: "call-05-001"
+     - origin: "agent"
+
+4. **item_start** (function_call_output)
+   - item_id: "fco-05-001"
+   - item_type: "function_call_output"
+
+5. **item_done** (function_call_output)
+   - item_id: "fco-05-001"
+   - final_item:
+     - type: "function_call_output"
+     - call_id: "call-05-001"
+     - output: '{"content": "Hello from file!", "bytes": 17}'
+     - success: true
+     - origin: "system"
+
+6. **item_start** (message)
+   - item_id: "msg-05-001"
+   - item_type: "message"
+
+7. **item_delta** (message)
+   - delta_content: "The file contains: Hello from file!"
+
+8. **item_done** (message)
+   - final_item with origin: "agent"
+
+9. **response_done** (status: "complete")
+
+**Expected Outputs (6 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (tool_call)
+   - itemType: "tool_call"
+   - changeType: "completed"
+   - content: "" (empty - tool calls don't have streaming content)
+   - toolName: "read_file"
+   - toolArguments: { path: "/tmp/test.txt", encoding: "utf-8" } (parsed object, not string)
+   - callId: "call-05-001"
+
+3. **item_upsert** (tool_output)
+   - itemType: "tool_output"
+   - changeType: "completed"
+   - content: "" (empty)
+   - callId: "call-05-001"
+   - toolOutput: { content: "Hello from file!", bytes: 17 } (parsed object)
+   - success: true
+
+4. **item_upsert** (message created)
+
+5. **item_upsert** (message completed)
+
+6. **turn_completed**
+
+---
+
+### TC-06: Multiple Tool Calls in Sequence
+
+**Purpose:** Verify multiple tool calls are processed correctly in sequence.
+
+**Processor Options:** Default
+
+**Input Events (15 events):**
+
+1. **response_start**
+
+2. **item_start** (function_call #1)
+   - item_id: "fc-06-001"
+   - item_type: "function_call"
+   - name: "list_files"
+
+3. **item_done** (function_call #1)
+   - arguments: '{"directory": "/home/user"}'
+   - call_id: "call-06-001"
+
+4. **item_start** (function_call_output #1)
+
+5. **item_done** (function_call_output #1)
+   - call_id: "call-06-001"
+   - output: '{"files": ["doc.txt", "image.png"]}'
+   - success: true
+
+6. **item_start** (function_call #2)
+   - item_id: "fc-06-002"
+   - item_type: "function_call"
+   - name: "read_file"
+
+7. **item_done** (function_call #2)
+   - arguments: '{"path": "/home/user/doc.txt"}'
+   - call_id: "call-06-002"
+
+8. **item_start** (function_call_output #2)
+
+9. **item_done** (function_call_output #2)
+   - call_id: "call-06-002"
+   - output: '{"content": "Document contents here"}'
+   - success: true
+
+10. **item_start** (message)
+
+11. **item_delta** (message)
+    - delta_content: "I found 2 files and read doc.txt for you."
+
+12. **item_done** (message)
+
+13. **response_done**
+
+**Expected Outputs (8 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (tool_call #1)
+   - toolName: "list_files"
+   - callId: "call-06-001"
+
+3. **item_upsert** (tool_output #1)
+   - callId: "call-06-001"
+   - success: true
+
+4. **item_upsert** (tool_call #2)
+   - toolName: "read_file"
+   - callId: "call-06-002"
+
+5. **item_upsert** (tool_output #2)
+   - callId: "call-06-002"
+   - success: true
+
+6. **item_upsert** (message created)
+
+7. **item_upsert** (message completed)
+
+8. **turn_completed**
+
+---
+
+### TC-07: Item Error Mid-Stream
+
+**Purpose:** Verify item_error events produce error upserts and don't prevent turn completion.
+
+**Processor Options:** Default
+
+**Input Events (7 events):**
+
+1. **response_start**
+
+2. **item_start** (message)
+   - item_id: "msg-07-001"
+   - item_type: "message"
+
+3. **item_delta**
+   - item_id: "msg-07-001"
+   - delta_content: "I was starting to respond but"
+
+4. **item_error**
+   - item_id: "msg-07-001"
+   - error:
+     - code: "CONTENT_FILTER"
+     - message: "Response blocked by content filter"
+
+5. **response_done**
+   - status: "error"
+   - finish_reason: "content_filter"
+
+**Expected Outputs (4 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (message created - partial content before error)
+   - itemType: "message"
+   - changeType: "created"
+   - content: "I was starting to respond but"
+
+3. **item_upsert** (error)
+   - itemType: "error"
+   - changeType: "completed"
+   - content: "" (empty)
+   - errorCode: "CONTENT_FILTER"
+   - errorMessage: "Response blocked by content filter"
+
+4. **turn_completed**
+   - status: "error"
+
+---
+
+### TC-08: Response Error
+
+**Purpose:** Verify response_error events produce turn_error and no turn_completed.
+
+**Processor Options:** Default
+
+**Input Events (2 events):**
+
+1. **response_start**
+
+2. **response_error**
+   - response_id: {turnId}
+   - error:
+     - code: "RATE_LIMIT_EXCEEDED"
+     - message: "Too many requests. Please retry after 60 seconds."
+
+**Expected Outputs (2 emissions):**
+
+1. **turn_started**
+
+2. **turn_error** (turn_event)
+   - type: "turn_error"
+   - turnId: {turnId}
+   - threadId: {threadId}
+   - error:
+     - code: "RATE_LIMIT_EXCEEDED"
+     - message: "Too many requests. Please retry after 60 seconds."
+
+Note: No turn_completed is emitted when response_error occurs.
+
+---
+
+### TC-09: Batch Timeout Safety Fallback
+
+**Purpose:** Verify batch timeout forces emission of buffered content when stream stalls.
+
+**Processor Options:**
+- batchTimeoutMs: 50 (short timeout for testing)
+- batchGradient: [100] (high threshold so we don't hit it naturally)
+
+**Input Events (5 events with timing gaps):**
+
+1. **response_start**
+
+2. **item_start** (message)
+   - item_id: "msg-09-001"
+
+3. **item_delta** #1 (at t=1002)
+   - delta_content: "First chunk. " (13 chars = ~3 tokens)
+   - Note: Under 100 token threshold, starts timeout timer
+
+4. **(wait 60ms - timeout fires, forcing emit)**
+
+5. **item_delta** #2 (at t=1063)
+   - delta_content: "Second chunk after delay."
+   - Note: Arrives after timeout fired
+
+6. **item_done**
+
+7. **response_done**
+
+**Test Implementation Note:**
+This test requires actual timing. The test runner must:
+- Send events 1-3
+- Wait > 50ms
+- Send events 4-6
+- Or use Bun's timer mocking if available
+
+**Expected Outputs (5 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (created - emitted when timeout fires)
+   - changeType: "created"
+   - content: "First chunk. "
+
+3. **item_upsert** (updated - emitted on second delta or timeout)
+   - changeType: "updated"
+   - content: "First chunk. Second chunk after delay."
+
+4. **item_upsert** (completed)
+   - changeType: "completed"
+
+5. **turn_completed**
+
+---
+
+### TC-10: Batch Gradient Progression
+
+**Purpose:** Verify emissions occur at correct cumulative token thresholds following the gradient.
+
+**Processor Options:**
+- batchGradient: [10, 10, 20, 20, 50] (cumulative thresholds: 10, 20, 40, 60, 110)
+
+**Input Events (8 events):**
+
+1. **response_start**
+
+2. **item_start** (message)
+   - item_id: "msg-10-001"
+
+3. **item_delta** #1
+   - delta_content: 44-character string = ~11 tokens
+   - Example: "This is exactly forty-four characters long!!"
+   - Cumulative: ~11 tokens → crosses threshold 1 (10)
+
+4. **item_delta** #2
+   - delta_content: 40-character string = ~10 tokens
+   - Example: "Adding more content to reach next level."
+   - Cumulative: ~21 tokens → crosses threshold 2 (20)
+
+5. **item_delta** #3
+   - delta_content: 80-character string = ~20 tokens
+   - Example: "This is a longer chunk of content that should push us past the third threshold point."
+   - Cumulative: ~41 tokens → crosses threshold 3 (40)
+
+6. **item_delta** #4
+   - delta_content: 80-character string = ~20 tokens
+   - Cumulative: ~61 tokens → crosses threshold 4 (60)
+
+7. **item_delta** #5
+   - delta_content: 40-character string = ~10 tokens
+   - Cumulative: ~71 tokens → under threshold 5 (110), no emit until done
+
+8. **item_done**
+
+9. **response_done**
+
+**Expected Outputs (7 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (created) - at ~11 tokens (crossed 10)
+   - changeType: "created"
+   - batchIndex should be 0 → 1
+
+3. **item_upsert** (updated) - at ~21 tokens (crossed 20)
+   - changeType: "updated"
+   - batchIndex should be 1 → 2
+
+4. **item_upsert** (updated) - at ~41 tokens (crossed 40)
+   - changeType: "updated"
+   - batchIndex should be 2 → 3
+
+5. **item_upsert** (updated) - at ~61 tokens (crossed 60)
+   - changeType: "updated"
+   - batchIndex should be 3 → 4
+
+6. **item_upsert** (completed) - on item_done
+   - changeType: "completed"
+   - Full accumulated content
+
+7. **turn_completed**
+
+---
+
+### TC-11: Empty Content Item
+
+**Purpose:** Verify items with no content are handled gracefully.
+
+**Processor Options:** Default
+
+**Input Events (5 events):**
+
+1. **response_start**
+
+2. **item_start** (message)
+   - item_id: "msg-11-001"
+   - item_type: "message"
+   - Note: No initial_content
+
+3. **item_done** (no deltas received)
+   - item_id: "msg-11-001"
+   - final_item:
+     - content: ""
+     - origin: "agent"
+
+4. **response_done**
+
+**Expected Outputs (3 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (completed only - no created since no content)
+   - itemType: "message"
+   - changeType: "completed"
+   - content: ""
+   - origin: "agent"
+
+3. **turn_completed**
+
+Note: No "created" emission because there was no content to trigger it.
+
+---
+
+### TC-12: Flush on Destroy
+
+**Purpose:** Verify buffered content is flushed when destroy() is called without response_done.
+
+**Processor Options:** Default
+
+**Input Events (4 events - incomplete sequence):**
+
+1. **response_start**
+
+2. **item_start** (message)
+   - item_id: "msg-12-001"
+
+3. **item_delta**
+   - delta_content: "This content is buffered but never completed..."
+
+4. **(No item_done, no response_done - destroy() called)**
+
+**Test Implementation Note:**
+The test must call `processor.destroy()` after processing event 3 (or have the harness call it automatically). The processor should flush buffered content.
+
+**Expected Outputs (3 emissions):**
+
+1. **turn_started**
+
+2. **item_upsert** (created - from initial delta)
+   - changeType: "created"
+   - content: "This content is buffered but never completed..."
+
+3. **item_upsert** (flushed on destroy - emitted as "updated" or however flush handles incomplete items)
+   - changeType: "updated" (or possibly "completed" depending on implementation)
+   - content: "This content is buffered but never completed..."
+
+Note: No turn_completed because response_done never received.
+
+---
+
+### TC-13: Redis Emit Retry Success
+
+**Purpose:** Verify retry logic recovers from transient failures.
+
+**Processor Options:**
+- retryAttempts: 3
+- retryBaseMs: 10 (short for testing)
+- retryMaxMs: 100
+
+**onEmit Behavior:** fail_then_succeed with failCount: 2
+
+**Input Events (3 events):**
+
+1. **response_start**
+
+2. **item_start** (message)
+   - item_id: "msg-13-001"
+
+3. **item_delta**
+   - delta_content: "Test message"
+
+4. **item_done**
+
+5. **response_done**
+
+**Test Implementation Note:**
+Configure mock onEmit to:
+- Fail on calls 1 and 2 (throw Error)
+- Succeed on call 3 and onward
+
+**Expected Behavior:**
+- First emit (turn_started) fails twice, succeeds on third attempt
+- Subsequent emits succeed on first attempt
+- No errors propagated to test
+
+**Expected Outputs (4 emissions, all eventually succeed):**
+
+1. **turn_started** (after 2 retries)
+2. **item_upsert** (created)
+3. **item_upsert** (completed)
+4. **turn_completed**
+
+**Expected Errors:** None (retries succeed)
+
+---
+
+### TC-14: Redis Emit Retry Exhausted
+
+**Purpose:** Verify error is thrown when all retry attempts fail.
+
+**Processor Options:**
+- retryAttempts: 3
+- retryBaseMs: 10
+- retryMaxMs: 100
+
+**onEmit Behavior:** always_fail
+
+**Input Events (2 events):**
+
+1. **response_start**
+
+(Processing should fail during response_start emit)
+
+**Test Implementation Note:**
+Configure mock onEmit to always throw Error("Mock Redis failure").
+
+**Expected Behavior:**
+- Attempt 1: fail, wait 10ms
+- Attempt 2: fail, wait 20ms
+- Attempt 3: fail, wait 40ms
+- Attempt 4: fail → throw error
+
+Total of 4 attempts (initial + 3 retries).
+
+**Expected Outputs:** 0 emissions (none succeed)
+
+**Expected Errors:** 1 error with message indicating retry exhaustion
+
+---
+
+## Test Data Generation Notes
+
+### Character-to-Token Estimation
+
+Use `chars / 4` as the token estimate. For precise control in tests:
+- 10 tokens ≈ 40 characters
+- 20 tokens ≈ 80 characters
+- 50 tokens ≈ 200 characters
+- 100 tokens ≈ 400 characters
+
+### Generating Test Content
+
+When creating delta content strings, use predictable patterns:
+- Exact character counts for precise threshold testing
+- Readable content for debugging
+- Example: "X".repeat(40) for exactly 10 tokens
+
+### UUID Patterns for Test Data
+
+Use recognizable patterns for debugging:
+- turnId: "test-turn-00000000-0000-0000-0000-000000000001"
+- threadId: "test-thread-0000-0000-0000-0000-000000000001"
+- item_id: "msg-{tc}-{seq}" (e.g., "msg-01-001")
+- call_id: "call-{tc}-{seq}" (e.g., "call-05-001")
+- event_id: "evt-{tc}-{seq}" (e.g., "evt-01-001")
+
+### Timing in Tests
+
+For TC-09 (timeout test):
+- Option A: Use actual delays with short timeout (50ms)
+- Option B: Use Bun's `mock.module()` to mock timers
+- Option C: Expose timer trigger method for testing
+
+For TC-13/TC-14 (retry tests):
+- Use short retry delays (10ms base) to keep tests fast
+- Total worst-case delay: 10 + 20 + 40 = 70ms for 3 retries
+
+---
+
+## Implementation Requirements
+
+### Success Criteria
+
+**CRITICAL: All tests MUST fail when run against the skeleton.**
+
+The skeleton methods throw `NotImplementedError`. This is intentional. The tests must:
+
+1. Execute without syntax/import errors
+2. Call the processor methods
+3. Fail because `NotImplementedError` is thrown
+4. Report the failure clearly
+
+**DO NOT:**
+- Skip tests because they fail
+- Comment out tests
+- Add try/catch to swallow NotImplementedError
+- Modify the skeleton to make tests pass
+
+**DO:**
+- Run `bun test` and verify all 14 tests fail
+- Verify each test fails with `NotImplementedError` (not import errors, not type errors)
+- Leave all tests active and failing
+
+### Verification Steps
+
+After implementing the test harness:
+
+1. Run `bun test` from `cody-fastify/` directory
+2. Confirm output shows 14 test cases
+3. Confirm all 14 tests FAIL
+4. Confirm failures are due to `NotImplementedError` from processor methods
+5. Confirm no tests are skipped or commented out
+
+Example expected output:
+```
+✗ TC-01: Simple agent message
+  NotImplementedError: processEvent is not yet implemented
+
+✗ TC-02: Agent message with batching
+  NotImplementedError: processEvent is not yet implemented
+
+... (all 14 tests failing with NotImplementedError)
+
+14 tests, 0 passed, 14 failed
+```
+
+### Why This Matters
+
+This is TDD (Test-Driven Development):
+1. **Red**: Write tests that fail (this slice)
+2. **Green**: Implement code until tests pass (next slice)
+3. **Refactor**: Clean up while keeping tests green
+
+If tests don't fail initially, we can't verify they're actually testing the right thing. A test that passes against unimplemented code is a broken test.
+
+---
+
 ## Next Steps
 
 1. Build TDD test harness for UpsertStreamProcessor
-2. Create mock fixtures for all test cases
-3. Wire up tests against skeleton (all should fail with NotImplementedError)
-4. Implement methods until all tests pass
+2. Create mock fixtures for all 14 test cases
+3. Wire up tests against skeleton
+4. Run tests and verify ALL 14 FAIL with NotImplementedError
+5. Commit the failing tests (this is correct TDD practice)
+6. (Next slice) Implement methods until all tests pass
 
 ---
 

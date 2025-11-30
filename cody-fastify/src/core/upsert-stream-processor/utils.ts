@@ -19,6 +19,22 @@ export class NotImplementedError extends Error {
 }
 
 // ---------------------------------------------------------------------------
+// RetryExhaustedError
+// ---------------------------------------------------------------------------
+
+/**
+ * Error thrown when all retry attempts have been exhausted.
+ */
+export class RetryExhaustedError extends Error {
+  constructor(attempts: number, lastError: Error) {
+    super(
+      `All ${attempts} retry attempts exhausted. Last error: ${lastError.message}`,
+    );
+    this.name = "RetryExhaustedError";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Token estimation
 // ---------------------------------------------------------------------------
 

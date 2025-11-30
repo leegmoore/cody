@@ -37,5 +37,6 @@ export {
   generateEventId,
   NotImplementedError,
   parseJsonSafe,
+  RetryExhaustedError,
   sleep,
 } from "./utils.js";
