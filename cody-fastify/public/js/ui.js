@@ -3,6 +3,7 @@ import {
     escapeHtml, formatToolCallSignature, formatToolCallJson, 
     normalizeRunId 
 } from './utils.js';
+import { thinkingCards } from './thinking-card.js';
 
 export function scrollToBottom() {
     const chatHistory = document.getElementById('chatHistory');
@@ -92,8 +93,7 @@ export function resetToolCallState(options = {}) {
         });
         state.toolCallTimelines.clear();
         state.toolCallSequence = 0;
-        state.thinkingBlocks.clear();
-        state.activeThinkingId = null;
+        thinkingCards.clear();
     }
     state.toolCallModalCallId = null;
     closeToolCallModal(true);
@@ -386,162 +386,6 @@ export function mapToolStatus(status) {
     return 'completed';
 }
 
-function ensureThinkingBlock(thinkingId) {
-    if (!thinkingId) {
-        return null;
-    }
-
-    let block = state.thinkingBlocks.get(thinkingId);
-    if (block && block.wrapper && !document.body.contains(block.wrapper)) {
-        state.thinkingBlocks.delete(thinkingId);
-        block = null;
-    }
-
-    if (!block) {
-        block = createThinkingBlock(thinkingId);
-        if (block) {
-            state.thinkingBlocks.set(thinkingId, block);
-        }
-    }
-
-    return block;
-}
-
-function createThinkingBlock(thinkingId) {
-    const chatHistory = document.getElementById('chatHistory');
-    if (!chatHistory) return null;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'flex justify-start thinking-message animate-fade-in';
-    wrapper.dataset.thinkingId = thinkingId;
-    wrapper.innerHTML = `
-        <div class="thinking-card" data-thinking-id="${thinkingId}" role="status" aria-live="polite">
-            <div class="thinking-card-header">
-                <div class="thinking-card-title">
-                    <svg class="w-4 h-4 mr-1 text-orange-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                    </svg>
-                    <span class="text-xs font-semibold tracking-wide uppercase text-brown-700">Thinking</span>
-                </div>
-                <span class="thinking-status text-xs font-semibold text-shimmer">Streaming</span>
-            </div>
-            <div class="thinking-content text-sm text-brown-900 font-mono whitespace-pre-wrap" data-expanded="false"></div>
-            <div class="thinking-card-footer">
-                <span class="thinking-hint text-[11px] font-semibold text-brown-600">Click to expand</span>
-                <svg class="thinking-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"></path>
-                </svg>
-            </div>
-        </div>
-    `;
-
-    const card = wrapper.querySelector('.thinking-card');
-    const content = wrapper.querySelector('.thinking-content');
-    const status = wrapper.querySelector('.thinking-status');
-    const chevron = wrapper.querySelector('.thinking-chevron');
-
-    card?.addEventListener('click', () => {
-        const selection = typeof window.getSelection === 'function' ? window.getSelection() : null;
-        if (selection && selection.toString().length) {
-            return;
-        }
-        toggleThinkingExpansion(card, content, chevron);
-    });
-
-    chatHistory.appendChild(wrapper);
-    scrollToBottom();
-
-    return { wrapper, card, content, status, chevron, text: '' };
-}
-
-function toggleThinkingExpansion(card, content, chevron) {
-    if (!content || !card) return;
-    const expanded = content.getAttribute('data-expanded') === 'true';
-    const next = expanded ? 'false' : 'true';
-    content.setAttribute('data-expanded', next);
-    card.classList.toggle('expanded', next === 'true');
-    if (chevron) {
-        chevron.classList.toggle('rotated', next === 'true');
-    }
-}
-
-function resolveThinkingId(preferred) {
-    return preferred || state.activeThinkingId || null;
-}
-
-function updateThinkingContent(block, text) {
-    if (!block || !block.content) return;
-    block.text = text;
-    block.content.textContent = text;
-    scrollToBottom();
-}
-
-export function handleThinkingStarted(data = {}) {
-    const thinkingId = data.thinkingId || `thinking-${Date.now()}`;
-    state.activeThinkingId = thinkingId;
-
-    const block = ensureThinkingBlock(thinkingId);
-    if (!block) return;
-
-    if (block.content) {
-        block.content.textContent = '';
-        block.content.setAttribute('data-expanded', 'false');
-    }
-
-    block.text = '';
-
-    if (block.card) {
-        block.card.classList.remove('completed');
-        block.card.classList.remove('expanded');
-        block.card.classList.add('active');
-    }
-
-    if (block.status) {
-        block.status.textContent = 'Thinking';
-        block.status.classList.add('text-shimmer');
-    }
-}
-
-export function handleThinkingDelta(data = {}) {
-    const thinkingId = resolveThinkingId(data.thinkingId);
-    if (!thinkingId) {
-        return;
-    }
-    const block = ensureThinkingBlock(thinkingId);
-    if (!block) {
-        return;
-    }
-
-    const delta = data.delta || data.text || '';
-    if (!delta) return;
-
-    const nextText = (block.text || '') + delta;
-    updateThinkingContent(block, nextText);
-}
-
-export function handleThinkingCompleted(data = {}) {
-    const thinkingId = resolveThinkingId(data.thinkingId);
-    if (!thinkingId) {
-        return;
-    }
-    const block = ensureThinkingBlock(thinkingId);
-    if (!block) {
-        return;
-    }
-
-    const finalText = data.text || block.text || '';
-    updateThinkingContent(block, finalText);
-
-    if (block.card) {
-        block.card.classList.remove('active');
-        block.card.classList.add('completed');
-    }
-    if (block.status) {
-        block.status.textContent = 'Finished';
-        block.status.classList.remove('text-shimmer');
-    }
-    state.activeThinkingId = null;
-}
 
 export function showThinkingPlaceholder() {
     const chatHistory = document.getElementById('chatHistory');
@@ -551,7 +395,7 @@ export function showThinkingPlaceholder() {
     thinkingPlaceholder.id = 'temp-thinking-placeholder';
     thinkingPlaceholder.className = 'flex justify-start mt-1 mb-2 animate-fade-in';
     thinkingPlaceholder.innerHTML = `
-        <div class="status-shimmer ml-2">Doing important ai stuff...</div>
+        <div class="status-shimmer ml-2">Doing AI Stuff...</div>
     `;
     chatHistory.appendChild(thinkingPlaceholder);
     scrollToBottom();
@@ -595,6 +439,7 @@ export function addUserMessage(text, options = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex justify-end animate-fade-in';
     messageDiv.dataset.itemId = messageId;
+    messageDiv.dataset.origin = 'user';
     messageDiv.innerHTML = `
         <div class="max-w-3xl">
             <div class="bg-orange-600 text-white rounded-lg px-4 py-3 shadow">
@@ -622,6 +467,7 @@ export function addAgentMessage(text, options = {}) {
     
     const messageDiv = document.createElement('div');
     messageDiv.id = messageId;
+    messageDiv.dataset.origin = 'agent';
     messageDiv.className = 'flex justify-start animate-fade-in';
     messageDiv.dataset.itemId = messageId;
     messageDiv.innerHTML = `
@@ -723,15 +569,12 @@ export function addThinkingHistoryMessage(text) {
         </div>
     `;
 
-    const card = wrapper.querySelector('.thinking-card');
     const content = wrapper.querySelector('.thinking-content');
-    const chevron = wrapper.querySelector('.thinking-chevron');
     if (content) {
         content.textContent = text;
     }
-    if (card) {
-        card.addEventListener('click', () => toggleThinkingExpansion(card, content, chevron));
-    }
+    // Note: This function uses legacy CSS classes that were removed
+    // Expand/collapse functionality removed - consider migrating to ThinkingCard system
     chatHistory.appendChild(wrapper);
     scrollToBottom();
 }
@@ -827,12 +670,44 @@ export function toggleRightSidebar() {
 
 export function renderResponseItems(items = [], context = {}) {
     items.forEach((item) => {
+        // Skip if already rendered (prevent duplicate renders)
+        // Check by looking for the element in the DOM with matching data-item-id
+        const existing = getRenderedElement(item.id);
+        if (existing) {
+            // Item is already rendered - just update content if needed
+            if (item.type === 'message') {
+                const content = existing.querySelector('.message-content');
+                if (content && content.textContent !== item.content) {
+                    content.textContent = item.content;
+                }
+            }
+            // Skip rendering - already exists
+            return;
+        }
+        
         switch (item.type) {
             case 'message':
                 renderMessageItem(item, context);
                 break;
             case 'reasoning':
-                renderReasoningItem(item);
+                // Only create thinking cards from persisted data (when loading thread history)
+                // During live streaming, handleThinkingEvent in stream.js manages cards
+                // Check if this is from persistence (no live streaming context)
+                const isFromPersistence = context.status === 'complete' || !state.eventSource;
+                if (isFromPersistence) {
+                    // Create card from persisted reasoning item
+                    thinkingCards.create(item.id, context.runId);
+                    const card = thinkingCards.get(item.id);
+                    if (card && item.content) {
+                        // Set the complete content (it's already complete when loading from persistence)
+                        card.content = item.content;
+                        if (card.contentEl) {
+                            card.contentEl.textContent = item.content;
+                        }
+                        card.complete();
+                    }
+                }
+                // During live streaming, ignore reasoning items here - handleThinkingEvent handles them
                 break;
             case 'function_call':
                 renderFunctionCallItem(item, context);
@@ -867,6 +742,13 @@ function updateMessageContent(elementId, text) {
 
 function renderMessageItem(item, context) {
     const origin = item.origin || 'agent';
+    
+    // Skip rendering user messages that haven't been finalized yet (they'll have "agent" origin temporarily)
+    // User messages have IDs like "${runId}-user-prompt"
+    if (origin === 'agent' && item.id && item.id.includes('-user-prompt')) {
+        return;
+    }
+    
     if (origin === 'agent' && (!item.content || item.content.length === 0)) {
         return;
     }
@@ -877,30 +759,65 @@ function renderMessageItem(item, context) {
         state.runAgentAnchors.delete(runId);
     }
     if (existing) {
-        const content = existing.querySelector('.message-content');
-        if (content && content.textContent !== item.content) {
-            content.textContent = item.content;
-            scrollToBottom();
+        // Check if origin changed - if so, we need to re-render
+        const existingOrigin = existing.dataset.origin || 'agent';
+        if (existingOrigin !== origin) {
+            // Origin changed - remove old element and re-render
+            existing.remove();
+            // Clear from rendered items map
+            state.renderedItems.delete(item.id);
+        } else {
+            // Same origin - just update content
+            const content = existing.querySelector('.message-content');
+            if (content && content.textContent !== item.content) {
+                content.textContent = item.content;
+                scrollToBottom();
+            }
+            if (origin === 'agent' && runId) {
+                state.runAgentAnchors.set(runId, {
+                    itemId: item.id,
+                    elementId: existing.id,
+                });
+            }
+            return;
         }
-        if (origin === 'agent' && runId) {
-            state.runAgentAnchors.set(runId, {
-                itemId: item.id,
-                elementId: existing.id,
-            });
-        }
-        return;
     }
 
     if (origin === 'user') {
+        // Check if this item is already rendered
+        if (existing) {
+            // Already rendered - just update content if needed
+            const content = existing.querySelector('.message-content');
+            if (content && content.textContent !== item.content) {
+                content.textContent = item.content;
+            }
+            return;
+        }
+        
+        // Check if there's a pending user message for this run
+        // Match by runId - the pending message should have been updated with the runId when the stream started
         const pendingIndex = state.pendingUserMessages.findIndex(
             (entry) => entry.runId === context.runId,
         );
         if (pendingIndex >= 0) {
             const pending = state.pendingUserMessages.splice(pendingIndex, 1)[0];
+            // Update the element's data-item-id to match the stream item ID
+            const element = document.getElementById(pending.elementId);
+            if (element) {
+                // Remove old itemId from renderedItems if it was registered
+                const oldItemId = element.dataset.itemId;
+                if (oldItemId && state.renderedItems.has(oldItemId)) {
+                    state.renderedItems.delete(oldItemId);
+                }
+                // Update to new item ID
+                element.dataset.itemId = item.id;
+            }
             registerRenderedItem(item.id, pending.elementId);
             updateMessageContent(pending.elementId, item.content);
             return;
         }
+        
+        // No pending message - create new one (this happens when loading from persistence)
         const elementId = addUserMessage(item.content, { itemId: item.id });
         registerRenderedItem(item.id, elementId);
         return;
@@ -926,37 +843,6 @@ function renderMessageItem(item, context) {
     }
 }
 
-function renderReasoningItem(item) {
-    const existing = state.thinkingBlocks.get(item.id);
-    if (existing) {
-        const content = existing.querySelector('.thinking-content');
-        if (content) {
-            content.textContent = item.content;
-        }
-        return;
-    }
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'flex justify-start reasoning-message animate-fade-in';
-    wrapper.dataset.thinkingId = item.id;
-    wrapper.innerHTML = `
-        <div class="max-w-3xl w-full">
-            <div class="bg-tan-200 border-l-4 border-tan-400 rounded-r-lg px-4 py-3 shadow-sm my-2">
-                <div class="flex items-center mb-1">
-                    <svg class="w-4 h-4 mr-2 text-tan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                    </svg>
-                    <span class="text-xs font-bold uppercase tracking-wide text-tan-700">Reasoning</span>
-                </div>
-                <div class="thinking-content text-sm text-brown-800 font-mono whitespace-pre-wrap">${escapeHtml(item.content)}</div>
-            </div>
-        </div>
-    `;
-    const chatHistory = document.getElementById('chatHistory');
-    chatHistory.appendChild(wrapper);
-    state.thinkingBlocks.set(item.id, wrapper);
-    scrollToBottom();
-}
 
 function renderFunctionCallItem(item, context) {
     const args = safeJson(item.arguments);

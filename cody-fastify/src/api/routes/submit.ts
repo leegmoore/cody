@@ -18,6 +18,7 @@ import { traceContextFromSpanContext } from "../../core/tracing.js";
 import {
   createThread,
   ensureThreadExists,
+  getThreadSummary,
 } from "../services/thread-service.js";
 
 const tracer = trace.getTracer("codex.api.submit");
@@ -66,29 +67,52 @@ export async function registerSubmitRoutes(
     async (req, reply) => {
       const body = req.body;
 
-      const defaultModel =
-        process.env.CORE2_MODEL?.trim() ??
-        process.env.OPENAI_MODEL?.trim() ??
-        "gpt-5-mini";
-      const model = body.model ?? defaultModel;
-      const providerId = body.providerId ?? "openai";
-
       const runId = body.runId ?? randomUUID();
       const turnId = body.turnId ?? randomUUID();
       let threadId = body.threadId;
-      if (!threadId) {
+
+      // Get model config from thread if threadId is provided, otherwise use defaults
+      let model: string;
+      let providerId: string;
+      let modelProviderApi: string;
+
+      if (threadId) {
+        const thread = await getThreadSummary(threadId);
+        if (thread) {
+          // Use thread's model config if request doesn't specify
+          model = body.model ?? thread.model ?? "claude-haiku-4.5";
+          providerId = body.providerId ?? thread.modelProviderId ?? "anthropic";
+          modelProviderApi = thread.modelProviderApi ?? "messages";
+        } else {
+          // Thread doesn't exist, use defaults
+          const defaultModel =
+            process.env.CORE2_MODEL?.trim() ??
+            process.env.OPENAI_MODEL?.trim() ??
+            "claude-haiku-4.5";
+          model = body.model ?? defaultModel;
+          providerId = body.providerId ?? "anthropic";
+          modelProviderApi = "messages";
+          await ensureThreadExists(threadId, {
+            modelProviderId: providerId,
+            modelProviderApi,
+            model,
+          });
+        }
+      } else {
+        // No threadId, use defaults and create thread
+        const defaultModel =
+          process.env.CORE2_MODEL?.trim() ??
+          process.env.OPENAI_MODEL?.trim() ??
+          "claude-haiku-4.5";
+        model = body.model ?? defaultModel;
+        providerId = body.providerId ?? "anthropic";
+        modelProviderApi = "messages";
         const thread = await createThread({
           modelProviderId: providerId,
-          modelProviderApi: "responses",
+          modelProviderApi,
           model,
         });
         threadId = thread.threadId;
-      } else {
-        await ensureThreadExists(threadId, {
-          modelProviderId: providerId,
-          modelProviderApi: "responses",
-          model,
-        });
       }
 
       const activeSpan = trace.getSpan(otelContext.active());

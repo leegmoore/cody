@@ -105,6 +105,29 @@ export class OpenAIStreamAdapter {
     });
     await this.redis.publish(responseStart);
 
+    // Publish user prompt as an output item
+    if (params.prompt) {
+      const userMessageId = `${runId}-user-prompt`;
+      const userMessageStart = this.makeEvent(baseTrace, runId, {
+        type: "item_start",
+        item_id: userMessageId,
+        item_type: "message",
+        initial_content: params.prompt,
+      });
+      await this.redis.publish(userMessageStart);
+      const userMessageDone = this.makeEvent(baseTrace, runId, {
+        type: "item_done",
+        item_id: userMessageId,
+        final_item: {
+          id: userMessageId,
+          type: "message",
+          content: params.prompt,
+          origin: "user",
+        },
+      });
+      await this.redis.publish(userMessageDone);
+    }
+
     const formattedTools =
       params.tools && params.tools.length > 0
         ? formatToolsForResponsesApi(params.tools)
@@ -196,7 +219,7 @@ export class OpenAIStreamAdapter {
       input: options.conversation,
       stream: true,
       ...(options.reasoningEffort && {
-        reasoning: { effort: options.reasoningEffort, summary: "auto" },
+        reasoning: { effort: options.reasoningEffort },
       }),
       tools: options.formattedTools,
       tool_choice: options.formattedTools ? "auto" : undefined,

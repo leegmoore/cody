@@ -521,6 +521,12 @@ These are known failure modes. Watch for them actively.
 **Detection:** `if (!process.env.X) return fail` instead of just trying the connection
 **Prevention:** "Just attempt the connection. Let it fail naturally with descriptive error."
 
+### Arbitrary Numeric Targets
+**Pattern:** Specs include arbitrary line counts or reduction targets
+**Detection:** "Target: ~300 lines", "reduce by 2500 lines", "keep under 400 lines"
+**Problem:** Agents churn trying to hit numbers instead of achieving the actual goal
+**Prevention:** Describe the goal qualitatively. "Extract duplicated code into utilities" not "reduce to X lines". The line count is what it is after the refactoring is done correctly.
+
 ---
 
 ## Quick Reference

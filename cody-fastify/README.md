@@ -318,3 +318,5 @@ cody-fastify/
 - `docs/gem/v2-custom-harness-gem.md` – custom harness design from the Gemini perspective.
 - `docs/gem/test-conditions-v2-error.md` – error-path test conditions for v2 harness.
 - `docs/gem/test-conditions-v2-happy-path.md` – happy-path test conditions for v2 harness.
+
+46

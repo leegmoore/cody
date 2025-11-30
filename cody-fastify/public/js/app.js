@@ -156,9 +156,9 @@ async function createNewThread() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                modelProviderId: 'openai',
-                modelProviderApi: 'responses',
-                model: 'gpt-5-mini',
+                modelProviderId: 'anthropic',
+                modelProviderApi: 'messages',
+                model: 'claude-haiku-4.5',
                 title: 'New Chat'
             })
         });
@@ -187,8 +187,10 @@ async function sendMessage() {
     textarea.style.height = 'auto';
     document.getElementById('charCount').textContent = '0 / 4000';
 
-    const userElementId = addUserMessage(message);
-    state.pendingUserMessages.push({ runId: null, elementId: userElementId });
+    // Create user message with a temporary ID - will be updated when runId arrives
+    const tempUserMessageId = `temp-user-${Date.now()}`;
+    const userElementId = addUserMessage(message, { itemId: tempUserMessageId });
+    state.pendingUserMessages.push({ runId: null, elementId: userElementId, tempId: tempUserMessageId });
     showThinkingPlaceholder();
 
     const sendButton = document.getElementById('sendButton');
@@ -201,6 +203,7 @@ async function sendMessage() {
             body: JSON.stringify({
                 threadId: state.currentThreadId,
                 prompt: message,
+                thinkingBudget: 1536, // Medium thinking budget for Anthropic models (must be < max_tokens, min 1024)
             })
         });
 

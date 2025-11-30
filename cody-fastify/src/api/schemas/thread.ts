@@ -2,9 +2,9 @@ import { z } from "zod";
 import { ResponseSchema } from "../../core/schema.js";
 
 export const ThreadCreateSchema = z.object({
-  modelProviderId: z.string().min(1).default("openai"),
-  modelProviderApi: z.string().min(1).default("responses"),
-  model: z.string().min(1).default("gpt-5-mini"),
+  modelProviderId: z.string().min(1).default("anthropic"),
+  modelProviderApi: z.string().min(1).default("messages"),
+  model: z.string().min(1).default("claude-haiku-4.5"),
   title: z.string().optional(),
   summary: z.string().optional(),
   tags: z.array(z.string()).optional(),

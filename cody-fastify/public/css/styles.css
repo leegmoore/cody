@@ -252,87 +252,168 @@ body {
     opacity: 1;
 }
 
-/* Thinking card styles */
-.thinking-message {
-    width: 100%;
+/* ===========================================
+   THINKING CARD - Clean Implementation
+   =========================================== */
+
+/* Wrapper - positions in chat flow */
+.tc-wrapper {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 1rem;
+    animation: tc-fade-in 0.2s ease-out;
 }
 
-.thinking-card {
-    width: min(32rem, 100%);
-    background: linear-gradient(140deg, #fff9f4 0%, #fde7d6 100%);
-    border: 1px solid rgba(234, 173, 137, 0.6);
-    border-left: 4px solid #ea580c;
-    border-radius: 18px;
-    padding: 0.85rem 1rem 0.75rem;
-    box-shadow: 0 10px 24px rgba(74, 39, 23, 0.13);
+@keyframes tc-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Card container */
+.tc-card {
+    background: linear-gradient(135deg, #fef7f0 0%, #fdf4ec 100%);
+    border: 1px solid rgba(180, 130, 90, 0.25);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    max-width: 85%;
+    min-width: 280px;
+    box-shadow: 0 1px 3px rgba(139, 90, 43, 0.08);
+    cursor: default;
+}
+
+.tc-card.tc-completed {
     cursor: pointer;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.thinking-card:hover {
-    box-shadow: 0 14px 32px rgba(74, 39, 23, 0.18);
-    transform: translateY(-1px);
+.tc-card.tc-completed:hover {
+    border-color: rgba(180, 130, 90, 0.4);
 }
 
-.thinking-card.active .thinking-status {
-    color: #78350f;
-}
-
-.thinking-card.completed {
-    border-left-color: #4ade80;
-}
-
-.thinking-card.completed .thinking-status {
-    color: #15803d;
-}
-
-.thinking-card-header,
-.thinking-card-footer {
+/* Header */
+.tc-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 0.5rem;
 }
 
-.thinking-card-footer {
-    margin-top: 0.45rem;
-    font-size: 0.7rem;
-    color: #7a4b2f;
+.tc-title {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tc-icon {
+    width: 1rem;
+    height: 1rem;
+    color: #c2410c;
+    flex-shrink: 0;
+}
+
+.tc-label {
+    font-size: 0.75rem;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: #78350f;
 }
 
-.thinking-content {
-    margin-top: 0.5rem;
+.tc-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #92400e;
+}
+
+/* Shimmer animation for "Thinking..." */
+.tc-shimmer {
+    background: linear-gradient(90deg, #92400e 0%, #f59e0b 50%, #92400e 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: tc-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes tc-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* Content area */
+.tc-content {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
     line-height: 1.35;
-    max-height: 3.2em;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
+    color: #451a03;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-.thinking-content[data-expanded="true"] {
-    max-height: 8.2em;
+/* Streaming: up to 5 lines visible, then scrolls */
+.tc-card.tc-streaming .tc-content {
+    max-height: 7em;
+    overflow-y: auto;
+    transition: max-height 0.15s ease-out;
+}
+
+/* Completed: collapsed to 2 lines */
+.tc-card.tc-completed .tc-content {
+    max-height: 2.8em;
+    overflow: hidden;
+}
+
+/* Completed + Expanded: show 5 lines with scroll */
+.tc-card.tc-completed.tc-expanded .tc-content {
+    max-height: 7em;
     overflow-y: auto;
 }
 
-.thinking-card.expanded .thinking-content {
-    max-height: 8.2em;
+/* Scrollbar styling */
+.tc-content::-webkit-scrollbar {
+    width: 4px;
 }
 
-.thinking-content[data-expanded="true"]::-webkit-scrollbar {
-    width: 6px;
+.tc-content::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-.thinking-content[data-expanded="true"]::-webkit-scrollbar-thumb {
-    background: rgba(122, 75, 47, 0.6);
-    border-radius: 3px;
+.tc-content::-webkit-scrollbar-thumb {
+    background: rgba(146, 64, 14, 0.3);
+    border-radius: 2px;
 }
 
-.thinking-chevron {
-    width: 1rem;
-    height: 1rem;
-    color: #7a4b2f;
+.tc-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(146, 64, 14, 0.5);
+}
+
+/* Footer */
+.tc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.tc-card.tc-completed .tc-footer {
+    opacity: 1;
+}
+
+.tc-hint {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: rgba(120, 53, 15, 0.6);
+}
+
+.tc-chevron {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: rgba(120, 53, 15, 0.5);
     transition: transform 0.2s ease;
 }
 
-.thinking-chevron.rotated {
+.tc-card.tc-completed.tc-expanded .tc-chevron {
     transform: rotate(180deg);
 }

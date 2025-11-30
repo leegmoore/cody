@@ -100,6 +100,11 @@ export class ResponseReducer {
           mutated = true;
           break;
         }
+        // Update buffer meta with origin from final_item before upserting
+        const buffer = this.itemBuffers.get(event.payload.item_id);
+        if (buffer && event.payload.final_item.origin) {
+          buffer.meta.origin = event.payload.final_item.origin;
+        }
         const finalItem = cloneDeep(event.payload.final_item);
         this.upsertOutputItem(finalItem);
         this.itemBuffers.delete(event.payload.item_id);

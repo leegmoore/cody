@@ -13,10 +13,11 @@ import { ResponseSchema, type Response } from "../../core/schema.js";
 type ThreadDoc = Doc<"threads">;
 type RunDoc = Doc<"messages">;
 
-const DEFAULT_PROVIDER_ID = process.env.CORE2_PROVIDER_ID?.trim() ?? "openai";
+const DEFAULT_PROVIDER_ID =
+  process.env.CORE2_PROVIDER_ID?.trim() ?? "anthropic";
 const DEFAULT_PROVIDER_API =
-  process.env.CORE2_PROVIDER_API?.trim() ?? "responses";
-const DEFAULT_MODEL = process.env.CORE2_MODEL?.trim() ?? "gpt-5-mini";
+  process.env.CORE2_PROVIDER_API?.trim() ?? "messages";
+const DEFAULT_MODEL = process.env.CORE2_MODEL?.trim() ?? "claude-haiku-4.5";
 
 function mapThread(doc: ThreadDoc): ThreadSummary {
   return {
