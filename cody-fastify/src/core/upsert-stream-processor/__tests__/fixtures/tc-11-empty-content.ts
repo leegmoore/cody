@@ -86,29 +86,25 @@ export const tc11EmptyContent: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert completed only (no created since no content)
+    // 2. message complete only (no create since no content)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "completed",
+        type: "message",
+        status: "complete",
         content: "",
         origin: "agent",
       },
     },
-    // 3. turn_completed
+    // 3. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

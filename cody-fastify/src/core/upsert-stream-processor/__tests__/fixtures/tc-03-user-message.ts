@@ -131,52 +131,44 @@ export const tc03UserMessage: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert for user message (completed only - no created/updated)
+    // 2. message for user (complete only - no create/update)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         itemId: "msg-03-001-user-prompt",
-        itemType: "message",
-        changeType: "completed",
+        status: "complete",
         content: "What is the weather like today?",
         origin: "user",
       },
     },
-    // 3. item_upsert for agent (created)
+    // 3. message for agent (create)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         itemId: "msg-03-002",
-        itemType: "message",
-        changeType: "created",
+        status: "create",
         origin: "agent",
       },
     },
-    // 4. item_upsert for agent (completed)
+    // 4. message for agent (complete)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         itemId: "msg-03-002",
-        itemType: "message",
-        changeType: "completed",
+        status: "complete",
         origin: "agent",
       },
     },
-    // 5. turn_completed
+    // 5. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

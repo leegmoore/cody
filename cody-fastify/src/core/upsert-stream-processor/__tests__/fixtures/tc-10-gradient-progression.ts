@@ -173,63 +173,56 @@ export const tc10GradientProgression: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert created - at ~11 tokens (crossed 10)
+    // 2. message create - at ~11 tokens (crossed 10)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "created",
+        type: "message",
+        status: "create",
         content: CONTENT_1,
       },
     },
-    // 3. item_upsert updated - at ~21 tokens (crossed 20)
+    // 3. message update - at ~21 tokens (crossed 20)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "updated",
+        type: "message",
+        status: "update",
         content: CONTENT_1 + CONTENT_2,
       },
     },
-    // 4. item_upsert updated - at ~41 tokens (crossed 40)
+    // 4. message update - at ~41 tokens (crossed 40)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "updated",
+        type: "message",
+        status: "update",
         content: CONTENT_1 + CONTENT_2 + CONTENT_3,
       },
     },
-    // 5. item_upsert updated - at ~61 tokens (crossed 60)
+    // 5. message update - at ~61 tokens (crossed 60)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "updated",
+        type: "message",
+        status: "update",
         content: CONTENT_1 + CONTENT_2 + CONTENT_3 + CONTENT_4,
       },
     },
-    // 6. item_upsert completed - on item_done (includes delta #5)
+    // 6. message complete - on item_done (includes delta #5)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "completed",
+        type: "message",
+        status: "complete",
         content: CONTENT_1 + CONTENT_2 + CONTENT_3 + CONTENT_4 + CONTENT_5,
       },
     },
-    // 7. turn_completed
+    // 7. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

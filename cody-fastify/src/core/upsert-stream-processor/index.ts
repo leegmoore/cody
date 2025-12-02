@@ -1,42 +1,44 @@
 /**
- * UpsertStreamProcessor module.
+ * StreamProcessor module.
  *
- * Transforms StreamEvents from adapters (Stream A) into UIUpserts
+ * Transforms StreamEvents from adapters (Stream A) into Content/TurnEvents
  * for the UI layer (Stream B) with intelligent batching.
  */
 
-// Re-export all public types
+// Types
 export type {
-  BufferInfo,
-  ItemBufferState,
+  Content,
+  ContentType,
+  Message,
   MessageOrigin,
-  StreamBMessage,
-  StreamBPayloadType,
+  ProcessorOptions,
+  Status,
+  StreamMessage,
+  StreamOutput,
+  Thinking,
+  ToolCall,
+  TurnComplete,
+  TurnError,
+  TurnEvent,
+  TurnStarted,
   TurnStatus,
-  UITurnEvent,
-  UITurnEventError,
-  UITurnEventType,
-  UITurnEventUsage,
-  UIUpsert,
-  UIUpsertChangeType,
-  UIUpsertItemType,
-  UpsertStreamProcessorOptions,
 } from "./types.js";
 
-// Export main class
-export { UpsertStreamProcessor } from "./processor.js";
+// Classes
+export { StreamProcessor } from "./processor.js";
+export {
+  ContentBuffer,
+  type BufferInfo,
+  type BufferOptions,
+  type BufferState,
+} from "./content-buffer.js";
 
-// Export ItemBuffer class and its options
-export { ItemBuffer } from "./item-buffer.js";
-export type { ItemBufferOptions } from "./item-buffer.js";
-
-// Export utilities
+// Utilities
+export { NotImplementedError, RetryExhaustedError } from "./utils.js";
 export {
   calculateRetryDelay,
   estimateTokenCount,
   generateEventId,
-  NotImplementedError,
   parseJsonSafe,
-  RetryExhaustedError,
   sleep,
 } from "./utils.js";

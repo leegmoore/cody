@@ -12,7 +12,7 @@ export const tc08ResponseError: TestFixture = {
   id: "TC-08",
   name: "Response error",
   description:
-    "Verify response_error events produce turn_error and no turn_completed",
+    "Verify response_error events produce turn_error and no turn_complete",
 
   input: [
     // 1. response_start
@@ -43,8 +43,8 @@ export const tc08ResponseError: TestFixture = {
         type: "response_error",
         response_id: TEST_TURN_ID,
         error: {
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many requests. Please retry after 60 seconds.",
+          code: "PROVIDER_ERROR",
+          message: "Provider returned 500 error",
         },
       },
     },
@@ -53,23 +53,21 @@ export const tc08ResponseError: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. turn_error (not turn_completed)
+    // 2. turn_error (NOT turn_complete)
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_error",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         error: {
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many requests. Please retry after 60 seconds.",
+          code: "PROVIDER_ERROR",
+          message: "Provider returned 500 error",
         },
       },
     },

@@ -1,7 +1,7 @@
 /**
- * UpsertStreamProcessor TDD Tests
+ * StreamProcessor TDD Tests
  *
- * These tests verify the UpsertStreamProcessor transforms StreamEvents to UIUpserts.
+ * These tests verify the StreamProcessor transforms StreamEvents to Content/TurnEvents.
  * All tests are expected to FAIL in the "Red" phase of TDD because the skeleton
  * methods throw NotImplementedError.
  */
@@ -25,7 +25,7 @@ import { tc12FlushOnDestroy } from "./fixtures/tc-12-flush-on-destroy.js";
 import { tc13RetrySuccess } from "./fixtures/tc-13-retry-success.js";
 import { tc14RetryExhausted } from "./fixtures/tc-14-retry-exhausted.js";
 
-describe("UpsertStreamProcessor", () => {
+describe("StreamProcessor", () => {
   describe("Happy Path Tests", () => {
     test("TC-01: Simple agent message", async () => {
       const fixture = tc01SimpleMessage;
@@ -51,7 +51,7 @@ describe("UpsertStreamProcessor", () => {
       assertEmissionsMatch(result.emissions, fixture.expected);
     });
 
-    test("TC-04: Anthropic reasoning block", async () => {
+    test("TC-04: Anthropic thinking block", async () => {
       const fixture = tc04Reasoning;
       const result = await runFixture(fixture);
 

@@ -12,7 +12,7 @@ export const tc02Batching: TestFixture = {
   id: "TC-02",
   name: "Agent message with batching",
   description:
-    "Verify batch gradient triggers 'updated' emissions when token thresholds are crossed",
+    "Verify batch gradient triggers 'update' emissions when token thresholds are crossed",
 
   options: {
     // Simplified gradient for test - thresholds at 10, 20, 40 cumulative tokens
@@ -132,53 +132,45 @@ export const tc02Batching: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert created - after first delta crosses threshold
+    // 2. message create - after first delta crosses threshold
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         itemId: "msg-02-001",
-        itemType: "message",
-        changeType: "created",
+        status: "create",
         content: "This is the first part of a longer message. ",
       },
     },
-    // 3. item_upsert updated - after second delta crosses next threshold
+    // 3. message update - after second delta crosses next threshold
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         itemId: "msg-02-001",
-        itemType: "message",
-        changeType: "updated",
+        status: "update",
         content:
           "This is the first part of a longer message. Here is some more content that continues. ",
       },
     },
-    // 4. item_upsert completed - on item_done
+    // 4. message complete - on item_done
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         itemId: "msg-02-001",
-        itemType: "message",
-        changeType: "completed",
+        status: "complete",
         content:
           "This is the first part of a longer message. Here is some more content that continues. And finally the conclusion of this message.",
       },
     },
-    // 5. turn_completed
+    // 5. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

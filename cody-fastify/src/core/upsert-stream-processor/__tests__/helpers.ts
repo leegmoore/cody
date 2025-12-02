@@ -1,18 +1,18 @@
 /**
- * Test helpers for UpsertStreamProcessor TDD tests.
+ * Test helpers for StreamProcessor TDD tests.
  */
 
 import { expect } from "bun:test";
-import { UpsertStreamProcessor } from "../processor.js";
+import { StreamProcessor } from "../processor.js";
 import type {
-  StreamBMessage,
-  UITurnEvent,
-  UIUpsert,
-  UpsertStreamProcessorOptions,
+  Content,
+  ProcessorOptions,
+  StreamMessage,
+  TurnEvent,
 } from "../types.js";
 import { sleep } from "../utils.js";
 import type {
-  ExpectedMessage,
+  ExpectedOutput,
   OnEmitBehavior,
   TestFixture,
 } from "./fixtures/types.js";
@@ -22,7 +22,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 export interface CapturedEmission {
-  message: StreamBMessage;
+  message: StreamMessage;
   timestamp: number;
 }
 
@@ -40,7 +40,7 @@ export interface TestResult {
 // ---------------------------------------------------------------------------
 
 export interface MockOnEmitResult {
-  onEmit: (message: StreamBMessage) => Promise<void>;
+  onEmit: (message: StreamMessage) => Promise<void>;
   getEmissions: () => CapturedEmission[];
   getCallCount: () => number;
 }
@@ -59,7 +59,7 @@ export function createMockOnEmit(
   let failuresRemaining =
     behavior.type === "fail_then_succeed" ? behavior.failCount : 0;
 
-  const onEmit = async (message: StreamBMessage): Promise<void> => {
+  const onEmit = async (message: StreamMessage): Promise<void> => {
     callCount++;
 
     if (behavior.type === "always_fail") {
@@ -98,14 +98,14 @@ export async function runFixture(fixture: TestFixture): Promise<TestResult> {
   const mock = createMockOnEmit(fixture.onEmitBehavior ?? { type: "success" });
   const errors: Error[] = [];
 
-  const options: UpsertStreamProcessorOptions = {
+  const options: ProcessorOptions = {
     turnId: "test-turn-00000000-0000-0000-0000-000000000001",
     threadId: "test-thread-0000-0000-0000-0000-000000000001",
     onEmit: mock.onEmit,
     ...fixture.options,
   };
 
-  const processor = new UpsertStreamProcessor(options);
+  const processor = new StreamProcessor(options);
 
   try {
     for (let i = 0; i < fixture.input.length; i++) {
@@ -151,13 +151,13 @@ export async function runFixture(fixture: TestFixture): Promise<TestResult> {
 // ---------------------------------------------------------------------------
 
 /**
- * Parses payload from StreamBMessage for assertion.
+ * Parses payload from StreamMessage for assertion.
  *
- * @param message - The StreamBMessage to parse
- * @returns Parsed UIUpsert or UITurnEvent
+ * @param message - The StreamMessage to parse
+ * @returns Parsed Content or TurnEvent
  */
-export function parsePayload(message: StreamBMessage): UIUpsert | UITurnEvent {
-  return JSON.parse(message.payload) as UIUpsert | UITurnEvent;
+export function parsePayload(message: StreamMessage): Content | TurnEvent {
+  return JSON.parse(message.payload) as Content | TurnEvent;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,11 +168,11 @@ export function parsePayload(message: StreamBMessage): UIUpsert | UITurnEvent {
  * Asserts emissions match expected, ignoring dynamic fields (eventId, timestamp).
  *
  * @param actual - Captured emissions from test run
- * @param expected - Expected messages from fixture
+ * @param expected - Expected outputs from fixture
  */
 export function assertEmissionsMatch(
   actual: CapturedEmission[],
-  expected: ExpectedMessage[],
+  expected: ExpectedOutput[],
 ): void {
   // Diagnostic output on length mismatch for debugging test failures
   if (actual.length !== expected.length) {
@@ -180,14 +180,12 @@ export function assertEmissionsMatch(
     console.error(
       "Actual:",
       actual.map((e) => ({
-        payloadType: e.message.payloadType,
         payload: JSON.parse(e.message.payload),
       })),
     );
     console.error(
       "Expected:",
       expected.map((e) => ({
-        payloadType: e.payloadType,
         payload: e.payload,
       })),
     );
@@ -197,13 +195,10 @@ export function assertEmissionsMatch(
 
   for (let i = 0; i < expected.length; i++) {
     const actualMsg = actual[i].message;
-    const expectedMsg = expected[i];
-
-    // Check payload type
-    expect(actualMsg.payloadType).toBe(expectedMsg.payloadType);
+    const expectedOutput = expected[i];
 
     // Parse and check payload (partial matching)
     const actualPayload = parsePayload(actualMsg);
-    expect(actualPayload).toMatchObject(expectedMsg.payload);
+    expect(actualPayload).toMatchObject(expectedOutput.payload);
   }
 }

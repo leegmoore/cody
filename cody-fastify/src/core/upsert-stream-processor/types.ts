@@ -1,147 +1,117 @@
 /**
- * Type definitions for UpsertStreamProcessor module.
- *
- * These types define the UI-focused event shapes that are emitted
- * to Stream B (Redis) for consumption by the UI layer.
+ * Stream processor output types.
+ * These shapes are emitted to Stream B for xapi/UI consumption.
  */
 
 // ---------------------------------------------------------------------------
-// UIUpsert - Item-level updates for UI
+// Common Types
 // ---------------------------------------------------------------------------
 
-export type UIUpsertItemType =
-  | "message"
-  | "reasoning"
-  | "tool_call"
-  | "tool_output"
-  | "error";
-
-export type UIUpsertChangeType = "created" | "updated" | "completed";
+export type Status = "create" | "update" | "complete" | "error";
 
 export type MessageOrigin = "user" | "agent" | "system";
 
-export interface UIUpsert {
-  type: "item_upsert";
+export type TurnStatus = "complete" | "error" | "aborted";
+
+// ---------------------------------------------------------------------------
+// Content Types
+// ---------------------------------------------------------------------------
+
+interface ContentBase {
   turnId: string;
   threadId: string;
   itemId: string;
-  itemType: UIUpsertItemType;
-  changeType: UIUpsertChangeType;
-  content: string;
-
-  // Message-specific
-  origin?: MessageOrigin;
-
-  // Reasoning-specific
-  providerId?: string;
-
-  // Tool call-specific
-  toolName?: string;
-  toolArguments?: Record<string, unknown>;
-  callId?: string;
-
-  // Tool output-specific
-  toolOutput?: Record<string, unknown> | string;
-  success?: boolean;
-
-  // Error-specific
+  status: Status;
   errorCode?: string;
   errorMessage?: string;
 }
 
-// ---------------------------------------------------------------------------
-// UITurnEvent - Turn lifecycle events for UI
-// ---------------------------------------------------------------------------
-
-export type UITurnEventType = "turn_started" | "turn_completed" | "turn_error";
-
-export type TurnStatus = "complete" | "error" | "aborted";
-
-export interface UITurnEventUsage {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
+export interface Message extends ContentBase {
+  type: "message";
+  content: string;
+  origin: MessageOrigin;
 }
 
-export interface UITurnEventError {
-  code: string;
-  message: string;
+export interface Thinking extends ContentBase {
+  type: "thinking";
+  content: string;
+  providerId: string;
 }
 
-export interface UITurnEvent {
-  type: UITurnEventType;
+export interface ToolCall extends ContentBase {
+  type: "tool_call";
+  content: string;
+  toolName: string;
+  toolArguments: Record<string, unknown>;
+  callId: string;
+  toolOutput?: Record<string, unknown> | string;
+  success?: boolean;
+}
+
+export type Content = Message | Thinking | ToolCall;
+
+export type ContentType = Content["type"];
+
+// ---------------------------------------------------------------------------
+// Turn Events
+// ---------------------------------------------------------------------------
+
+export interface TurnStarted {
+  type: "turn_started";
   turnId: string;
   threadId: string;
-
-  // turn_started
   modelId?: string;
   providerId?: string;
-
-  // turn_completed
-  status?: TurnStatus;
-  usage?: UITurnEventUsage;
-
-  // turn_error
-  error?: UITurnEventError;
 }
 
+export interface TurnComplete {
+  type: "turn_complete";
+  turnId: string;
+  threadId: string;
+  status: TurnStatus;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+export interface TurnError {
+  type: "turn_error";
+  turnId: string;
+  threadId: string;
+  error: {
+    code: string;
+    message: string;
+  };
+}
+
+export type TurnEvent = TurnStarted | TurnComplete | TurnError;
+
 // ---------------------------------------------------------------------------
-// StreamBMessage - Redis envelope for UI events
+// Stream Output
 // ---------------------------------------------------------------------------
 
-export type StreamBPayloadType = "item_upsert" | "turn_event";
+export type StreamOutput = Content | TurnEvent;
 
-export interface StreamBMessage {
+export interface StreamMessage {
   eventId: string;
   timestamp: number;
   turnId: string;
-  payloadType: StreamBPayloadType;
-  payload: string; // JSON serialized UIUpsert | UITurnEvent
+  payload: string; // JSON serialized StreamOutput
 }
 
 // ---------------------------------------------------------------------------
-// Processor configuration
+// Processor Configuration
 // ---------------------------------------------------------------------------
 
-export interface UpsertStreamProcessorOptions {
+export interface ProcessorOptions {
   turnId: string;
   threadId: string;
-  batchGradient?: number[]; // Default: [10, 10, 20, 20, 50, 50, 50, 50, 100, 100, 200, 200, 500, 500, 1000, 1000, 2000]
-  batchTimeoutMs?: number; // Default: 1000
-  onEmit: (message: StreamBMessage) => Promise<void>;
-  retryAttempts?: number; // Default: 3
-  retryBaseMs?: number; // Default: 1000
-  retryMaxMs?: number; // Default: 10000
-}
-
-// ---------------------------------------------------------------------------
-// Buffer state types (for testing/debugging)
-// ---------------------------------------------------------------------------
-
-export interface BufferInfo {
-  itemId: string;
-  itemType: UIUpsertItemType;
-  tokenCount: number;
-  contentLength: number;
-  batchIndex: number;
-  isHeld: boolean;
-  isComplete: boolean;
-}
-
-export interface ItemBufferState {
-  itemId: string;
-  itemType: UIUpsertItemType;
-  content: string;
-  tokenCount: number;
-  batchIndex: number;
-  emittedTokenCount: number;
-  isComplete: boolean;
-  isHeld: boolean;
-  hasEmittedCreated: boolean;
-
-  // Type-specific metadata
-  origin?: MessageOrigin;
-  providerId?: string;
-  toolName?: string;
-  callId?: string;
+  batchGradient?: number[];
+  batchTimeoutMs?: number;
+  onEmit: (message: StreamMessage) => Promise<void>;
+  retryAttempts?: number;
+  retryBaseMs?: number;
+  retryMaxMs?: number;
 }

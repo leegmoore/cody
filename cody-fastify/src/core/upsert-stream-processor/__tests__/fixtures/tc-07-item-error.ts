@@ -12,7 +12,7 @@ export const tc07ItemError: TestFixture = {
   id: "TC-07",
   name: "Item error mid-stream",
   description:
-    "Verify item_error events produce error upserts and don't prevent turn completion",
+    "Verify item_error events produce error status on content and don't prevent turn completion",
 
   input: [
     // 1. response_start
@@ -93,40 +93,36 @@ export const tc07ItemError: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert created with partial content
+    // 2. message create (partial content)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "created",
+        type: "message",
+        itemId: "msg-07-001",
+        status: "create",
         content: "I was starting to respond but",
       },
     },
-    // 3. item_upsert error
+    // 3. message error (same itemId)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "error",
-        changeType: "completed",
-        content: "",
+        type: "message",
+        itemId: "msg-07-001",
+        status: "error",
+        content: "I was starting to respond but",
         errorCode: "CONTENT_FILTER",
         errorMessage: "Response blocked by content filter",
       },
     },
-    // 4. turn_completed with error status
+    // 4. turn_complete with error status
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "error",

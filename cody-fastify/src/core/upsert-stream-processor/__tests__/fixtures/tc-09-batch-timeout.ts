@@ -127,44 +127,39 @@ export const tc09BatchTimeout: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert created (emitted when timeout fires)
+    // 2. message create (emitted when timeout fires)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "created",
+        type: "message",
+        status: "create",
         content: "First chunk. ",
       },
     },
-    // 3. item_upsert updated (emitted on second delta or timeout)
+    // 3. message update (emitted on second delta or timeout)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "updated",
+        type: "message",
+        status: "update",
         content: "First chunk. Second chunk after delay.",
       },
     },
-    // 4. item_upsert completed
+    // 4. message complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "completed",
+        type: "message",
+        status: "complete",
       },
     },
-    // 5. turn_completed
+    // 5. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

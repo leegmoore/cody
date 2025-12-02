@@ -111,34 +111,30 @@ export const tc13RetrySuccess: TestFixture = {
     // All eventually succeed after retries
     // 1. turn_started (after 2 retries)
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert created
+    // 2. message create
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "created",
+        type: "message",
+        status: "create",
       },
     },
-    // 3. item_upsert completed
+    // 3. message complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "completed",
+        type: "message",
+        status: "complete",
       },
     },
-    // 4. turn_completed
+    // 4. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

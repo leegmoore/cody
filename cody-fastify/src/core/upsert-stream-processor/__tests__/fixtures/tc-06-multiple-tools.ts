@@ -42,7 +42,7 @@ export const tc06MultipleTools: TestFixture = {
         type: "item_start",
         item_id: "fc-06-001",
         item_type: "function_call",
-        name: "list_files",
+        name: "read_file",
       },
     },
     // 3. item_done for function_call #1
@@ -58,8 +58,8 @@ export const tc06MultipleTools: TestFixture = {
         final_item: {
           id: "fc-06-001",
           type: "function_call",
-          name: "list_files",
-          arguments: '{"directory": "/home/user"}',
+          name: "read_file",
+          arguments: '{"path": "/tmp/input.txt"}',
           call_id: "call-06-001",
           origin: "agent",
         },
@@ -92,7 +92,7 @@ export const tc06MultipleTools: TestFixture = {
           id: "fco-06-001",
           type: "function_call_output",
           call_id: "call-06-001",
-          output: '{"files": ["doc.txt", "image.png"]}',
+          output: '{"content": "input data"}',
           success: true,
           origin: "system",
         },
@@ -109,7 +109,7 @@ export const tc06MultipleTools: TestFixture = {
         type: "item_start",
         item_id: "fc-06-002",
         item_type: "function_call",
-        name: "read_file",
+        name: "write_file",
       },
     },
     // 7. item_done for function_call #2
@@ -125,8 +125,8 @@ export const tc06MultipleTools: TestFixture = {
         final_item: {
           id: "fc-06-002",
           type: "function_call",
-          name: "read_file",
-          arguments: '{"path": "/home/user/doc.txt"}',
+          name: "write_file",
+          arguments: '{"path": "/tmp/output.txt", "content": "processed"}',
           call_id: "call-06-002",
           origin: "agent",
         },
@@ -159,7 +159,7 @@ export const tc06MultipleTools: TestFixture = {
           id: "fco-06-002",
           type: "function_call_output",
           call_id: "call-06-002",
-          output: '{"content": "Document contents here"}',
+          output: '{"bytesWritten": 9}',
           success: true,
           origin: "system",
         },
@@ -233,80 +233,80 @@ export const tc06MultipleTools: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. tool_call #1
+    // 2. tool_call #1 create
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "tool_call",
-        changeType: "completed",
-        toolName: "list_files",
-        callId: "call-06-001",
-      },
-    },
-    // 3. tool_output #1
-    {
-      payloadType: "item_upsert",
-      payload: {
-        type: "item_upsert",
-        itemType: "tool_output",
-        changeType: "completed",
-        callId: "call-06-001",
-        success: true,
-      },
-    },
-    // 4. tool_call #2
-    {
-      payloadType: "item_upsert",
-      payload: {
-        type: "item_upsert",
-        itemType: "tool_call",
-        changeType: "completed",
+        type: "tool_call",
+        itemId: "fc-06-001",
+        status: "create",
         toolName: "read_file",
-        callId: "call-06-002",
+        toolArguments: { path: "/tmp/input.txt" },
+        callId: "call-06-001",
       },
     },
-    // 5. tool_output #2
+    // 3. tool_call #1 complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "tool_output",
-        changeType: "completed",
-        callId: "call-06-002",
+        type: "tool_call",
+        itemId: "fc-06-001",
+        status: "complete",
+        toolName: "read_file",
+        callId: "call-06-001",
+        toolOutput: { content: "input data" },
         success: true,
       },
     },
-    // 6. message created
+    // 4. tool_call #2 create
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "created",
+        type: "tool_call",
+        itemId: "fc-06-002",
+        status: "create",
+        toolName: "write_file",
+        toolArguments: { path: "/tmp/output.txt", content: "processed" },
+        callId: "call-06-002",
       },
     },
-    // 7. message completed
+    // 5. tool_call #2 complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "completed",
+        type: "tool_call",
+        itemId: "fc-06-002",
+        status: "complete",
+        toolName: "write_file",
+        callId: "call-06-002",
+        toolOutput: { bytesWritten: 9 },
+        success: true,
       },
     },
-    // 8. turn_completed
+    // 6. message create
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "message",
+        itemId: "msg-06-001",
+        status: "create",
+        origin: "agent",
+      },
+    },
+    // 7. message complete
+    {
+      payload: {
+        type: "message",
+        itemId: "msg-06-001",
+        status: "complete",
+        origin: "agent",
+      },
+    },
+    // 8. turn_complete
+    {
+      payload: {
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

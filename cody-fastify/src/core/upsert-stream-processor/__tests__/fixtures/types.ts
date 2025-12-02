@@ -1,9 +1,9 @@
 /**
- * Test fixture types for UpsertStreamProcessor TDD tests.
+ * Test fixture types for StreamProcessor TDD tests.
  */
 
 import type { StreamEvent } from "../../../schema.js";
-import type { UITurnEvent, UIUpsert } from "../../types.js";
+import type { Content, TurnEvent } from "../../types.js";
 
 // ---------------------------------------------------------------------------
 // Test Constants
@@ -19,12 +19,9 @@ export const TEST_TRACE_CONTEXT = {
 // Expected Message Type
 // ---------------------------------------------------------------------------
 
-export interface ExpectedMessage {
-  /** Payload type to verify */
-  payloadType: "item_upsert" | "turn_event";
-
-  /** Parsed payload to match against (partial matching supported) */
-  payload: Partial<UIUpsert | UITurnEvent>;
+export interface ExpectedOutput {
+  /** Partial matching against the emitted Content or TurnEvent */
+  payload: Partial<Content | TurnEvent>;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,25 +29,18 @@ export interface ExpectedMessage {
 // ---------------------------------------------------------------------------
 
 export type OnEmitBehavior =
-  | { type: "success" } // Always succeed
-  | { type: "fail_then_succeed"; failCount: number } // Fail N times then succeed
-  | { type: "always_fail" }; // Always fail
+  | { type: "success" }
+  | { type: "fail_then_succeed"; failCount: number }
+  | { type: "always_fail" };
 
 // ---------------------------------------------------------------------------
 // Test Fixture Interface
 // ---------------------------------------------------------------------------
 
 export interface TestFixture {
-  /** Test case identifier (e.g., "TC-01") */
   id: string;
-
-  /** Human-readable test name */
   name: string;
-
-  /** Description of what this test verifies */
   description: string;
-
-  /** Processor options overrides (optional) */
   options?: {
     batchGradient?: number[];
     batchTimeoutMs?: number;
@@ -58,28 +48,13 @@ export interface TestFixture {
     retryBaseMs?: number;
     retryMaxMs?: number;
   };
-
-  /** Input: Array of StreamEvents to feed to processEvent() in order */
   input: StreamEvent[];
-
-  /** Expected: Array of StreamBMessages that onEmit should receive */
-  expected: ExpectedMessage[];
-
-  /** For retry tests: configure onEmit behavior */
+  expected: ExpectedOutput[];
   onEmitBehavior?: OnEmitBehavior;
-
-  /**
-   * Special test handling flags.
-   * Some tests require special execution handling (timing, early destroy, etc.)
-   */
   special?: {
-    /** If true, test involves timing delays between events */
     requiresTiming?: boolean;
-    /** Delay in ms between specific events (array indices) */
     delayBetweenEvents?: { afterIndex: number; delayMs: number }[];
-    /** If true, call destroy() without completing the sequence */
     earlyDestroy?: boolean;
-    /** If set, expect this many errors from the test */
     expectedErrorCount?: number;
   };
 }

@@ -98,9 +98,7 @@ export const tc01SimpleMessage: TestFixture = {
   ] as StreamEvent[],
 
   expected: [
-    // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
@@ -109,39 +107,29 @@ export const tc01SimpleMessage: TestFixture = {
         providerId: "anthropic",
       },
     },
-    // 2. item_upsert created
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
+        type: "message",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         itemId: "msg-01-001",
-        itemType: "message",
-        changeType: "created",
+        status: "create",
         content: "Hello there!",
         origin: "agent",
       },
     },
-    // 3. item_upsert completed
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        turnId: TEST_TURN_ID,
-        threadId: TEST_THREAD_ID,
+        type: "message",
         itemId: "msg-01-001",
-        itemType: "message",
-        changeType: "completed",
+        status: "complete",
         content: "Hello there!",
         origin: "agent",
       },
     },
-    // 4. turn_completed
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

@@ -71,34 +71,22 @@ export const tc12FlushOnDestroy: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. item_upsert created (from initial delta)
+    // 2. message create (emitted on delta, before destroy)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        changeType: "created",
+        type: "message",
+        itemId: "msg-12-001",
+        status: "create",
         content: "This content is buffered but never completed...",
       },
     },
-    // 3. item_upsert flushed on destroy (emitted as "updated" during flush)
-    // Note: Depending on implementation, this might be "updated" or just not emitted
-    // if nothing new was buffered. The key test is that destroy doesn't throw
-    // and any pending content is handled.
-    {
-      payloadType: "item_upsert",
-      payload: {
-        type: "item_upsert",
-        changeType: "updated",
-        content: "This content is buffered but never completed...",
-      },
-    },
-    // Note: No turn_completed because response_done never received
+    // NO THIRD EMISSION - destroy emits nothing if no new content
+    // Note: No turn_complete because response_done never received
   ],
 };

@@ -12,7 +12,7 @@ export const tc05ToolCall: TestFixture = {
   id: "TC-05",
   name: "Tool call and output",
   description:
-    "Verify function_call and function_call_output are transformed to tool_call and tool_output with parsed arguments",
+    "Verify function_call and function_call_output are transformed to tool_call with create and complete status",
 
   input: [
     // 1. response_start
@@ -167,62 +167,62 @@ export const tc05ToolCall: TestFixture = {
   expected: [
     // 1. turn_started
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. tool_call upsert
+    // 2. tool_call create (on function_call item_done)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "tool_call",
-        changeType: "completed",
+        type: "tool_call",
+        itemId: "fc-05-001",
+        status: "create",
         content: "",
         toolName: "read_file",
         toolArguments: { path: "/tmp/test.txt", encoding: "utf-8" },
         callId: "call-05-001",
       },
     },
-    // 3. tool_output upsert
+    // 3. tool_call complete (on function_call_output item_done)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "tool_output",
-        changeType: "completed",
+        type: "tool_call",
+        itemId: "fc-05-001",
+        status: "complete",
         content: "",
+        toolName: "read_file",
+        toolArguments: { path: "/tmp/test.txt", encoding: "utf-8" },
         callId: "call-05-001",
         toolOutput: { content: "Hello from file!", bytes: 17 },
         success: true,
       },
     },
-    // 4. message created
+    // 4. message create
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "created",
+        type: "message",
+        itemId: "msg-05-001",
+        status: "create",
+        content: "The file contains: Hello from file!",
+        origin: "agent",
       },
     },
-    // 5. message completed
+    // 5. message complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "completed",
+        type: "message",
+        itemId: "msg-05-001",
+        status: "complete",
+        content: "The file contains: Hello from file!",
+        origin: "agent",
       },
     },
-    // 6. turn_completed
+    // 6. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",

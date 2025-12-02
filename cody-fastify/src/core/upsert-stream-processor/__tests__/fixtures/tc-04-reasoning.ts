@@ -1,5 +1,5 @@
 /**
- * TC-04: Anthropic Reasoning Block
+ * TC-04: Anthropic Thinking Block
  *
  * Scenario: Anthropic model emits thinking/reasoning before response.
  */
@@ -10,9 +10,9 @@ import { TEST_THREAD_ID, TEST_TRACE_CONTEXT, TEST_TURN_ID } from "./types.js";
 
 export const tc04Reasoning: TestFixture = {
   id: "TC-04",
-  name: "Anthropic reasoning block",
+  name: "Anthropic thinking block",
   description:
-    "Verify reasoning/thinking blocks are emitted with providerId for UI filtering",
+    "Verify thinking blocks are emitted with providerId for UI filtering",
 
   input: [
     // 1. response_start
@@ -158,7 +158,6 @@ export const tc04Reasoning: TestFixture = {
   expected: [
     // 1. turn_started with providerId
     {
-      payloadType: "turn_event",
       payload: {
         type: "turn_started",
         turnId: TEST_TURN_ID,
@@ -166,64 +165,53 @@ export const tc04Reasoning: TestFixture = {
         providerId: "anthropic",
       },
     },
-    // 2. item_upsert reasoning created
+    // 2. thinking create
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "reasoning",
-        changeType: "created",
+        type: "thinking",
+        status: "create",
         content: "Let me think about this problem. ",
         providerId: "anthropic",
       },
     },
-    // 3. item_upsert reasoning updated (after second delta crosses threshold)
+    // 3. thinking update (after second delta crosses threshold)
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "reasoning",
-        changeType: "updated",
+        type: "thinking",
+        status: "update",
         content:
           "Let me think about this problem. I should consider multiple factors here.",
         providerId: "anthropic",
       },
     },
-    // 4. item_upsert reasoning completed
+    // 4. thinking complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "reasoning",
-        changeType: "completed",
+        type: "thinking",
+        status: "complete",
         providerId: "anthropic",
       },
     },
-    // 5. item_upsert message created
+    // 5. message create
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "created",
+        type: "message",
+        status: "create",
         origin: "agent",
       },
     },
-    // 6. item_upsert message completed
+    // 6. message complete
     {
-      payloadType: "item_upsert",
       payload: {
-        type: "item_upsert",
-        itemType: "message",
-        changeType: "completed",
+        type: "message",
+        status: "complete",
         origin: "agent",
       },
     },
-    // 7. turn_completed
+    // 7. turn_complete
     {
-      payloadType: "turn_event",
       payload: {
-        type: "turn_completed",
+        type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",
