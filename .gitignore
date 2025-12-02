@@ -48,3 +48,6 @@ test-results/
 # Temporary files
 tmp-*/
 *.tmp
+
+# Context manager project
+coding-agent-manager/
