@@ -2,7 +2,7 @@
 
 **Project:** 04-stream-management
 **Slice:** 002-setup-tdd-tests
-**Status:** ✅ IMPLEMENTATION COMPLETE - All 17 tests passing
+**Status:** ✅ IMPLEMENTATION COMPLETE - All 20 tests passing
 
 ---
 
@@ -516,8 +516,8 @@ bun test --verbose
 
 ### Current State
 
-- 17 test fixtures created (14 core + 3 threshold edge cases)
-- All 17 tests passing (TDD Green phase complete)
+- 20 test fixtures created (14 core + 3 threshold edge cases + 3 additional)
+- All 20 tests passing (TDD Green phase complete)
 - Implementation verified against spec
 
 ---
@@ -807,7 +807,7 @@ Note: Even though 25 tokens crosses thresholds at 10 and 20, we only emit once p
 - [ ] Implement flush()
 - [ ] Implement destroy()
 - [ ] Implement retry logic with exponential backoff
-- [ ] Run tests - all 17 should pass
+- [ ] Run tests - all 20 should pass
 
 ---
 
@@ -822,11 +822,11 @@ cd cody-fastify && bun run typecheck
 **Tests (current state - TDD Red):**
 ```bash
 cd cody-fastify && bun test src/core/upsert-stream-processor/
-# Expected: 17 tests, 17 fail with NotImplementedError
+# Expected: 20 tests, 20 fail with NotImplementedError
 ```
 
 **Tests (after implementation - TDD Green):**
 ```bash
 cd cody-fastify && bun test src/core/upsert-stream-processor/
-# Expected: 17 tests, 17 pass
+# Expected: 20 tests, 20 pass
 ```

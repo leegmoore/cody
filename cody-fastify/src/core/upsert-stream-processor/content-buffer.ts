@@ -72,11 +72,12 @@ export class ContentBuffer {
     contentType: ContentType,
     options?: BufferOptions,
   ) {
+    const initialContent = options?.initialContent ?? "";
     this.state = {
       itemId,
       contentType,
-      content: options?.initialContent ?? "",
-      tokenCount: 0,
+      content: initialContent,
+      tokenCount: estimateTokenCount(initialContent),
       batchIndex: 0,
       emittedTokenCount: 0,
       isComplete: false,

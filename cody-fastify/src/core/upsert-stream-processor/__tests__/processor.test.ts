@@ -29,6 +29,7 @@ import { tc16ThresholdPlusOne } from "./fixtures/tc-16-threshold-plus-one.js";
 import { tc17SingleDeltaMultipleThresholds } from "./fixtures/tc-17-single-delta-multiple-thresholds.js";
 import { tc18ItemCancelled } from "./fixtures/tc-18-item-cancelled.js";
 import { tc19GradientExhaustion } from "./fixtures/tc-19-gradient-exhaustion.js";
+import { tc20InitialContentThreshold } from "./fixtures/tc-20-initial-content-threshold.js";
 
 describe("StreamProcessor", () => {
   describe("Happy Path Tests", () => {
@@ -142,6 +143,14 @@ describe("StreamProcessor", () => {
 
     test("TC-19: Gradient exhaustion - continues with last value", async () => {
       const fixture = tc19GradientExhaustion;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test("TC-20: Initial content counts toward threshold", async () => {
+      const fixture = tc20InitialContentThreshold;
       const result = await runFixture(fixture);
 
       expect(result.errors).toHaveLength(0);
