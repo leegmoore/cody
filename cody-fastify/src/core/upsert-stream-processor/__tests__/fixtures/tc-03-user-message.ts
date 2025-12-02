@@ -147,25 +147,17 @@ export const tc03UserMessage: TestFixture = {
         origin: "user",
       },
     },
-    // 3. message for agent (create)
-    {
-      payload: {
-        type: "message",
-        itemId: "msg-03-002",
-        status: "create",
-        origin: "agent",
-      },
-    },
-    // 4. message for agent (complete)
+    // 3. message for agent (complete only - 10 tokens at threshold, not exceeding)
     {
       payload: {
         type: "message",
         itemId: "msg-03-002",
         status: "complete",
+        content: "I don't have access to weather data.",
         origin: "agent",
       },
     },
-    // 5. turn_complete
+    // 4. turn_complete
     {
       payload: {
         type: "turn_complete",

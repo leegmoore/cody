@@ -109,7 +109,7 @@ export const tc13RetrySuccess: TestFixture = {
 
   expected: [
     // All eventually succeed after retries
-    // 1. turn_started (after 2 retries)
+    // 1. turn_started (after 2 retries, first onEmit succeeds on 3rd attempt)
     {
       payload: {
         type: "turn_started",
@@ -117,21 +117,16 @@ export const tc13RetrySuccess: TestFixture = {
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. message create
-    {
-      payload: {
-        type: "message",
-        status: "create",
-      },
-    },
-    // 3. message complete
+    // 2. message complete (12 chars = 3 tokens, under threshold - no create)
+    // Retry failures are exhausted by turn_started, subsequent emits succeed immediately
     {
       payload: {
         type: "message",
         status: "complete",
+        content: "Test message",
       },
     },
-    // 4. turn_complete
+    // 3. turn_complete
     {
       payload: {
         type: "turn_complete",

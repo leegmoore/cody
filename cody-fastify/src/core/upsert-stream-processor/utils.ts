@@ -44,8 +44,8 @@ export class RetryExhaustedError extends Error {
  * @param text - The text to estimate tokens for
  * @returns Estimated token count
  */
-export function estimateTokenCount(_text: string): number {
-  throw new NotImplementedError("estimateTokenCount");
+export function estimateTokenCount(text: string): number {
+  return Math.ceil(text.length / 4);
 }
 
 // ---------------------------------------------------------------------------
@@ -75,11 +75,17 @@ export function sleep(ms: number): Promise<void> {
  * @returns Delay in milliseconds
  */
 export function calculateRetryDelay(
-  _attempt: number,
-  _baseMs: number,
-  _maxMs: number,
+  attempt: number,
+  baseMs: number,
+  maxMs: number,
 ): number {
-  throw new NotImplementedError("calculateRetryDelay");
+  // Exponential backoff: baseMs * 2^attempt
+  const exponentialDelay = baseMs * Math.pow(2, attempt);
+  // Add jitter (0-100% of delay) to prevent thundering herd
+  const jitter = Math.random() * exponentialDelay;
+  const delayWithJitter = exponentialDelay + jitter;
+  // Cap at maxMs
+  return Math.min(delayWithJitter, maxMs);
 }
 
 // ---------------------------------------------------------------------------
@@ -92,8 +98,12 @@ export function calculateRetryDelay(
  * @param json - JSON string to parse
  * @returns Parsed object or original string if parsing fails
  */
-export function parseJsonSafe<T>(_json: string): T | string {
-  throw new NotImplementedError("parseJsonSafe");
+export function parseJsonSafe<T>(json: string): T | string {
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return json;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@
  */
 
 import type { ContentType, MessageOrigin } from "./types.js";
-import { NotImplementedError } from "./utils.js";
+import { estimateTokenCount } from "./utils.js";
 
 // ---------------------------------------------------------------------------
 // Buffer State Types (internal to this module)
@@ -95,8 +95,9 @@ export class ContentBuffer {
    *
    * @param delta - Content to append
    */
-  appendContent(_delta: string): void {
-    throw new NotImplementedError("ContentBuffer.appendContent");
+  appendContent(delta: string): void {
+    this.state.content += delta;
+    this.state.tokenCount = estimateTokenCount(this.state.content);
   }
 
   /**
@@ -105,7 +106,7 @@ export class ContentBuffer {
    * @returns Full content string
    */
   getContent(): string {
-    throw new NotImplementedError("ContentBuffer.getContent");
+    return this.state.content;
   }
 
   /**
@@ -114,7 +115,7 @@ export class ContentBuffer {
    * @returns Estimated tokens
    */
   getTokenCount(): number {
-    throw new NotImplementedError("ContentBuffer.getTokenCount");
+    return this.state.tokenCount;
   }
 
   /**
@@ -123,21 +124,21 @@ export class ContentBuffer {
    * @returns Tokens since last emit
    */
   getUnemittedTokenCount(): number {
-    throw new NotImplementedError("ContentBuffer.getUnemittedTokenCount");
+    return this.state.tokenCount - this.state.emittedTokenCount;
   }
 
   /**
    * Updates emittedTokenCount to current tokenCount after an emit.
    */
   markEmitted(): void {
-    throw new NotImplementedError("ContentBuffer.markEmitted");
+    this.state.emittedTokenCount = this.state.tokenCount;
   }
 
   /**
    * Increments the batch index (moves to next gradient level).
    */
   advanceBatchIndex(): void {
-    throw new NotImplementedError("ContentBuffer.advanceBatchIndex");
+    this.state.batchIndex++;
   }
 
   /**
@@ -146,14 +147,14 @@ export class ContentBuffer {
    * @returns Current batch index
    */
   getBatchIndex(): number {
-    throw new NotImplementedError("ContentBuffer.getBatchIndex");
+    return this.state.batchIndex;
   }
 
   /**
    * Marks the item as complete.
    */
   markComplete(): void {
-    throw new NotImplementedError("ContentBuffer.markComplete");
+    this.state.isComplete = true;
   }
 
   /**
@@ -161,8 +162,8 @@ export class ContentBuffer {
    *
    * @returns true if item is complete
    */
-  isComplete(): boolean {
-    throw new NotImplementedError("ContentBuffer.isComplete");
+  getIsComplete(): boolean {
+    return this.state.isComplete;
   }
 
   /**
@@ -170,8 +171,8 @@ export class ContentBuffer {
    *
    * @returns true if item is held
    */
-  isHeld(): boolean {
-    throw new NotImplementedError("ContentBuffer.isHeld");
+  getIsHeld(): boolean {
+    return this.state.isHeld;
   }
 
   /**
@@ -179,8 +180,8 @@ export class ContentBuffer {
    *
    * @param held - Whether to hold the item
    */
-  setHeld(_held: boolean): void {
-    throw new NotImplementedError("ContentBuffer.setHeld");
+  setHeld(held: boolean): void {
+    this.state.isHeld = held;
   }
 
   /**
@@ -188,15 +189,15 @@ export class ContentBuffer {
    *
    * @returns true if create status has been emitted
    */
-  hasEmittedCreate(): boolean {
-    throw new NotImplementedError("ContentBuffer.hasEmittedCreate");
+  getHasEmittedCreate(): boolean {
+    return this.state.hasEmittedCreate;
   }
 
   /**
    * Marks that 'create' status has been emitted.
    */
   markCreateEmitted(): void {
-    throw new NotImplementedError("ContentBuffer.markCreateEmitted");
+    this.state.hasEmittedCreate = true;
   }
 
   /**
@@ -205,7 +206,7 @@ export class ContentBuffer {
    * @returns Full BufferState
    */
   getState(): BufferState {
-    throw new NotImplementedError("ContentBuffer.getState");
+    return { ...this.state };
   }
 
   /**
@@ -214,6 +215,14 @@ export class ContentBuffer {
    * @returns BufferInfo for external inspection
    */
   toBufferInfo(): BufferInfo {
-    throw new NotImplementedError("ContentBuffer.toBufferInfo");
+    return {
+      itemId: this.state.itemId,
+      contentType: this.state.contentType,
+      tokenCount: this.state.tokenCount,
+      contentLength: this.state.content.length,
+      batchIndex: this.state.batchIndex,
+      isHeld: this.state.isHeld,
+      isComplete: this.state.isComplete,
+    };
   }
 }

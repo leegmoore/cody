@@ -133,7 +133,8 @@ export const tc09BatchTimeout: TestFixture = {
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. message create (emitted when timeout fires)
+    // 2. message create (emitted when timeout fires after 50ms)
+    // Content at timeout: "First chunk. " (13 chars = 4 tokens)
     {
       payload: {
         type: "message",
@@ -141,22 +142,16 @@ export const tc09BatchTimeout: TestFixture = {
         content: "First chunk. ",
       },
     },
-    // 3. message update (emitted on second delta or timeout)
-    {
-      payload: {
-        type: "message",
-        status: "update",
-        content: "First chunk. Second chunk after delay.",
-      },
-    },
-    // 4. message complete
+    // 3. message complete (delta #2 doesn't exceed 100 token threshold, no update)
+    // Total content: 38 chars = 10 tokens, still under 100 threshold
     {
       payload: {
         type: "message",
         status: "complete",
+        content: "First chunk. Second chunk after delay.",
       },
     },
-    // 5. turn_complete
+    // 4. turn_complete
     {
       payload: {
         type: "turn_complete",

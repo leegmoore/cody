@@ -165,50 +165,38 @@ export const tc04Reasoning: TestFixture = {
         providerId: "anthropic",
       },
     },
-    // 2. thinking create
+    // 2. thinking create (emitted when delta #2 causes total to exceed threshold)
+    // Delta #1: 33 chars = 9 tokens (under 10 threshold)
+    // Delta #2: +41 chars = 74 total = 19 tokens (exceeds 10 threshold)
     {
       payload: {
         type: "thinking",
         status: "create",
-        content: "Let me think about this problem. ",
-        providerId: "anthropic",
-      },
-    },
-    // 3. thinking update (after second delta crosses threshold)
-    {
-      payload: {
-        type: "thinking",
-        status: "update",
         content:
           "Let me think about this problem. I should consider multiple factors here.",
         providerId: "anthropic",
       },
     },
-    // 4. thinking complete
+    // 3. thinking complete
     {
       payload: {
         type: "thinking",
         status: "complete",
+        content:
+          "Let me think about this problem. I should consider multiple factors here.",
         providerId: "anthropic",
       },
     },
-    // 5. message create
-    {
-      payload: {
-        type: "message",
-        status: "create",
-        origin: "agent",
-      },
-    },
-    // 6. message complete
+    // 4. message complete only (39 chars = 10 tokens, at threshold but not exceeding)
     {
       payload: {
         type: "message",
         status: "complete",
+        content: "Based on my analysis, the answer is 42.",
         origin: "agent",
       },
     },
-    // 7. turn_complete
+    // 5. turn_complete
     {
       payload: {
         type: "turn_complete",

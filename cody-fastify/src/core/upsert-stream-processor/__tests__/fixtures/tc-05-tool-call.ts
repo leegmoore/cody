@@ -199,17 +199,7 @@ export const tc05ToolCall: TestFixture = {
         success: true,
       },
     },
-    // 4. message create
-    {
-      payload: {
-        type: "message",
-        itemId: "msg-05-001",
-        status: "create",
-        content: "The file contains: Hello from file!",
-        origin: "agent",
-      },
-    },
-    // 5. message complete
+    // 4. message complete only (35 chars = 9 tokens, under threshold)
     {
       payload: {
         type: "message",
@@ -219,7 +209,7 @@ export const tc05ToolCall: TestFixture = {
         origin: "agent",
       },
     },
-    // 6. turn_complete
+    // 5. turn_complete
     {
       payload: {
         type: "turn_complete",

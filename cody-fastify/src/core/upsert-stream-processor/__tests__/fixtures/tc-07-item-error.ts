@@ -99,16 +99,8 @@ export const tc07ItemError: TestFixture = {
         threadId: TEST_THREAD_ID,
       },
     },
-    // 2. message create (partial content)
-    {
-      payload: {
-        type: "message",
-        itemId: "msg-07-001",
-        status: "create",
-        content: "I was starting to respond but",
-      },
-    },
-    // 3. message error (same itemId)
+    // 2. message error (29 chars = 8 tokens, under threshold - no create emitted)
+    // item_error emits directly with error status
     {
       payload: {
         type: "message",
@@ -119,7 +111,7 @@ export const tc07ItemError: TestFixture = {
         errorMessage: "Response blocked by content filter",
       },
     },
-    // 4. turn_complete with error status
+    // 3. turn_complete with error status
     {
       payload: {
         type: "turn_complete",
