@@ -238,10 +238,21 @@ The `status` field tells the UI what to do:
 | error | Item failed | Update content, show error state |
 
 **Emit Rules:**
-- First emission for an item → status: "create"
-- Subsequent emissions before done → status: "update"
-- On item_done → status: "complete"
-- On item_error → status: "error" (same item, not separate type)
+
+Emissions are triggered by threshold crossing OR item completion:
+
+1. **Threshold exceeded** (accumulated tokens > current threshold AND more content arrives):
+   - First threshold crossing → emit with status: "create"
+   - Subsequent threshold crossings → emit with status: "update"
+
+2. **Item completion** (item_done received):
+   - Emit remaining buffered content with status: "complete"
+   - This may be the ONLY emission if content never exceeded any threshold
+
+3. **Item error** (item_error received):
+   - Emit with status: "error" on the same item (not a separate type)
+
+**Key insight:** Short content that never exceeds threshold results in a single "complete" emission on item_done. No "create" or "update" emissions occur.
 
 ---
 
@@ -433,7 +444,7 @@ No "create" or "update" emissions for user messages - just one "complete".
 
 | TC | Name | Tests |
 |----|------|-------|
-| 01 | Simple Agent Message | Basic flow, short message |
+| 01 | Simple Agent Message | Basic flow, short message (under threshold) |
 | 02 | Batching Threshold | Gradient triggers updates |
 | 03 | User Message Hold | Held until complete |
 | 04 | Thinking Block | Reasoning → Thinking mapping |
@@ -447,6 +458,9 @@ No "create" or "update" emissions for user messages - just one "complete".
 | 12 | Flush on Destroy | Buffered content emitted |
 | 13 | Retry Success | Retry recovers |
 | 14 | Retry Exhausted | RetryExhaustedError thrown |
+| 15 | Exactly At Threshold | Threshold met but not exceeded |
+| 16 | Threshold Plus One | Minimal threshold exceed |
+| 17 | Single Delta Multiple Thresholds | Bulk content crosses multiple |
 
 ---
 
@@ -523,9 +537,10 @@ bun test --verbose
 
 **Expected Outputs:**
 1. turn_started { turnId, threadId, modelId, providerId }
-2. message { itemId: "msg-01-001", status: "create", content: "Hello there!", origin: "agent" }
-3. message { itemId: "msg-01-001", status: "complete", content: "Hello there!", origin: "agent" }
-4. turn_complete { turnId, threadId, status: "complete", usage }
+2. message { itemId: "msg-01-001", status: "complete", content: "Hello there!", origin: "agent" }
+3. turn_complete { turnId, threadId, status: "complete", usage }
+
+Note: Only one message emission because content (~3 tokens) never exceeded threshold (10). No "create" emission.
 
 ---
 
@@ -715,6 +730,69 @@ Only 2 emissions. The "create" was emitted on delta. No item_done means no "comp
 
 ---
 
+### TC-15: Exactly At Threshold
+
+**Purpose:** Boundary condition - content exactly at threshold (met but not exceeded).
+
+**Input Events:**
+1. response_start
+2. item_start (item_id: "msg-15-001", item_type: "message")
+3. item_delta (40 chars = exactly 10 tokens = exactly threshold)
+4. item_done
+5. response_done
+
+**Expected Outputs:**
+1. turn_started
+2. message { status: "complete" } - only emission, threshold was met but not exceeded
+3. turn_complete
+
+Note: No "create" emission because threshold (10) was met exactly, not exceeded.
+
+---
+
+### TC-16: Threshold Plus One
+
+**Purpose:** Minimal threshold exceed - 10 tokens, then 1 more arrives.
+
+**Input Events:**
+1. response_start
+2. item_start
+3. item_delta #1 (40 chars = 10 tokens, at threshold)
+4. item_delta #2 (4 chars = 1 token, exceeds threshold)
+5. item_done
+6. response_done
+
+**Expected Outputs:**
+1. turn_started
+2. message { status: "create" } - emitted when delta #2 arrives and exceeds threshold
+3. message { status: "complete" } - on item_done
+4. turn_complete
+
+---
+
+### TC-17: Single Delta Crosses Multiple Thresholds
+
+**Purpose:** One large delta that would cross multiple thresholds only emits once.
+
+**Processor Options:** batchGradient: [10, 10, 20] (thresholds at 10, 20, 40)
+
+**Input Events:**
+1. response_start
+2. item_start
+3. item_delta (100 chars = 25 tokens, crosses 10 and 20 thresholds)
+4. item_done
+5. response_done
+
+**Expected Outputs:**
+1. turn_started
+2. message { status: "create" } - single emission (batch index advances to match)
+3. message { status: "complete" } - on item_done
+4. turn_complete
+
+Note: Even though 25 tokens crosses thresholds at 10 and 20, we only emit once per delta.
+
+---
+
 ## Implementation Checklist
 
 - [ ] Implement ContentBuffer methods
@@ -729,7 +807,7 @@ Only 2 emissions. The "create" was emitted on delta. No item_done means no "comp
 - [ ] Implement flush()
 - [ ] Implement destroy()
 - [ ] Implement retry logic with exponential backoff
-- [ ] Run tests - all 14 should pass
+- [ ] Run tests - all 17 should pass
 
 ---
 
@@ -744,11 +822,11 @@ cd cody-fastify && bun run typecheck
 **Tests (current state - TDD Red):**
 ```bash
 cd cody-fastify && bun test src/core/upsert-stream-processor/
-# Expected: 14 tests, 14 fail with NotImplementedError
+# Expected: 17 tests, 17 fail with NotImplementedError
 ```
 
 **Tests (after implementation - TDD Green):**
 ```bash
 cd cody-fastify && bun test src/core/upsert-stream-processor/
-# Expected: 14 tests, 14 pass
+# Expected: 17 tests, 17 pass
 ```

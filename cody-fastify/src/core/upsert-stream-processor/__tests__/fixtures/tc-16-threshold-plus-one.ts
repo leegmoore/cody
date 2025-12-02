@@ -1,23 +1,25 @@
 /**
- * TC-01: Simple Agent Message
+ * TC-16: Threshold Plus One
  *
- * Scenario: Agent responds with a short message under one batch threshold.
+ * Scenario: Content accumulates to threshold (10 tokens), then one more
+ * token arrives in a second delta. This exceeds the threshold, triggering
+ * a "create" emission. Then item_done triggers "complete".
  */
 
 import type { StreamEvent } from "../../../schema.js";
 import type { TestFixture } from "./types.js";
 import { TEST_THREAD_ID, TEST_TRACE_CONTEXT, TEST_TURN_ID } from "./types.js";
 
-export const tc01SimpleMessage: TestFixture = {
-  id: "TC-01",
-  name: "Simple agent message",
+export const tc16ThresholdPlusOne: TestFixture = {
+  id: "TC-16",
+  name: "Threshold plus one",
   description:
-    "Verify basic flow - response starts, agent sends short message, response completes",
+    "Verify threshold exceeded by one token triggers create emission",
 
   input: [
     // 1. response_start
     {
-      event_id: "evt-01-001",
+      event_id: "evt-16-001",
       timestamp: 1000,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
@@ -34,52 +36,65 @@ export const tc01SimpleMessage: TestFixture = {
     },
     // 2. item_start for message
     {
-      event_id: "evt-01-002",
+      event_id: "evt-16-002",
       timestamp: 1001,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "item_start",
       payload: {
         type: "item_start",
-        item_id: "msg-01-001",
+        item_id: "msg-16-001",
         item_type: "message",
       },
     },
-    // 3. item_delta with content (12 chars = ~3 tokens, under 10 token threshold)
+    // 3. item_delta #1 with exactly 40 chars = 10 tokens (at threshold)
     {
-      event_id: "evt-01-003",
+      event_id: "evt-16-003",
       timestamp: 1002,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "item_delta",
       payload: {
         type: "item_delta",
-        item_id: "msg-01-001",
-        delta_content: "Hello there!",
+        item_id: "msg-16-001",
+        delta_content: "This is exactly forty characters long..", // 40 chars = 10 tokens
       },
     },
-    // 4. item_done
+    // 4. item_delta #2 with 4 chars = 1 token (exceeds threshold!)
     {
-      event_id: "evt-01-004",
+      event_id: "evt-16-004",
       timestamp: 1003,
+      trace_context: TEST_TRACE_CONTEXT,
+      run_id: TEST_TURN_ID,
+      type: "item_delta",
+      payload: {
+        type: "item_delta",
+        item_id: "msg-16-001",
+        delta_content: " Hi!", // 4 chars = 1 token
+      },
+    },
+    // 5. item_done
+    {
+      event_id: "evt-16-005",
+      timestamp: 1004,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "item_done",
       payload: {
         type: "item_done",
-        item_id: "msg-01-001",
+        item_id: "msg-16-001",
         final_item: {
-          id: "msg-01-001",
+          id: "msg-16-001",
           type: "message",
-          content: "Hello there!",
+          content: "This is exactly forty characters long.. Hi!",
           origin: "agent",
         },
       },
     },
-    // 5. response_done
+    // 6. response_done
     {
-      event_id: "evt-01-005",
-      timestamp: 1004,
+      event_id: "evt-16-006",
+      timestamp: 1005,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "response_done",
@@ -89,8 +104,8 @@ export const tc01SimpleMessage: TestFixture = {
         status: "complete",
         usage: {
           prompt_tokens: 10,
-          completion_tokens: 3,
-          total_tokens: 13,
+          completion_tokens: 11,
+          total_tokens: 21,
         },
         finish_reason: "end_turn",
       },
@@ -104,34 +119,35 @@ export const tc01SimpleMessage: TestFixture = {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
-        modelId: "claude-sonnet-4-20250514",
-        providerId: "anthropic",
       },
     },
-    // 2. message complete - only emission since content (3 tokens) never exceeded threshold (10)
+    // 2. message create - triggered when delta #2 exceeds threshold
     {
       payload: {
         type: "message",
-        turnId: TEST_TURN_ID,
-        threadId: TEST_THREAD_ID,
-        itemId: "msg-01-001",
-        status: "complete",
-        content: "Hello there!",
+        itemId: "msg-16-001",
+        status: "create",
+        content: "This is exactly forty characters long.. Hi!",
         origin: "agent",
       },
     },
-    // 3. turn_complete
+    // 3. message complete - on item_done
+    {
+      payload: {
+        type: "message",
+        itemId: "msg-16-001",
+        status: "complete",
+        content: "This is exactly forty characters long.. Hi!",
+        origin: "agent",
+      },
+    },
+    // 4. turn_complete
     {
       payload: {
         type: "turn_complete",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",
-        usage: {
-          promptTokens: 10,
-          completionTokens: 3,
-          totalTokens: 13,
-        },
       },
     },
   ],

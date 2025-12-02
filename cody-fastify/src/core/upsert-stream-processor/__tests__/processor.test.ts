@@ -24,6 +24,9 @@ import { tc11EmptyContent } from "./fixtures/tc-11-empty-content.js";
 import { tc12FlushOnDestroy } from "./fixtures/tc-12-flush-on-destroy.js";
 import { tc13RetrySuccess } from "./fixtures/tc-13-retry-success.js";
 import { tc14RetryExhausted } from "./fixtures/tc-14-retry-exhausted.js";
+import { tc15ExactlyAtThreshold } from "./fixtures/tc-15-exactly-at-threshold.js";
+import { tc16ThresholdPlusOne } from "./fixtures/tc-16-threshold-plus-one.js";
+import { tc17SingleDeltaMultipleThresholds } from "./fixtures/tc-17-single-delta-multiple-thresholds.js";
 
 describe("StreamProcessor", () => {
   describe("Happy Path Tests", () => {
@@ -105,6 +108,30 @@ describe("StreamProcessor", () => {
 
     test("TC-10: Batch gradient progression", async () => {
       const fixture = tc10GradientProgression;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test("TC-15: Exactly at threshold", async () => {
+      const fixture = tc15ExactlyAtThreshold;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test("TC-16: Threshold plus one", async () => {
+      const fixture = tc16ThresholdPlusOne;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test("TC-17: Single delta crosses multiple thresholds", async () => {
+      const fixture = tc17SingleDeltaMultipleThresholds;
       const result = await runFixture(fixture);
 
       expect(result.errors).toHaveLength(0);

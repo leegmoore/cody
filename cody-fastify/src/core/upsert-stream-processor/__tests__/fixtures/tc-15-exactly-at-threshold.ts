@@ -1,23 +1,25 @@
 /**
- * TC-01: Simple Agent Message
+ * TC-15: Exactly At Threshold
  *
- * Scenario: Agent responds with a short message under one batch threshold.
+ * Scenario: Content accumulates to exactly the threshold (10 tokens),
+ * then item_done arrives. Since threshold was met but not exceeded,
+ * there should be only one emission (complete).
  */
 
 import type { StreamEvent } from "../../../schema.js";
 import type { TestFixture } from "./types.js";
 import { TEST_THREAD_ID, TEST_TRACE_CONTEXT, TEST_TURN_ID } from "./types.js";
 
-export const tc01SimpleMessage: TestFixture = {
-  id: "TC-01",
-  name: "Simple agent message",
+export const tc15ExactlyAtThreshold: TestFixture = {
+  id: "TC-15",
+  name: "Exactly at threshold",
   description:
-    "Verify basic flow - response starts, agent sends short message, response completes",
+    "Verify content exactly at threshold (not exceeded) results in single complete emission",
 
   input: [
     // 1. response_start
     {
-      event_id: "evt-01-001",
+      event_id: "evt-15-001",
       timestamp: 1000,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
@@ -34,51 +36,51 @@ export const tc01SimpleMessage: TestFixture = {
     },
     // 2. item_start for message
     {
-      event_id: "evt-01-002",
+      event_id: "evt-15-002",
       timestamp: 1001,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "item_start",
       payload: {
         type: "item_start",
-        item_id: "msg-01-001",
+        item_id: "msg-15-001",
         item_type: "message",
       },
     },
-    // 3. item_delta with content (12 chars = ~3 tokens, under 10 token threshold)
+    // 3. item_delta with exactly 40 chars = 10 tokens (exactly at threshold)
     {
-      event_id: "evt-01-003",
+      event_id: "evt-15-003",
       timestamp: 1002,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "item_delta",
       payload: {
         type: "item_delta",
-        item_id: "msg-01-001",
-        delta_content: "Hello there!",
+        item_id: "msg-15-001",
+        delta_content: "This is exactly forty characters long..", // 40 chars = 10 tokens
       },
     },
-    // 4. item_done
+    // 4. item_done (no more content)
     {
-      event_id: "evt-01-004",
+      event_id: "evt-15-004",
       timestamp: 1003,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
       type: "item_done",
       payload: {
         type: "item_done",
-        item_id: "msg-01-001",
+        item_id: "msg-15-001",
         final_item: {
-          id: "msg-01-001",
+          id: "msg-15-001",
           type: "message",
-          content: "Hello there!",
+          content: "This is exactly forty characters long..",
           origin: "agent",
         },
       },
     },
     // 5. response_done
     {
-      event_id: "evt-01-005",
+      event_id: "evt-15-005",
       timestamp: 1004,
       trace_context: TEST_TRACE_CONTEXT,
       run_id: TEST_TURN_ID,
@@ -89,8 +91,8 @@ export const tc01SimpleMessage: TestFixture = {
         status: "complete",
         usage: {
           prompt_tokens: 10,
-          completion_tokens: 3,
-          total_tokens: 13,
+          completion_tokens: 10,
+          total_tokens: 20,
         },
         finish_reason: "end_turn",
       },
@@ -104,19 +106,15 @@ export const tc01SimpleMessage: TestFixture = {
         type: "turn_started",
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
-        modelId: "claude-sonnet-4-20250514",
-        providerId: "anthropic",
       },
     },
-    // 2. message complete - only emission since content (3 tokens) never exceeded threshold (10)
+    // 2. message complete - only emission (threshold met but not exceeded)
     {
       payload: {
         type: "message",
-        turnId: TEST_TURN_ID,
-        threadId: TEST_THREAD_ID,
-        itemId: "msg-01-001",
+        itemId: "msg-15-001",
         status: "complete",
-        content: "Hello there!",
+        content: "This is exactly forty characters long..",
         origin: "agent",
       },
     },
@@ -127,11 +125,6 @@ export const tc01SimpleMessage: TestFixture = {
         turnId: TEST_TURN_ID,
         threadId: TEST_THREAD_ID,
         status: "complete",
-        usage: {
-          promptTokens: 10,
-          completionTokens: 3,
-          totalTokens: 13,
-        },
       },
     },
   ],
