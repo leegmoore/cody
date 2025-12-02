@@ -134,7 +134,7 @@ export async function runFixture(fixture: TestFixture): Promise<TestResult> {
     // internally flushes pending items on destroy.
 
     try {
-      processor.destroy();
+      await processor.destroy();
     } catch (error) {
       errors.push(error as Error);
     }

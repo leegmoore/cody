@@ -180,10 +180,10 @@ export class StreamProcessor {
           : "create";
         const content = this.buildContentFromBuffer(buffer, status);
         await this.emitContent(content);
-        buffer.markEmitted();
         if (!buffer.getHasEmittedCreate()) {
           buffer.markCreateEmitted();
         }
+        buffer.markEmitted();
       }
       this.clearBatchTimer(itemId);
     }
@@ -191,10 +191,11 @@ export class StreamProcessor {
 
   /**
    * Cleanup all resources.
-   * Clears all timers, releases all buffers.
+   * Flushes remaining content, clears all timers, releases all buffers.
    * Must be called when processor is no longer needed.
    */
-  destroy(): void {
+  async destroy(): Promise<void> {
+    await this.flush();
     this.clearAllTimers();
     this.contentBuffers.clear();
     this.toolCallRegistry.clear();

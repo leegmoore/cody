@@ -27,6 +27,8 @@ import { tc14RetryExhausted } from "./fixtures/tc-14-retry-exhausted.js";
 import { tc15ExactlyAtThreshold } from "./fixtures/tc-15-exactly-at-threshold.js";
 import { tc16ThresholdPlusOne } from "./fixtures/tc-16-threshold-plus-one.js";
 import { tc17SingleDeltaMultipleThresholds } from "./fixtures/tc-17-single-delta-multiple-thresholds.js";
+import { tc18ItemCancelled } from "./fixtures/tc-18-item-cancelled.js";
+import { tc19GradientExhaustion } from "./fixtures/tc-19-gradient-exhaustion.js";
 
 describe("StreamProcessor", () => {
   describe("Happy Path Tests", () => {
@@ -137,6 +139,14 @@ describe("StreamProcessor", () => {
       expect(result.errors).toHaveLength(0);
       assertEmissionsMatch(result.emissions, fixture.expected);
     });
+
+    test("TC-19: Gradient exhaustion - continues with last value", async () => {
+      const fixture = tc19GradientExhaustion;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
   });
 
   describe("Edge Cases", () => {
@@ -156,6 +166,14 @@ describe("StreamProcessor", () => {
       // We do NOT check result.errors because early destroy may have incomplete state
       // and the processor may emit warnings or errors during cleanup. The important
       // assertion is that buffered content was properly flushed to emissions.
+      assertEmissionsMatch(result.emissions, fixture.expected);
+    });
+
+    test("TC-18: Item cancelled mid-stream", async () => {
+      const fixture = tc18ItemCancelled;
+      const result = await runFixture(fixture);
+
+      expect(result.errors).toHaveLength(0);
       assertEmissionsMatch(result.emissions, fixture.expected);
     });
   });
