@@ -65,37 +65,102 @@ Environment variable overrides:
 
 ## Session File Format
 
+> **Updated 2025-12-02** based on analysis of 25 real sessions across 5 independent reports.
+
 **Target format:** Project-specific JSONL files at `~/.claude/projects/-Users-<user>-<path>/<sessionId>.jsonl`
 
-This format contains complete conversation data:
-- Full user and assistant messages
-- `tool_use` blocks with id, name, input
-- `thinking` blocks with content and signature
-- Session metadata (sessionId, cwd, gitBranch, version)
+### Entry Types (6 total)
 
-**Entry types:**
-- `type: "user"` - User messages (including tool_result) → process
-- `type: "assistant"` - Assistant responses with content arrays → process
-- `type: "queue-operation"` - Internal queue state → copy through, update sessionId
-- `type: "file-history-snapshot"` - File tracking metadata → copy through, update sessionId
+| Type | UUID Chain | Purpose | Clone Action |
+|------|------------|---------|--------------|
+| `user` | Yes | Human input OR tool results | Process |
+| `assistant` | Yes | Claude responses (streaming chunks) | Process |
+| `queue-operation` | No (uuid=null) | Message queue tracking | Copy, update sessionId |
+| `file-history-snapshot` | No (uuid=null) | File state for undo | Copy, update messageId refs |
+| `summary` | No (uuid=null) | Conversation summaries | Copy, update leafUuid refs |
+| `system` | Yes (special) | Compaction boundaries | Copy, handle logicalParentUuid |
 
-**JSONL Structure:**
-Each line has its own `uuid` and `parentUuid` forming a linked list:
+### Content Block Types
+
+| Type | Location | Fields |
+|------|----------|--------|
+| `text` | user/assistant | `{type: "text", text: string}` |
+| `tool_use` | assistant | `{type: "tool_use", id: string, name: string, input: object}` |
+| `tool_result` | user | `{type: "tool_result", tool_use_id: string, content: string}` |
+| `thinking` | assistant | `{type: "thinking", thinking: string, signature: string}` |
+
+### Streaming Pattern
+
+Multiple JSONL entries share the same `message.id` during streaming:
+
+| Version | Streaming Behavior |
+|---------|-------------------|
+| v2.0.36-42 | All entries have same `stop_reason` (final value) |
+| v2.0.50+ | Intermediate entries have `stop_reason: null`; final has non-null |
+
+**Final message selection:** Entry with non-null `stop_reason`, or last entry for that `message.id`.
+
+### Turn Definition (CORRECTED)
+
+> **CRITICAL:** Turn detection is based on **user entry content type**, NOT `stop_reason`.
+
+**A turn starts when:** A `user` entry has `message.content` as:
+- A **string** (human text input), OR
+- An **array containing `{type: "text"}`** blocks (but NOT only `tool_result` blocks)
+
+**A turn does NOT start when:** A `user` entry has `message.content` as:
+- An **array containing only `{type: "tool_result"}`** blocks (this is a tool response within the current turn)
+
+**Turn detection algorithm:**
+```typescript
+function isNewTurn(entry: SessionEntry): boolean {
+  if (entry.type !== "user") return false;
+
+  const content = entry.message?.content;
+
+  // String content = human input (new turn)
+  if (typeof content === "string") return true;
+
+  // Array content - check block types
+  if (Array.isArray(content)) {
+    const hasText = content.some(b => b.type === "text");
+    const hasToolResult = content.some(b => b.type === "tool_result");
+
+    // New turn if has text but NOT tool_result
+    // (tool_result alone means continuation, not new turn)
+    return hasText && !hasToolResult;
+  }
+
+  return false;
+}
 ```
-line 1: queue-operation (uuid=null)
-line 2: queue-operation (uuid=null)
-line 3: user      uuid=aaa  parentUuid=null       ← turn 1 starts
-line 4: assistant uuid=bbb  parentUuid=aaa  stop_reason="tool_use"
-line 5: assistant uuid=ccc  parentUuid=bbb  stop_reason="tool_use"
-line 6: user      uuid=ddd  parentUuid=ccc  [tool_result]
-line 7: user      uuid=eee  parentUuid=ddd  [tool_result]
-line 8: assistant uuid=fff  parentUuid=eee  stop_reason="end_turn"  ← turn 1 ends
-line 9: user      uuid=ggg  parentUuid=fff       ← turn 2 starts
+
+**Why NOT use `stop_reason: "end_turn"`:**
+- Many sessions (especially tool-heavy ones) never have `end_turn` - they end with `tool_use`
+- `stop_reason` is for streaming deduplication, not turn boundaries
+- Tool loops can span many messages without `end_turn` appearing
+
+### UUID Chain Structure
+
+```
+line 1: summary         uuid=null  parentUuid=null
+line 2: queue-operation uuid=null  parentUuid=null
+line 3: user            uuid=aaa   parentUuid=null       ← TURN 1 START (text content)
+line 4: assistant       uuid=bbb   parentUuid=aaa        stop_reason="tool_use"
+line 5: user            uuid=ccc   parentUuid=bbb        [tool_result] ← NOT a new turn
+line 6: assistant       uuid=ddd   parentUuid=ccc        stop_reason="tool_use"
+line 7: user            uuid=eee   parentUuid=ddd        [tool_result] ← NOT a new turn
+line 8: assistant       uuid=fff   parentUuid=eee        stop_reason=null (streaming)
+line 9: assistant       uuid=ggg   parentUuid=fff        stop_reason="end_turn" (final)
+line 10: user           uuid=hhh   parentUuid=ggg        ← TURN 2 START (text content)
 ...
 ```
 
-**Turn Definition:**
-A turn begins when a user submits a message and ends when the assistant responds with `stop_reason="end_turn"`. Tool call loops (tool_use → tool_result → tool_use...) are part of the same turn.
+### Tool Call Pairing
+
+- `tool_use.id` in assistant message matches `tool_result.tool_use_id` in user message
+- **Always 1:1 paired** - no orphans observed across 25 sessions analyzed
+- When removing tool calls, must remove both the `tool_use` AND matching `tool_result`
 
 ---
 
@@ -417,26 +482,72 @@ Write all TC-01 through TC-13 tests. Each test:
 Implement in order:
 1. `findSessionFile()` - Glob search in `~/.claude/projects/*/`
 2. `parseSession()` - JSONL line-by-line parsing
-3. `identifyTurns()` - Scan for `stop_reason="end_turn"`
+3. `identifyTurns()` - **Scan user entries for text content (NOT stop_reason)**
 4. `applyRemovals()` - Mark and delete lines, surgical content removal
 5. `repairParentUuidChain()` - Patch first-line-after-deleted-block
 6. `cloneSession()` - Orchestrate all steps, write output
 
 **Algorithm Details:**
 
-**Identify Turns:**
+**Identify Turns (CORRECTED):**
 ```typescript
-// Scan for stop_reason="end_turn" to mark turn boundaries
-// Turn = all entries from user message through end_turn assistant
+// A turn starts when a USER entry has text content (not tool_result)
+function isNewTurn(entry: SessionEntry): boolean {
+  if (entry.type !== "user") return false;
+
+  const content = entry.message?.content;
+
+  // String content = human input (new turn)
+  if (typeof content === "string") return true;
+
+  // Array content - check block types
+  if (Array.isArray(content)) {
+    const hasText = content.some(b => b.type === "text");
+    const hasToolResult = content.some(b => b.type === "tool_result");
+
+    // New turn = has text but NOT tool_result
+    return hasText && !hasToolResult;
+  }
+
+  return false;
+}
+
+// Count turns = count user entries that start new turns
+function identifyTurns(entries: SessionEntry[]): Turn[] {
+  const turns: Turn[] = [];
+  let currentTurn: Turn | null = null;
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+
+    if (isNewTurn(entry)) {
+      // Close previous turn if exists
+      if (currentTurn) {
+        currentTurn.endIndex = i - 1;
+        turns.push(currentTurn);
+      }
+      // Start new turn
+      currentTurn = { startIndex: i, endIndex: -1 };
+    }
+  }
+
+  // Close final turn
+  if (currentTurn) {
+    currentTurn.endIndex = entries.length - 1;
+    turns.push(currentTurn);
+  }
+
+  return turns;
+}
 ```
 
 **Apply Removals:**
 ```typescript
 // 1. Calculate boundary: floor(turnCount * percentage / 100)
 // 2. For turns in removal zone:
-//    - Tool: Delete tool_use lines + matching tool_result lines
+//    - Tool: Delete tool_use entries + matching tool_result entries
 //    - Thinking: Remove from content[] array (surgical)
-// 3. Delete lines where content.length === 0
+// 3. Delete entries where content becomes empty after removal
 ```
 
 **Repair Chain:**
@@ -456,6 +567,120 @@ Implement in order:
 #### 3.3 Phase 3 Completion Criteria
 - [ ] All 13 tests passing (green)
 - [ ] Manual test: clone a real session, verify output loads in Claude Code
+
+---
+
+### Phase 3.1: Fix Turn Detection Bug
+
+**Goal:** Fix the incorrect `identifyTurns()` implementation that was looking for `stop_reason: "end_turn"` instead of user text content.
+
+**Background:**
+The original implementation assumed turns end with `stop_reason: "end_turn"`. Analysis of 25 real sessions revealed:
+- Many sessions (especially tool-heavy ones) have NO `end_turn` markers
+- Turns should be identified by **user entries with text content**, not assistant stop reasons
+- The current implementation returns 0 turns for valid sessions, causing no tool removal to occur
+
+#### 3.1.1 Changes Required
+
+**File:** `src/services/session-clone.ts`
+
+**Replace `identifyTurns()` function:**
+
+FROM (incorrect):
+```typescript
+export function identifyTurns(entries: SessionEntry[]): Turn[] {
+  // Looking for stop_reason === "end_turn" - WRONG
+  ...
+}
+```
+
+TO (correct):
+```typescript
+/**
+ * Identifies turn boundaries in a session.
+ * A turn starts when a user entry has text content (not tool_result).
+ * Tool result entries are continuations of the current turn, not new turns.
+ */
+export function identifyTurns(entries: SessionEntry[]): Turn[] {
+  const turns: Turn[] = [];
+  let currentTurnStart: number | null = null;
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+
+    if (isNewTurn(entry)) {
+      // Close previous turn if exists
+      if (currentTurnStart !== null) {
+        turns.push({ startIndex: currentTurnStart, endIndex: i - 1 });
+      }
+      // Start new turn
+      currentTurnStart = i;
+    }
+  }
+
+  // Close final turn
+  if (currentTurnStart !== null) {
+    turns.push({ startIndex: currentTurnStart, endIndex: entries.length - 1 });
+  }
+
+  return turns;
+}
+
+/**
+ * Determines if an entry represents the start of a new turn.
+ * A new turn starts when a user sends text content (not a tool result).
+ */
+function isNewTurn(entry: SessionEntry): boolean {
+  if (entry.type !== "user") return false;
+
+  const content = (entry as any).message?.content;
+
+  // String content = human input (new turn)
+  if (typeof content === "string") return true;
+
+  // Array content - check block types
+  if (Array.isArray(content)) {
+    const hasText = content.some((b: any) => b.type === "text");
+    const hasToolResult = content.some((b: any) => b.type === "tool_result");
+
+    // New turn = has text but NOT tool_result
+    // (tool_result alone means tool response within current turn)
+    return hasText && !hasToolResult;
+  }
+
+  return false;
+}
+```
+
+#### 3.1.2 Test Updates
+
+Update TC-07 if it relies on the old turn detection behavior:
+- Ensure fixture has proper user text entries to detect turns
+- Verify turn count matches expected based on user text entries
+
+#### 3.1.3 Verification
+
+After fix:
+```bash
+# Run tests
+npm test
+
+# Manual test with a real session
+curl -X POST http://localhost:3001/api/clone \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"<your-session-id>","toolRemoval":"100","thinkingRemoval":"none"}'
+```
+
+Expected result:
+- `originalTurnCount` should be > 0 for sessions with user messages
+- `toolCallsRemoved` should be > 0 when toolRemoval is "100"
+
+#### 3.1.4 Phase 3.1 Completion Criteria
+- [ ] `identifyTurns()` rewritten to detect user text entries
+- [ ] `isNewTurn()` helper function added
+- [ ] All existing tests still pass
+- [ ] Manual test: real session clone reports correct turn count
+- [ ] Manual test: 100% tool removal actually removes tool calls
 
 ---
 
@@ -819,3 +1044,49 @@ describe("POST /api/clone", () => {
 - Banded summarization/compression
 - Manual turn editing UI
 - Preview before clone
+
+---
+
+## Appendix: Session Format Analysis (2025-12-02)
+
+### Analysis Methodology
+
+5 independent agents analyzed 5 sessions each (25 total sessions) to reverse-engineer the Claude Code session format. Reports are stored in:
+- `session-format-analysis-01.md` through `session-format-analysis-05.md`
+
+### Key Findings (Consensus Across All 5 Reports)
+
+| Finding | Confidence |
+|---------|------------|
+| 6 Entry Types: user, assistant, queue-operation, file-history-snapshot, summary, system | 100% |
+| Tool pairing is always 1:1 (tool_use.id ↔ tool_result.tool_use_id), no orphans | 100% |
+| UUID chain: user/assistant entries form linked list via uuid/parentUuid | 100% |
+| Streaming: multiple entries share message.id; final has non-null stop_reason | 100% |
+| Content block types: text, tool_use, tool_result, thinking | 100% |
+| stop_reason values: null (streaming), "end_turn", "tool_use", "stop_sequence" (rare) | 100% |
+
+### Critical Discovery: Turn Detection
+
+**Original (incorrect) assumption:**
+> Turns end with `stop_reason: "end_turn"` on assistant messages.
+
+**Actual behavior:**
+> Turns start when a `user` entry has text content (not tool_result).
+
+**Evidence:**
+- Many sessions have NO `end_turn` markers (especially tool-heavy sessions)
+- `stop_reason` is for streaming deduplication, not turn boundaries
+- All 5 reports independently converged on the same turn detection algorithm
+
+### Version-Dependent Streaming
+
+| Claude Code Version | Streaming Behavior |
+|---------------------|-------------------|
+| v2.0.36-42 | All streaming entries have same stop_reason (final value) |
+| v2.0.50+ | Intermediate entries have stop_reason: null |
+
+### Models Observed
+
+- `claude-sonnet-4-5-20250929`
+- `claude-opus-4-5-20251101`
+- `<synthetic>` (placeholder responses)
