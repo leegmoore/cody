@@ -116,6 +116,9 @@ Multiple JSONL entries share the same `message.id` during streaming:
 function isNewTurn(entry: SessionEntry): boolean {
   if (entry.type !== "user") return false;
 
+  // Meta messages (system-injected) are not turns
+  if (entry.isMeta === true) return false;
+
   const content = entry.message?.content;
 
   // String content = human input (new turn)
@@ -582,7 +585,26 @@ The original implementation assumed turns end with `stop_reason: "end_turn"`. An
 
 #### 3.1.1 Changes Required
 
-**File:** `src/services/session-clone.ts`
+**File 1:** `src/types.ts`
+
+Add `isMeta` field to `SessionEntry` interface:
+```typescript
+export interface SessionEntry {
+  type: string;
+  uuid?: string;
+  parentUuid?: string | null;
+  sessionId?: string;
+  isMeta?: boolean;  // ADD THIS - meta messages should not count as turns
+  message?: {
+    role?: string;
+    content?: ContentBlock[] | string;
+    stop_reason?: string;
+  };
+  [key: string]: unknown;
+}
+```
+
+**File 2:** `src/services/session-clone.ts`
 
 **Replace `identifyTurns()` function:**
 
@@ -596,6 +618,34 @@ export function identifyTurns(entries: SessionEntry[]): Turn[] {
 
 TO (correct):
 ```typescript
+/**
+ * Determines if an entry represents the start of a new turn.
+ * A new turn starts when a user sends text content (not a tool result).
+ */
+function isNewTurn(entry: SessionEntry): boolean {
+  if (entry.type !== "user") return false;
+
+  // Meta messages (system-injected) are not turns
+  if (entry.isMeta === true) return false;
+
+  const content = entry.message?.content;
+
+  // String content = human input (new turn)
+  if (typeof content === "string") return true;
+
+  // Array content - check block types
+  if (Array.isArray(content)) {
+    const hasText = content.some((b) => b.type === "text");
+    const hasToolResult = content.some((b) => b.type === "tool_result");
+
+    // New turn = has text but NOT tool_result
+    // (tool_result alone means tool response within current turn)
+    return hasText && !hasToolResult;
+  }
+
+  return false;
+}
+
 /**
  * Identifies turn boundaries in a session.
  * A turn starts when a user entry has text content (not tool_result).
@@ -625,31 +675,6 @@ export function identifyTurns(entries: SessionEntry[]): Turn[] {
 
   return turns;
 }
-
-/**
- * Determines if an entry represents the start of a new turn.
- * A new turn starts when a user sends text content (not a tool result).
- */
-function isNewTurn(entry: SessionEntry): boolean {
-  if (entry.type !== "user") return false;
-
-  const content = (entry as any).message?.content;
-
-  // String content = human input (new turn)
-  if (typeof content === "string") return true;
-
-  // Array content - check block types
-  if (Array.isArray(content)) {
-    const hasText = content.some((b: any) => b.type === "text");
-    const hasToolResult = content.some((b: any) => b.type === "tool_result");
-
-    // New turn = has text but NOT tool_result
-    // (tool_result alone means tool response within current turn)
-    return hasText && !hasToolResult;
-  }
-
-  return false;
-}
 ```
 
 #### 3.1.2 Test Updates
@@ -676,11 +701,12 @@ Expected result:
 - `toolCallsRemoved` should be > 0 when toolRemoval is "100"
 
 #### 3.1.4 Phase 3.1 Completion Criteria
+- [ ] `isMeta?: boolean` added to `SessionEntry` interface in `types.ts`
+- [ ] `isNewTurn()` helper function added with `isMeta` check
 - [ ] `identifyTurns()` rewritten to detect user text entries
-- [ ] `isNewTurn()` helper function added
 - [ ] All existing tests still pass
-- [ ] Manual test: real session clone reports correct turn count
-- [ ] Manual test: 100% tool removal actually removes tool calls
+- [ ] Manual test: real session clone reports correct turn count (> 0)
+- [ ] Manual test: 100% tool removal actually removes tool calls (> 0)
 
 ---
 
